@@ -20,6 +20,12 @@ DctVolume::~DctVolume()
 	free(modes_);
 }
 
+/*
+ExcuteDct() and ExcuteIdct() are used to perform the DCT and IDCT, respectively, 
+using the Fast Fourier Transform (FFT) library FFTW3. 
+
+After executing the FFT, normalization is performed to get accurate values.
+*/
 void DctVolume::ExcuteDct()
 {
 	fftw_execute(dct_plan_);

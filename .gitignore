@@ -39,3 +39,7 @@
 *.db-shm
 *.db-wal
 *.opendb
+*.tlog
+*.log
+*.idb
+*.pdb

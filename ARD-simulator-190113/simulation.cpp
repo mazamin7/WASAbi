@@ -10,7 +10,30 @@
 #include <iomanip>
 #include <omp.h>
 
+/*
+The constructor takes two inputs: a vector of shared pointers to Partition objects 
+and a vector of shared pointers to SoundSource objects.
 
+The code then initializes the member variables partitions_ and sources_ with the 
+input vectors. 
+
+It then finds all shared boundaries of the partitions and adds them to the 
+vector boundaries_.
+
+Next, the code adds the sources to their corresponding partitions by checking if the 
+source's coordinates are within the bounds of the partition. 
+
+Then, the code updates some information fields in the info_ object 
+(number of partitions, number of boundaries, and number of sources).
+
+Finally, the code creates PML partitions (absorbing partitions) along the left 
+and right sides of each partition, if they have open borders. 
+
+These PML partitions are created as new Partition objects and added to the 
+partitions_ vector. 
+
+The boundary between the partition and its PML is also found and added to the boundaries_ vector.
+*/
 Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std::vector<std::shared_ptr<SoundSource>> &sources)
 	: partitions_(partitions), sources_(sources)
 {
@@ -297,6 +320,42 @@ Simulation::~Simulation()
 {
 }
 
+/*
+The method Update is part of the class Simulation. 
+
+The method updates the state of the simulation, including the partitions and 
+boundaries objects. 
+
+The update is done in two steps, first computing the source forcing terms for 
+each partition and then updating each partition. 
+
+The result of the update is then visualized in an RGB image.
+
+The method first sets time_step to the value of time_step_, which is 
+incremented after. 
+
+Then, #pragma omp parallel for is used to parallelize the following for loop 
+that iterates through the partitions_ vector. 
+
+For each partition, the ComputeSourceForcingTerms method is called with the 
+current time_step and the Update method of the partition is also called.
+
+Next, #pragma omp parallel for is used to parallelize the following for loop 
+that iterates through the boundaries_ vector. 
+
+For each boundary, the ComputeForcingTerms method is called.
+
+Finally, the visualization section converts the pressure values of each 
+partition into RGB values, which are then stored in the pixels_ vector. 
+
+The visualization can be viewed from two angles, the xy-plane or the yz-plane, 
+and the look_from_ variable determines which angle to view from. 
+
+The pressure values are scaled and mapped to an RGB value based on the 
+v_coef variable, with higher pressure resulting in brighter colors. 
+
+The RGB values are stored in the pixels_ vector.
+*/
 int Simulation::Update()
 {
 	int time_step = time_step_++;

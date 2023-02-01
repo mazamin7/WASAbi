@@ -27,14 +27,14 @@ bool is_record = true;
 double Partition::absorption_ = 0.5;	// Absorption coefficients of the boundaries.
 double Simulation::duration_ = 2;		// Duration of the whole simulation (seconds).
 
-double Simulation::dh_ = 0.05;			// Space sampling rate.
-double Simulation::dt_ = 0.625e-4;		// Time sampling rate.
+//double Simulation::dh_ = 0.05;			// Space sampling rate.
+//double Simulation::dt_ = 0.625e-4;		// Time sampling rate.
 
 //double Simulation::dh_ = 0.1;
 //double Simulation::dt_ = 1.25e-4;
 
-//double Simulation::dh_ = 0.2;
-//double Simulation::dt_ = 2e-4;
+double Simulation::dh_ = 0.2;
+double Simulation::dt_ = 2e-4;
 
 //double Simulation::dh_ = 0.5;
 //double Simulation::dt_ = 6.25e-4;
@@ -42,6 +42,25 @@ double Simulation::dt_ = 0.625e-4;		// Time sampling rate.
 double Simulation::c0_ = 3.435e2;		// Speed of sound
 int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
 
+/*
+The main function starts by recording the beginning time, used to measure the 
+time it takes to run the simulation. 
+
+The code then prepares the output folder, imports the properties of partitions, 
+sound sources, and recorders from text files. 
+
+It then assigns recorders to the corresponding partitions, initializes the 
+simulation, and shows basic information about the simulation. 
+
+The code then initializes an SDL window for visualization and sets up variables 
+for the simulation. 
+
+A loop runs for the duration of the simulation, updating the state of the 
+simulation and displaying the current state in the SDL window. 
+
+The simulation ends when all time steps have passed or when the user closes 
+the window.
+*/
 int main()
 {
 	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the cosuming time.
