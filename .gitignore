@@ -43,3 +43,8 @@
 *.log
 *.idb
 *.pdb
+*.idb
+*.tlog
+*.log
+*.pdb
+*.idb

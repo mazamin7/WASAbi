@@ -1,25 +1,4 @@
 ﻿  Source.cpp
 c1xx : warning C4199: la ricerca del nome in due fasi non è supportata per C++/CLI, C++/CX o OpenMP. Usare /Zc:twoPhase-
 d:\documents\git_projects\ard-simulator-master\ard-simulator-190113\source.cpp(133): warning C4244: 'inizializzazione': conversione da 'double' a 'int'. Possibile perdita di dati.
-  boundary.cpp
-c1xx : warning C4199: la ricerca del nome in due fasi non è supportata per C++/CLI, C++/CX o OpenMP. Usare /Zc:twoPhase-
-  dct_partition.cpp
-c1xx : warning C4199: la ricerca del nome in due fasi non è supportata per C++/CLI, C++/CX o OpenMP. Usare /Zc:twoPhase-
-  dct_volume.cpp
-c1xx : warning C4199: la ricerca del nome in due fasi non è supportata per C++/CLI, C++/CX o OpenMP. Usare /Zc:twoPhase-
-  partition.cpp
-c1xx : warning C4199: la ricerca del nome in due fasi non è supportata per C++/CLI, C++/CX o OpenMP. Usare /Zc:twoPhase-
-c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\memory(1801): warning C4244: 'argomento': conversione da '_Ty' a 'int'. Possibile perdita di dati.
-          with
-          [
-              _Ty=double
-          ]
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\memory(1865): note: vedere il riferimento all'istanza '<Sconosciuto>' della funzione <Sconosciuto> di cui è in corso la compilazione
-  c:\program files (x86)\microsoft visual studio\2017\community\vc\tools\msvc\14.16.27023\include\memory(1866): note: vedere il riferimento all'istanza '<Sconosciuto>' della funzione <Sconosciuto> di cui è in corso la compilazione
-  d:\documents\git_projects\ard-simulator-master\ard-simulator-190113\partition.cpp(222): note: vedere il riferimento all'istanza '<Sconosciuto>' della funzione <Sconosciuto> di cui è in corso la compilazione
-  simulation.cpp
-c1xx : warning C4199: la ricerca del nome in due fasi non è supportata per C++/CLI, C++/CX o OpenMP. Usare /Zc:twoPhase-
-d:\documents\git_projects\ard-simulator-master\ard-simulator-190113\simulation.cpp(424): warning C4244: 'argomento': conversione da 'double' a 'Uint8'. Possibile perdita di dati.
-d:\documents\git_projects\ard-simulator-master\ard-simulator-190113\simulation.cpp(471): warning C4244: 'argomento': conversione da 'double' a 'Uint8'. Possibile perdita di dati.
-  Generazione del codice in corso...
   ARD-simulator-190113.vcxproj -> D:\Documents\git_projects\ARD-simulator-master\x64\Debug\ARD-simulator-190113.exe

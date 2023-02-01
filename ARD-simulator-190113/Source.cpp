@@ -91,7 +91,7 @@ int main()
 
 	auto simulation = std::make_shared<Simulation>(partitions, sources);	// Initialize the simulation.
 	simulation->Info();														// Show basic info of the simulation
-	//simulation->look_from_ = 1;											// FOR DEBUG: show field from another view direction.
+	simulation->look_from_ = 2;											// FOR DEBUG: show field from another view direction.
 
 	/* Initialize SDL window
 	 * simulation_rect: show field.
