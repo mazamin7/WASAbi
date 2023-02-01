@@ -36,3 +36,6 @@
 .vs/ARD-simulator-190113/v17/.suo
 *.db
 *.ipch
+*.db-shm
+*.db-wal
+*.opendb
