@@ -3,13 +3,13 @@
 #include "dct_partition.h"
 
 
-DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha)
-	: Partition(xs, ys, zs, w, h, d, alpha), pressure_(w, h, d), force_(w, h, d)
+DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double h_abs)
+	: Partition(xs, ys, zs, w, h, d, h_abs), pressure_(w, h, d), force_(w, h, d)
 {
 	should_render_ = true;
 	info_.type = "DCT";
 
-	is_damped_ = alpha != 0;
+	is_damped_ = h_abs != 0;
 
 	prev_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
 	next_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
@@ -38,7 +38,7 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double a
 				double w = c0_ * M_PI * sqrt(i * i / lz2_ + j * j / ly2_ + k * k / lx2_);
 				cwt_[idx] = cos(w * dt_);
 				swt_[idx] = sin(w * dt_);
-				alpha_[idx] = alpha;
+				alpha_[idx] = w * h_abs;
 				alpha2_[idx] = alpha_[idx] * alpha_[idx];
 				eatm_[idx] = exp(-alpha_[idx] * dt_);
 				w_omega_[idx] = w;

@@ -24,7 +24,7 @@ class DctPartition : public Partition
 	double *velocity_{ nullptr };
 
 public:
-	DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha);
+	DctPartition(int xs, int ys, int zs, int w, int h, int d, double h_abs);
 	~DctPartition();
 
 	virtual void Update();
