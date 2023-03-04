@@ -1,4 +1,0 @@
-﻿  Source.cpp
-c1xx : warning C4199: la ricerca del nome in due fasi non è supportata per C++/CLI, C++/CX o OpenMP. Usare /Zc:twoPhase-
-d:\documents\git_projects\ard-simulator-master\ard-simulator-190113\source.cpp(133): warning C4244: 'inizializzazione': conversione da 'double' a 'int'. Possibile perdita di dati.
-  ARD-simulator-190113.vcxproj -> D:\Documents\git_projects\ARD-simulator-master\x64\Debug\ARD-simulator-190113.exe
