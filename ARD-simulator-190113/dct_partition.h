@@ -7,7 +7,7 @@ class DctPartition : public Partition
 	double lx2_, ly2_, lz2_;	// actual length ^2
 	double *cwt_{ nullptr };	// cos(wt)
 	double* swt_{ nullptr };	// sin(wt)
-	double* alpha_abs_{ nullptr };	// alpha
+	double* alpha_{ nullptr };	// alpha
 	double* alpha2_{ nullptr };	// alpha^2
 	double* eatm_{ nullptr };	// exp(-alpha*t)
 	double* w_omega_{ nullptr };	// w
@@ -24,7 +24,7 @@ class DctPartition : public Partition
 	double *velocity_{ nullptr };
 
 public:
-	DctPartition(int xs, int ys, int zs, int w, int h, int d);
+	DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha);
 	~DctPartition();
 
 	virtual void Update();

@@ -13,10 +13,13 @@ protected:
 	double dh_;
 	double dt_;
 	double c0_;
+	double alpha_;
+
 	int x_start_, x_end_;
 	int y_start_, y_end_;
 	int z_start_, z_end_;
 	int width_, height_, depth_;
+
 	struct Info
 	{
 		int id;
@@ -42,7 +45,7 @@ protected:
 public:
 	static double absorption_;
 
-	Partition(int xs, int ys, int zs, int w, int h, int d);
+	Partition(int xs, int ys, int zs, int w, int h, int d, double alpha);
 	~Partition();
 
 	virtual void Update() = 0;
