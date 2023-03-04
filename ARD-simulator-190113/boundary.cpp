@@ -18,36 +18,6 @@ Boundary::~Boundary()
 {
 }
 
-/*
-ComputeForcingTerms() computes forcing terms for the boundaries of a simulation grid. 
-
-The function starts by initializing a 6x6 array "coefs" with constant values.
-
-The function then checks the type of the boundary using "type_" and if it is an X_BOUNDARY, 
-it performs calculations. 
-
-The code determines if the boundary is located to the left or right of two other boundaries, 
-"a_" and "b_", by comparing their x-coordinate positions. 
-
-The code then parallelizes the following calculations for each i in the y-direction and j 
-in the z-direction using OpenMP:
-
-1. The code computes a value "sip" based on the pressures of the left and right boundaries, 
-taking into account the values in the "coefs" array.
-
-2. The code computes "fi", another value, using the "sip" value and some constants.
-
-3. The code sets the force on the left or right boundary using "fi" multiplied by the 
-"absorption_" value.
-
-If the boundary type is a Y_BOUNDARY, the code performs similar calculations as for the 
-X_BOUNDARY, but in the y-direction. 
-
-The code determines if the boundary is located at the top or bottom of two other boundaries, 
-"a_" and "b_", by comparing their y-coordinate positions.
-
-For Z_BOUNDARY, the code performs similar calculations in the z-direction.
-*/
 void Boundary::ComputeForcingTerms()
 {
 	double coefs[6][6] = {
@@ -270,24 +240,6 @@ void Boundary::ComputeForcingTerms()
 //	}
 //}
 
-/*
-FindBoundary() takes three arguments:
-
-1. a is a std::shared_ptr<Partition> which represents a partition.
-2. b is a std::shared_ptr<Partition> which represents another partition.
-3. absorp is a double which represents the absorption coefficient of the boundary.
-
-The function calculates the overlapping areas between a and b along the x and y axis, and 
-determines if they are touching or not. 
-
-If the partitions are touching along the x-axis, the function returns a 
-std::shared_ptr<Boundary> object with the x-axis boundary information. 
-
-If they are touching along the y-axis, the function returns a std::shared_ptr<Boundary> 
-object with the y-axis boundary information. 
-
-If the partitions are not touching, the function returns a nullptr.
-*/
 std::shared_ptr<Boundary> Boundary::FindBoundary(std::shared_ptr<Partition> a, std::shared_ptr<Partition> b, double absorp)
 {
 	int xa_min = a->x_start_;
