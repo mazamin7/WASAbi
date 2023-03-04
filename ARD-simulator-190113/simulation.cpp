@@ -51,7 +51,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 	info_.num_sources = sources_.size();
 
 
-	// Find adn create PML partitions.
+	// Find and create PML partitions.
 	for (int cnt = 0; cnt < info_.num_dct_partitions; cnt++)
 	{
 		auto partition = partitions_[cnt];
@@ -303,6 +303,14 @@ int Simulation::Update()
 	//std::cout << "#" << std::setw(5) << time_step << " : ";
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
+	// Reset residues and forces
+	for (int i = 0; i < partitions_.size(); i++)
+	{
+		auto part = partitions_[i];
+		part->reset_residues();
+		part->reset_forces();
+	}
+
 #pragma omp parallel for
 	for (int i = 0; i < boundaries_.size(); i++)
 	{
@@ -310,10 +318,12 @@ int Simulation::Update()
 	}
 	//std::cout << std::endl;
 
+	if (is_pre_merge)
 #pragma omp parallel for
 	for (int i = 0; i < boundaries_.size(); i++)
 	{
 		boundaries_[i]->PreMerge();
+		// std::cout << "Pre-merge";
 	}
 	//std::cout << std::endl;
 
@@ -324,6 +334,15 @@ int Simulation::Update()
 		partitions_[i]->Update();
 		//std::cout << "update partition " << partition->info_.id << " ";
 	}
+
+	if (!is_pre_merge)
+#pragma omp parallel for
+	for (int i = 0; i < boundaries_.size(); i++)
+	{
+		boundaries_[i]->PostMerge();
+		// std::cout << "Post-merge";
+	}
+	//std::cout << std::endl;
 
 	// Visualization
 	{

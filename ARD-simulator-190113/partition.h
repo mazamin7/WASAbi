@@ -51,14 +51,21 @@ public:
 	virtual void Update() = 0;
 
 	virtual double* get_pressure_field() = 0;
+
 	std::vector<double> get_xy_plane(int z);
 	std::vector<double> get_yz_plane(int x);
 	std::vector<double> get_xz_plane(int y);
+
 	virtual double get_pressure(int x, int y, int z) = 0;
-	virtual double get_residue(int x, int y, int z) = 0;
-	virtual void set_force(int x, int y, int z, double f) = 0;
 	virtual void set_pressure(int x, int y, int z, double v) = 0;
+	virtual double get_residue(int x, int y, int z) = 0;
 	virtual void set_residue(int x, int y, int z, double v) = 0;
+	virtual double get_force(int x, int y, int z) = 0;
+	virtual void set_force(int x, int y, int z, double f) = 0;
+
+	void reset_residues();
+	void reset_forces();
+
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 
 	void AddBoundary(std::shared_ptr<Boundary> boundary);

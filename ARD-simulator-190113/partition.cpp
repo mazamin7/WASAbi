@@ -182,7 +182,6 @@ void Partition::Info()
 		<< std::to_string(info_.num_boundaries) << " boundaries; " << std::endl;
 }
 
-
 void Partition::ComputeSourceForcingTerms(double t)
 {
 	for (auto source : sources_)
@@ -192,5 +191,33 @@ void Partition::ComputeSourceForcingTerms(double t)
 			source->y_ - y_start_,
 			source->z_ - z_start_,
 			source->SampleValue(t));
+	}
+}
+
+void Partition::reset_residues()
+{
+	for (int i = 0; i < depth_; i++)
+	{
+		for (int j = 0; j < height_; j++)
+		{
+			for (int k = 0; k < width_; k++)
+			{
+				set_residue(k, j, i, 0);
+			}
+		}
+	}
+}
+
+void Partition::reset_forces()
+{
+	for (int i = 0; i < depth_; i++)
+	{
+		for (int j = 0; j < height_; j++)
+		{
+			for (int k = 0; k < width_; k++)
+			{
+				set_force(k, j, i, 0);
+			}
+		}
 	}
 }

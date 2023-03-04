@@ -32,13 +32,14 @@ public:
 
 	virtual double* get_pressure_field();
 	virtual double get_pressure(int x, int y, int z);
-	virtual double get_residue(int x, int y, int z);
 	virtual void set_pressure(int x, int y, int z, double v);
+	virtual double get_residue(int x, int y, int z);
 	virtual void set_residue(int x, int y, int z, double v);
+	virtual double get_force(int x, int y, int z);
 	virtual void set_force(int x, int y, int z, double f);
+
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 
-	double get_force(int x, int y, int z);
 	std::vector<double> get_xy_force_plane(int z);
 	friend class Boundary;
 };

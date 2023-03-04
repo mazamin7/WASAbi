@@ -27,6 +27,7 @@ void Boundary::ComputeResidues()
 		{  2.0, -27.0,  270.0, -270.0,  27.0, -2.0 },
 		{  0.0,   2.0,  -27.0,   27.0,  -2.0,  0.0 },
 		{  0.0,   0.0,    2.0,   -2.0,   0.0,  0.0 } };
+
 	if (type_ == X_BOUNDARY)
 	{
 		bool is_a_left = (x_start_ <= a_->x_end_ && x_end_ >= a_->x_end_);
@@ -45,10 +46,13 @@ void Boundary::ComputeResidues()
 				{
 					int left_x = left->width_ + m;
 					int right_x = m;
+
 					double sip = 0.0;
 					double sip1 = 0.0;
 					double sip2 = 0.0;
-					double fi = 0.0;
+					double res = 0.0;
+					double old = 0.0;
+
 					for (int n = 0; n < 3; n++)
 					{
 						sip1 += coefs[m + 3][n] * left->get_pressure(left->width_ - 3 + n, left_y, left_z);
@@ -61,14 +65,16 @@ void Boundary::ComputeResidues()
 					{
 						//sip = sip1 + sip2;
 						sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
-						fi = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						left->set_residue(left_x, left_y, left_z, absorption_ * fi);
+						old = left->get_residue(left_x, left_y, left_z);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						left->set_residue(left_x, left_y, left_z, absorption_ * res + old);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
-						fi = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						right->set_residue(right_x, right_y, right_z, absorption_ * fi);
+						old = right->get_residue(right_x, right_y, right_z);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						right->set_residue(right_x, right_y, right_z, absorption_ * res + old);
 					}
 				}
 
@@ -93,10 +99,13 @@ void Boundary::ComputeResidues()
 				{
 					int top_y = top->height_ + m;
 					int bottom_y = m;
+
 					double sip = 0.0;
 					double sip1 = 0.0;
 					double sip2 = 0.0;
-					double fi = 0.0;
+					double res = 0.0;
+					double old = 0.0;
+
 					for (int n = 0; n < 3; n++)
 					{
 						sip1 += coefs[m + 3][n] * top->get_pressure(top_x, top->height_ - 3 + n, top_z);
@@ -109,14 +118,16 @@ void Boundary::ComputeResidues()
 					{
 						//sip = sip1 + sip2;
 						sip = top->include_self_terms_ ? (sip1 + sip2) : sip2;
-						fi = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						top->set_residue(top_x, top_y, top_z, absorption_ * fi);
+						old = top->get_residue(top_x, top_y, top_z);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						top->set_residue(top_x, top_y, top_z, absorption_ * res + old);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = bottom->include_self_terms_ ? (sip1 + sip2) : sip1;
-						fi = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						bottom->set_residue(bottom_x, bottom_y, bottom_z, absorption_ * fi);
+						old = bottom->get_residue(bottom_x, bottom_y, bottom_z);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						bottom->set_residue(bottom_x, bottom_y, bottom_z, absorption_ * res + old);
 					}
 				}
 
@@ -141,10 +152,13 @@ void Boundary::ComputeResidues()
 				{
 					int front_z = front->depth_ + m;
 					int back_z = m;
+
 					double sip = 0.0;
 					double sip1 = 0.0;
 					double sip2 = 0.0;
-					double fi = 0.0;
+					double res = 0.0;
+					double old = 0.0;
+
 					for (int n = 0; n < 3; n++)
 					{
 						sip1 += coefs[m + 3][n] * front->get_pressure(front_x, front_y, front->depth_ - 3 + n);
@@ -157,14 +171,16 @@ void Boundary::ComputeResidues()
 					{
 						//sip = sip1 + sip2;
 						sip = front->include_self_terms_ ? (sip1 + sip2) : sip2;
-						fi = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						front->set_residue(front_x, front_y, front_z, absorption_ * fi);
+						old = front->get_residue(front_x, front_y, front_z);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						front->set_residue(front_x, front_y, front_z, absorption_ * res + old);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = back->include_self_terms_ ? (sip1 + sip2) : sip1;
-						fi = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						back->set_residue(back_x, back_y, back_z, absorption_ * fi);
+						old = back->get_residue(back_x, back_y, back_z);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						back->set_residue(back_x, back_y, back_z, absorption_ * res + old);
 					}
 				}
 
@@ -195,15 +211,18 @@ void Boundary::PreMerge()
 					int right_x = m;
 
 					double res = 0.0;
+					double old = 0.0;
 
 					if (m < 0)
 					{
+						old = left->get_force(left_x, left_y, left_z);
 						res = left->get_residue(left_x, left_y, left_z);
-						left->set_force(left_x, left_y, left_z, res);
+						left->set_force(left_x, left_y, left_z, res + old);
 					}
 					else {
+						old = right->get_force(right_x, right_y, right_z);
 						res = right->get_residue(right_x, right_y, right_z);
-						right->set_force(right_x, right_y, right_z, res);
+						right->set_force(right_x, right_y, right_z, res + old);
 					}
 				}
 
@@ -230,15 +249,18 @@ void Boundary::PreMerge()
 					int bottom_y = m;
 
 					double res = 0.0;
+					double old = 0.0;
 
 					if (m < 0)
 					{
+						old = top->get_force(top_x, top_y, top_z);
 						res = top->get_residue(top_x, top_y, top_z);
-						top->set_force(top_x, top_y, top_z, res);
+						top->set_force(top_x, top_y, top_z, res + old);
 					}
 					else {
+						old = bottom->get_force(bottom_x, bottom_y, bottom_z);
 						res = bottom->get_residue(bottom_x, bottom_y, bottom_z);
-						bottom->set_force(bottom_x, bottom_y, bottom_z, res);
+						bottom->set_force(bottom_x, bottom_y, bottom_z, res + old);
 					}
 				}
 
@@ -265,15 +287,138 @@ void Boundary::PreMerge()
 					int back_z = m;
 
 					double res = 0.0;
+					double old = 0.0;
 
 					if (m < 0)
 					{
+						old = front->get_force(front_x, front_y, front_z);
 						res = front->get_residue(front_x, front_y, front_z);
-						front->set_force(front_x, front_y, front_z, res);
+						front->set_force(front_x, front_y, front_z, res + old);
 					}
 					else {
+						old = back->get_force(back_x, back_y, back_z);
 						res = back->get_residue(back_x, back_y, back_z);
-						back->set_force(back_x, back_y, back_z, res);
+						back->set_force(back_x, back_y, back_z, res + old);
+					}
+				}
+
+			}
+		}
+	}
+}
+
+void Boundary::PostMerge()
+{
+	double dt2 = Simulation::dt_ * Simulation::dt_;
+
+	if (type_ == X_BOUNDARY)
+	{
+		bool is_a_left = (x_start_ <= a_->x_end_ && x_end_ >= a_->x_end_);
+		auto left = is_a_left ? a_ : b_;
+		auto right = is_a_left ? b_ : a_;
+#pragma omp parallel for
+		for (int i = y_start_; i < y_end_; i++)
+		{
+			for (int j = z_start_; j < z_end_; j++)
+			{
+				int left_y = i - left->y_start_;
+				int right_y = i - right->y_start_;
+				int left_z = j - left->z_start_;
+				int right_z = j - right->z_start_;
+				for (int m = -3; m < 3; m++)
+				{
+					int left_x = left->width_ + m;
+					int right_x = m;
+
+					double res = 0.0;
+					double old = 0.0;
+
+					if (m < 0)
+					{
+						old = left->get_pressure(left_x, left_y, left_z);
+						res = left->get_residue(left_x, left_y, left_z);
+						left->set_pressure(left_x, left_y, left_z, dt2 * res + old);
+					}
+					else {
+						old = right->get_pressure(right_x, right_y, right_z);
+						res = right->get_residue(right_x, right_y, right_z);
+						right->set_pressure(right_x, right_y, right_z, dt2 * res + old);
+					}
+				}
+
+			}
+		}
+	}
+	else if (type_ == Y_BOUNDARY)
+	{
+		bool is_a_top = (y_start_ <= a_->y_end_ && y_end_ >= a_->y_end_);
+		auto top = is_a_top ? a_ : b_;
+		auto bottom = is_a_top ? b_ : a_;
+#pragma omp parallel for
+		for (int i = x_start_; i < x_end_; i++)
+		{
+			for (int j = z_start_; j < z_end_; j++)
+			{
+				int top_x = i - top->x_start_;
+				int bottom_x = i - bottom->x_start_;
+				int top_z = j - top->z_start_;
+				int bottom_z = j - bottom->z_start_;
+				for (int m = -3; m < 3; m++)
+				{
+					int top_y = top->height_ + m;
+					int bottom_y = m;
+
+					double res = 0.0;
+					double old = 0.0;
+
+					if (m < 0)
+					{
+						old = top->get_pressure(top_x, top_y, top_z);
+						res = top->get_residue(top_x, top_y, top_z);
+						top->set_pressure(top_x, top_y, top_z, dt2 * res + old);
+					}
+					else {
+						old = bottom->get_pressure(bottom_x, bottom_y, bottom_z);
+						res = bottom->get_residue(bottom_x, bottom_y, bottom_z);
+						bottom->set_pressure(bottom_x, bottom_y, bottom_z, dt2 * res + old);
+					}
+				}
+
+			}
+		}
+	}
+	else if (type_ == Z_BOUNDARY)
+	{
+		bool is_a_front = (z_start_ <= a_->z_end_ && z_end_ >= a_->z_end_);
+		auto front = is_a_front ? a_ : b_;
+		auto back = is_a_front ? b_ : a_;
+#pragma omp parallel for
+		for (int i = x_start_; i < x_end_; i++)
+		{
+			for (int j = y_start_; j < y_end_; j++)
+			{
+				int front_x = i - front->x_start_;
+				int back_x = i - back->x_start_;
+				int front_y = j - front->y_start_;
+				int back_y = j - back->y_start_;
+				for (int m = -3; m < 3; m++)
+				{
+					int front_z = front->depth_ + m;
+					int back_z = m;
+
+					double res = 0.0;
+					double old = 0.0;
+
+					if (m < 0)
+					{
+						old = front->get_pressure(front_x, front_y, front_z);
+						res = front->get_residue(front_x, front_y, front_z);
+						front->set_pressure(front_x, front_y, front_z, dt2 * res + old);
+					}
+					else {
+						old = back->get_pressure(back_x, back_y, back_z);
+						res = back->get_residue(back_x, back_y, back_z);
+						back->set_pressure(back_x, back_y, back_z, dt2 * res + old);
 					}
 				}
 

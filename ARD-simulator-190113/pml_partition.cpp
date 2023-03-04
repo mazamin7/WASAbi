@@ -208,22 +208,27 @@ double PmlPartition::get_pressure(int x, int y, int z)
 	return p_[GetIndex(x, y, z)];
 }
 
-double PmlPartition::get_residue(int x, int y, int z)
-{
-	return residue_[GetIndex(x, y, z)];
-}
-
-void PmlPartition::set_force(int x, int y, int z, double f)
-{
-	force_[GetIndex(x, y, z)] = f;
-}
-
 void PmlPartition::set_pressure(int x, int y, int z, double v)
 {
 	p_[GetIndex(x, y, z)] = v;
 }
 
+double PmlPartition::get_residue(int x, int y, int z)
+{
+	return residue_[GetIndex(x, y, z)];
+}
+
 void PmlPartition::set_residue(int x, int y, int z, double v)
 {
 	residue_[GetIndex(x, y, z)] = v;
+}
+
+double PmlPartition::get_force(int x, int y, int z)
+{
+	return force_[GetIndex(x, y, z)];
+}
+
+void PmlPartition::set_force(int x, int y, int z, double f)
+{
+	force_[GetIndex(x, y, z)] = f;
 }

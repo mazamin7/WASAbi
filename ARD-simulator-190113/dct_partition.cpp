@@ -116,6 +116,11 @@ void DctPartition::set_residue(int x, int y, int z, double v)
 	residue_.set_value(x, y, z, v);
 }
 
+double DctPartition::get_force(int x, int y, int z)
+{
+	return force_.get_value(x, y, z);
+}
+
 void DctPartition::set_force(int x, int y, int z, double f)
 {
 	force_.set_value(x, y, z, f);
@@ -130,11 +135,6 @@ std::vector<double> DctPartition::get_xy_forcing_plane(int z)
 		}
 	}
 	return xy_plane;
-}
-
-double DctPartition::get_force(int x, int y, int z)
-{
-	return force_.get_value(x, y, z);
 }
 
 std::vector<double> DctPartition::get_xy_force_plane(int z)
