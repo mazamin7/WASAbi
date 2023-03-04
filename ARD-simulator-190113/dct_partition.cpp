@@ -2,32 +2,7 @@
 #include <cmath>
 #include "dct_partition.h"
 
-/*
-The constructor sets the values of various data members including pressure_, force_, 
-prev_modes_, next_modes_, cwt_, w2_, and others.
 
-It first initializes the base class Partition with the given arguments 
-xs, ys, zs, w, h, and d which represents the starting position xs, ys, zs and the 
-width w, height h, and depth d of the partition.
-
-Then it sets the value of should_render_ to true and sets the type of the info_ member 
-to "DCT".
-
-The member prev_modes_, next_modes_, cwt_, and w2_ are dynamically allocated memory of 
-size width_ * height_ * depth_ using the calloc function.
-
-The member lx2_, ly2_, and lz2_ are computed based on the values of width_, height_, 
-and depth_.
-
-Finally, a nested for loop is used to compute values of w2_ (squared angular frequency) 
-and cwt_ ( cos(omega*dt) ).
-
-The loop iterates over the entire volume of the partition defined by width_, height_, 
-and depth_ and computes the values of w2_ and cwt_ at each point. 
-
-The computation is based on the values of lx2_, ly2_, and lz2_ and the constant 
-c0_ (speed of sound) and dt_ (time step).
-*/
 DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
 	: Partition(xs, ys, zs, w, h, d), pressure_(w, h, d), force_(w, h, d)
 {
@@ -67,24 +42,6 @@ DctPartition::~DctPartition()
 	free(w2_);
 }
 
-/*
-The Update function of the DctPartition class performs the following steps:
-
-1. The force_ object executes the discrete cosine transform (DCT) with the 
-ExcuteDct() function.
-
-2. For each cell in the partition, the value of next_modes_[idx] is updated 
-based on the current values of pressure_.modes_[idx], prev_modes_[idx], and 
-force_.modes_[idx].
-
-3. The value of prev_modes_ is updated with the current values of 
-pressure_.modes_.
-
-4. The values of pressure_.modes_ are updated with the values of next_modes_.
-
-5. The pressure_ object executes the inverse discrete cosine transform (IDCT) 
-with the ExcuteIdct function.
-*/
 void DctPartition::Update()
 {
 	force_.ExcuteDct();
