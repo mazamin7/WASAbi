@@ -304,18 +304,26 @@ int Simulation::Update()
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
 #pragma omp parallel for
+	for (int i = 0; i < boundaries_.size(); i++)
+	{
+		boundaries_[i]->ComputeResidues();
+	}
+	//std::cout << std::endl;
+
+#pragma omp parallel for
+	for (int i = 0; i < boundaries_.size(); i++)
+	{
+		boundaries_[i]->PreMerge();
+	}
+	//std::cout << std::endl;
+
+#pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->ComputeSourceForcingTerms(time_step);
 		partitions_[i]->Update();
 		//std::cout << "update partition " << partition->info_.id << " ";
 	}
-#pragma omp parallel for
-	for (int i = 0; i < boundaries_.size(); i++)
-	{
-		boundaries_[i]->ComputeForcingTerms();
-	}
-	//std::cout << std::endl;
 
 	// Visualization
 	{

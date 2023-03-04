@@ -33,6 +33,8 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	p_ = (double *)malloc(size * sizeof(double));
 	p_new_ = (double *)malloc(size * sizeof(double));
 
+	residue_ = (double*)malloc(size * sizeof(double));
+
 	phi_x_ = (double *)malloc(size * sizeof(double));
 	phi_x_new_ = (double *)malloc(size * sizeof(double));
 	phi_y_ = (double *)malloc(size * sizeof(double));
@@ -206,7 +208,22 @@ double PmlPartition::get_pressure(int x, int y, int z)
 	return p_[GetIndex(x, y, z)];
 }
 
+double PmlPartition::get_residue(int x, int y, int z)
+{
+	return residue_[GetIndex(x, y, z)];
+}
+
 void PmlPartition::set_force(int x, int y, int z, double f)
 {
 	force_[GetIndex(x, y, z)] = f;
+}
+
+void PmlPartition::set_pressure(int x, int y, int z, double v)
+{
+	p_[GetIndex(x, y, z)] = v;
+}
+
+void PmlPartition::set_residue(int x, int y, int z, double v)
+{
+	residue_[GetIndex(x, y, z)] = v;
 }

@@ -55,7 +55,10 @@ public:
 	std::vector<double> get_yz_plane(int x);
 	std::vector<double> get_xz_plane(int y);
 	virtual double get_pressure(int x, int y, int z) = 0;
+	virtual double get_residue(int x, int y, int z) = 0;
 	virtual void set_force(int x, int y, int z, double f) = 0;
+	virtual void set_pressure(int x, int y, int z, double v) = 0;
+	virtual void set_residue(int x, int y, int z, double v) = 0;
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 
 	void AddBoundary(std::shared_ptr<Boundary> boundary);

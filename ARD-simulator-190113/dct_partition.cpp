@@ -4,7 +4,7 @@
 
 
 DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double h_abs)
-	: Partition(xs, ys, zs, w, h, d, h_abs), pressure_(w, h, d), force_(w, h, d)
+	: Partition(xs, ys, zs, w, h, d, h_abs), pressure_(w, h, d), force_(w, h, d), residue_(w, h, d)
 {
 	should_render_ = true;
 	info_.type = "DCT";
@@ -99,6 +99,21 @@ double* DctPartition::get_pressure_field()
 double DctPartition::get_pressure(int x, int y, int z)
 {
 	return pressure_.get_value(x, y, z);
+}
+
+void DctPartition::set_pressure(int x, int y, int z, double v)
+{
+	pressure_.set_value(x, y, z, v);
+}
+
+double DctPartition::get_residue(int x, int y, int z)
+{
+	return residue_.get_value(x, y, z);
+}
+
+void DctPartition::set_residue(int x, int y, int z, double v)
+{
+	residue_.set_value(x, y, z, v);
 }
 
 void DctPartition::set_force(int x, int y, int z, double f)
