@@ -152,7 +152,7 @@ int main()
 		SDL_RenderCopy(renderer, texture, nullptr, &simulation_rect);
 		SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
 
-		message = std::to_string((omp_get_wtime() - time1) / 60) + " min";
+		message = std::to_string(static_cast<int>(round((omp_get_wtime() - time1) / 60))) + " min, " + std::to_string(static_cast<int>(round((omp_get_wtime() - time1))) % 60) + " sec";
 		surfaceMessage = TTF_RenderText_Solid(Sans, message.c_str(), White);
 		Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
 		SDL_RenderCopy(renderer, Message, NULL, &Message_rect2);
