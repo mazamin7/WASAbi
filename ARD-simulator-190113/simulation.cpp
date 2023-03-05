@@ -318,14 +318,15 @@ int Simulation::Update()
 	}
 	//std::cout << std::endl;
 
-	if (is_pre_merge)
+	if (is_pre_merge) {
 #pragma omp parallel for
-	for (int i = 0; i < boundaries_.size(); i++)
-	{
-		boundaries_[i]->PreMerge();
-		// std::cout << "Pre-merge";
+		for (int i = 0; i < partitions_.size(); i++)
+		{
+			partitions_[i]->PreMerge();
+			// std::cout << "Pre-merge";
+		}
+		//std::cout << std::endl;
 	}
-	//std::cout << std::endl;
 
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
@@ -335,14 +336,15 @@ int Simulation::Update()
 		//std::cout << "update partition " << partition->info_.id << " ";
 	}
 
-	if (!is_pre_merge)
+	if (!is_pre_merge) {
 #pragma omp parallel for
-	for (int i = 0; i < boundaries_.size(); i++)
-	{
-		boundaries_[i]->PostMerge();
-		// std::cout << "Post-merge";
+		for (int i = 0; i < partitions_.size(); i++)
+		{
+			partitions_[i]->PostMerge();
+			// std::cout << "Post-merge";
+		}
+		//std::cout << std::endl;
 	}
-	//std::cout << std::endl;
 
 	// Visualization
 	{

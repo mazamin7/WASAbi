@@ -194,7 +194,7 @@ void Partition::ComputeSourceForcingTerms(double t)
 	}
 }
 
-void Partition::reset_residues()
+void Partition::PreMerge()
 {
 	for (int i = 0; i < depth_; i++)
 	{
@@ -202,21 +202,27 @@ void Partition::reset_residues()
 		{
 			for (int k = 0; k < width_; k++)
 			{
-				set_residue(k, j, i, 0);
+				auto old = get_force(k, j, i);
+				auto res = get_residue(k, j, i);
+				set_force(k, j, i, res + old);
 			}
 		}
 	}
 }
 
-void Partition::reset_forces()
+void Partition::PostMerge()
 {
+	double dt2 = Simulation::dt_ * Simulation::dt_;
+
 	for (int i = 0; i < depth_; i++)
 	{
 		for (int j = 0; j < height_; j++)
 		{
 			for (int k = 0; k < width_; k++)
 			{
-				set_force(k, j, i, 0);
+				auto old = get_pressure(k, j, i);
+				auto res = get_residue(k, j, i);
+				set_pressure(k, j, i, res * dt2 + old);
 			}
 		}
 	}

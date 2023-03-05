@@ -68,6 +68,8 @@ DctPartition::~DctPartition()
 void DctPartition::Update()
 {
 	force_.ExcuteDct();
+	pressure_.ExcuteDct();
+
 	for (int i = 0; i < depth_; i++)
 	{
 		for (int j = 0; j < height_; j++)
@@ -86,8 +88,10 @@ void DctPartition::Update()
 			}
 		}
 	}
+
 	memcpy((void *)prev_modes_, (void *)pressure_.modes_, depth_ * width_ * height_ * sizeof(double));
 	memcpy((void *)pressure_.modes_, (void *)next_modes_, depth_ * width_ * height_ * sizeof(double));
+
 	pressure_.ExcuteIdct();
 }
 
@@ -124,6 +128,16 @@ double DctPartition::get_force(int x, int y, int z)
 void DctPartition::set_force(int x, int y, int z, double f)
 {
 	force_.set_value(x, y, z, f);
+}
+
+void DctPartition::reset_forces()
+{
+	force_.reset();
+}
+
+void DctPartition::reset_residues()
+{
+	residue_.reset();
 }
 
 std::vector<double> DctPartition::get_xy_forcing_plane(int z)

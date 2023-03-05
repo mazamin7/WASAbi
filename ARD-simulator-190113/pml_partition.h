@@ -59,5 +59,8 @@ public:
 	virtual void set_residue(int x, int y, int z, double v);
 	virtual double get_force(int x, int y, int z);
 	virtual void set_force(int x, int y, int z, double f);
+
+	virtual void reset_forces();
+	virtual void reset_residues();
 };
 

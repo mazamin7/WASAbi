@@ -22,6 +22,8 @@ public:
 	void set_value(int x, int y, int z, double v);
 	void set_mode(int x, int y, int z, double m);
 
+	void reset();
+
 	friend class Partition;
 	friend class DctPartition;
 };

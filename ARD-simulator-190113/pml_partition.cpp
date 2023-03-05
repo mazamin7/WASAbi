@@ -33,8 +33,6 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	p_ = (double *)malloc(size * sizeof(double));
 	p_new_ = (double *)malloc(size * sizeof(double));
 
-	residue_ = (double*)malloc(size * sizeof(double));
-
 	phi_x_ = (double *)malloc(size * sizeof(double));
 	phi_x_new_ = (double *)malloc(size * sizeof(double));
 	phi_y_ = (double *)malloc(size * sizeof(double));
@@ -43,6 +41,9 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	phi_z_new_ = (double *)malloc(size * sizeof(double));
 
 	force_ = (double *)malloc(size * sizeof(double));
+
+	residue_ = (double*)malloc(size * sizeof(double));
+
 	memset((void *)p_old_, 0, size * sizeof(double));
 	memset((void *)p_, 0, size * sizeof(double));
 	memset((void *)p_new_, 0, size * sizeof(double));
@@ -53,10 +54,12 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	memset((void *)phi_z_, 0, size * sizeof(double));
 	memset((void *)phi_z_new_, 0, size * sizeof(double));
 	memset((void *)force_, 0, size * sizeof(double));
+	memset((void*)residue_, 0, size * sizeof(double));
 
 	zetax_ = (double*)calloc(size, sizeof(double));
 	zetay_ = (double*)calloc(size, sizeof(double));
 	zetaz_ = (double*)calloc(size, sizeof(double));
+
 	for (int k = 0; k < depth_; k++)
 	{
 		for (int j = 0; j < height_; j++)
@@ -104,6 +107,7 @@ PmlPartition::~PmlPartition()
 	free(phi_z_);
 	free(phi_z_new_);
 	free(force_);
+	free(residue_);
 	free(zetax_);
 	free(zetay_);
 	free(zetaz_);
@@ -231,4 +235,22 @@ double PmlPartition::get_force(int x, int y, int z)
 void PmlPartition::set_force(int x, int y, int z, double f)
 {
 	force_[GetIndex(x, y, z)] = f;
+}
+
+void PmlPartition::reset_forces()
+{
+	int width = width_;
+	int height = height_;
+	int depth = depth_;
+
+	memset((void*)force_, 0, width * height * depth * sizeof(double));
+}
+
+void PmlPartition::reset_residues()
+{
+	int width = width_;
+	int height = height_;
+	int depth = depth_;
+
+	memset((void*)residue_, 0, width * height * depth * sizeof(double));
 }

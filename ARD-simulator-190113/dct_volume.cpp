@@ -23,6 +23,7 @@ DctVolume::~DctVolume()
 void DctVolume::ExcuteDct()
 {
 	fftw_execute(dct_plan_);
+
 	// FFTW3 does not normalize values, so we must perform this
 	// step, or values will be wacky.
 	for (int i = 0; i < depth_; i++)
@@ -40,6 +41,7 @@ void DctVolume::ExcuteDct()
 void DctVolume::ExcuteIdct()
 {
 	fftw_execute(idct_plan_);
+
 	// Normalization
 	for (int i = 0; i < depth_; i++)
 	{
@@ -71,4 +73,14 @@ void DctVolume::set_value(int x, int y, int z, double v)
 void DctVolume::set_mode(int x, int y, int z, double m)
 {
 	modes_[z * height_ * width_ + y * width_ + x] = m;
+}
+
+void DctVolume::reset()
+{
+	int width = width_;
+	int height = height_;
+	int depth = depth_;
+
+	memset((void*)values_, 0, width * height * depth * sizeof(double));
+	memset((void*)modes_, 0, width * height * depth * sizeof(double));
 }

@@ -44,7 +44,7 @@ int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
 
 int main()
 {
-	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the cosuming time.
+	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the consuming time.
 
 	std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::absorption_);
 	CreateDirectory(dir_name.c_str(), NULL);	// Prepare for the output folder.
@@ -72,7 +72,7 @@ int main()
 
 	auto simulation = std::make_shared<Simulation>(partitions, sources);	// Initialize the simulation.
 	simulation->Info();														// Show basic info of the simulation
-	//simulation->look_from_ = 1;											// FOR DEBUG: show field from another view direction.
+	simulation->look_from_ = 0;											// FOR DEBUG: show field from another view direction.
 
 	/* Initialize SDL window
 	 * simulation_rect: show field.

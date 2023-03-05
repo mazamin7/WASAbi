@@ -63,8 +63,11 @@ public:
 	virtual double get_force(int x, int y, int z) = 0;
 	virtual void set_force(int x, int y, int z, double f) = 0;
 
-	void reset_residues();
-	void reset_forces();
+	virtual void reset_forces() = 0;
+	virtual void reset_residues() = 0;
+
+	void PreMerge();
+	void PostMerge();
 
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 
