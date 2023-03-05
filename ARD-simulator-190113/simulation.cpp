@@ -323,7 +323,6 @@ int Simulation::Update()
 		for (int i = 0; i < partitions_.size(); i++)
 		{
 			partitions_[i]->PreMerge();
-			// std::cout << "Pre-merge";
 		}
 		//std::cout << std::endl;
 	}
@@ -341,7 +340,6 @@ int Simulation::Update()
 		for (int i = 0; i < partitions_.size(); i++)
 		{
 			partitions_[i]->PostMerge();
-			// std::cout << "Post-merge";
 		}
 		//std::cout << std::endl;
 	}
@@ -480,6 +478,11 @@ void Simulation::Info()
 	{
 		std::cout << "Source " << s->id_ << ": " << s->x() << "," << s->y() << "," << s->z() << std::endl;
 	}
+	std::cout << "------------------------------------------------------------" << std::endl;
+	if (is_pre_merge)
+		std::cout << "Using Pre-merge" << std::endl;
+	else
+		std::cout << "Using Post-merge" << std::endl;
 	std::cout << "------------------------------------------------------------" << std::endl;
 }
 
