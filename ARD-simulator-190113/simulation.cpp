@@ -318,12 +318,6 @@ int Simulation::Update()
 	}
 
 #pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
-		partitions_[i]->ComputeSourceForcingTerms(time_step);
-	}
-
-#pragma omp parallel for
 	for (int i = 0; i < boundaries_.size(); i++)
 	{
 		boundaries_[i]->ComputeResidues();
@@ -342,6 +336,7 @@ int Simulation::Update()
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
+		partitions_[i]->ComputeSourceForcingTerms(time_step);
 		partitions_[i]->Update();
 		//std::cout << "update partition " << partition->info_.id << " ";
 	}

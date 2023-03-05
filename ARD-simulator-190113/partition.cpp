@@ -202,9 +202,9 @@ void Partition::PreMerge()
 		{
 			for (int k = 0; k < width_; k++)
 			{
-				auto old = get_force(k, j, i);
+				//auto old = get_force(k, j, i);
 				auto res = get_residue(k, j, i);
-				set_force(k, j, i, res + old);
+				set_force(k, j, i, res);
 			}
 		}
 	}

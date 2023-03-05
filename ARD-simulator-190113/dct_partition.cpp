@@ -68,7 +68,7 @@ DctPartition::~DctPartition()
 void DctPartition::Update()
 {
 	force_.ExcuteDct();
-	pressure_.ExcuteDct();
+	// pressure_.ExcuteDct();
 
 	for (int i = 0; i < depth_; i++)
 	{
