@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <omp.h>
+#include <assert.h>
 
 
 Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std::vector<std::shared_ptr<SoundSource>> &sources)
@@ -309,6 +310,17 @@ int Simulation::Update()
 		auto part = partitions_[i];
 		part->reset_residues();
 		part->reset_forces();
+
+		double temp = part->check_reset_residues();
+		if(temp > 0.0)
+			std::cout << "NOOOOO! " + std::to_string(temp) << std::endl;
+		assert(temp == 0);
+	}
+
+#pragma omp parallel for
+	for (int i = 0; i < partitions_.size(); i++)
+	{
+		partitions_[i]->ComputeSourceForcingTerms(time_step);
 	}
 
 #pragma omp parallel for
@@ -330,7 +342,6 @@ int Simulation::Update()
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
-		partitions_[i]->ComputeSourceForcingTerms(time_step);
 		partitions_[i]->Update();
 		//std::cout << "update partition " << partition->info_.id << " ";
 	}

@@ -140,6 +140,25 @@ void DctPartition::reset_residues()
 	residue_.reset();
 }
 
+double DctPartition::check_reset_residues()
+{
+	double acc = 0.0;
+
+	for (int i = 0; i < depth_; i++)
+	{
+		for (int j = 0; j < height_; j++)
+		{
+			for (int k = 0; k < width_; k++)
+			{
+				double temp = get_residue(k, j, i);
+				acc = acc + temp;
+			}
+		}
+	}
+
+	return acc;
+}
+
 std::vector<double> DctPartition::get_xy_forcing_plane(int z)
 {
 	std::vector<double> xy_plane;

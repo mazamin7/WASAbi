@@ -254,3 +254,23 @@ void PmlPartition::reset_residues()
 
 	memset((void*)residue_, 0, width * height * depth * sizeof(double));
 }
+
+double PmlPartition::check_reset_residues()
+{
+	/*
+	for (int i = 0; i <= depth_; i++)
+	{
+		for (int j = 0; j <= height_; j++)
+		{
+			for (int k = 0; k <= width_; k++)
+			{
+				auto temp = get_residue(k, j, i);
+
+				if (temp != 0)
+					return false;
+			}
+		}
+	}*/
+
+	return 0.0;
+}

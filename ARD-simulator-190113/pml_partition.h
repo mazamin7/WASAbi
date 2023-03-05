@@ -62,5 +62,7 @@ public:
 
 	virtual void reset_forces();
 	virtual void reset_residues();
+
+	virtual double check_reset_residues();
 };
 

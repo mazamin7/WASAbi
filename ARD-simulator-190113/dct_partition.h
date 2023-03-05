@@ -41,6 +41,8 @@ public:
 	virtual void reset_forces();
 	virtual void reset_residues();
 
+	virtual double check_reset_residues();
+
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 
 	std::vector<double> get_xy_force_plane(int z);
