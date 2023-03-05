@@ -66,9 +66,7 @@ public:
 	virtual void reset_forces() = 0;
 	virtual void reset_residues() = 0;
 
-	virtual void update_pressure(bool) = 0;
-
-	virtual double check_reset_residues() = 0;
+	virtual void add_to_pressure(int x, int y, int z, double v) = 0;
 
 	void PreMerge();
 	void PostMerge();

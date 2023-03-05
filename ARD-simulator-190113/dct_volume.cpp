@@ -49,7 +49,7 @@ void DctVolume::ExcuteIdct()
 		{
 			for (int k = 0; k < width_; k++)
 			{
-				values_[i * height_ * width_ + j * width_ + k] /= sqrt(2.0 * depth_ * width_ * height_);
+				values_[i * height_ * width_ + j * width_ + k] /= 2.0 * sqrt(2.0 * depth_ * width_ * height_);
 			}
 		}
 	}

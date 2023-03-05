@@ -65,18 +65,10 @@ DctPartition::~DctPartition()
 	free(inv_w2_);
 }
 
-void DctPartition::update_pressure(bool direct)
-{
-	if (direct)
-		pressure_.ExcuteDct();
-	else
-		pressure_.ExcuteIdct();
-}
-
 void DctPartition::Update()
 {
 	force_.ExcuteDct();
-	// pressure_.ExcuteDct(); THIS BREAKS CODE
+	pressure_.ExcuteDct();
 
 	for (int i = 0; i < depth_; i++)
 	{
@@ -100,7 +92,7 @@ void DctPartition::Update()
 	memcpy((void *)prev_modes_, (void *)pressure_.modes_, depth_ * width_ * height_ * sizeof(double));
 	memcpy((void *)pressure_.modes_, (void *)next_modes_, depth_ * width_ * height_ * sizeof(double));
 
-	// pressure_.ExcuteIdct();
+	pressure_.ExcuteIdct();
 }
 
 double* DctPartition::get_pressure_field()
@@ -116,6 +108,11 @@ double DctPartition::get_pressure(int x, int y, int z)
 void DctPartition::set_pressure(int x, int y, int z, double v)
 {
 	pressure_.set_value(x, y, z, v);
+}
+
+void DctPartition::add_to_pressure(int x, int y, int z, double v)
+{
+	pressure_.set_value(x, y, z, pressure_.get_value(x, y, z) + v);
 }
 
 double DctPartition::get_residue(int x, int y, int z)
@@ -146,25 +143,6 @@ void DctPartition::reset_forces()
 void DctPartition::reset_residues()
 {
 	residue_.reset();
-}
-
-double DctPartition::check_reset_residues()
-{
-	double acc = 0.0;
-
-	for (int i = 0; i < depth_; i++)
-	{
-		for (int j = 0; j < height_; j++)
-		{
-			for (int k = 0; k < width_; k++)
-			{
-				double temp = get_residue(k, j, i);
-				acc = acc + temp;
-			}
-		}
-	}
-
-	return acc;
 }
 
 std::vector<double> DctPartition::get_xy_forcing_plane(int z)

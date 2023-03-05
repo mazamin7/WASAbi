@@ -220,9 +220,8 @@ void Partition::PostMerge()
 		{
 			for (int k = 0; k < width_; k++)
 			{
-				auto old = get_pressure(k, j, i);
 				auto res = get_residue(k, j, i);
-				set_pressure(k, j, i, res * dt2 + old);
+				add_to_pressure(k, j, i, res * dt2);
 			}
 		}
 	}

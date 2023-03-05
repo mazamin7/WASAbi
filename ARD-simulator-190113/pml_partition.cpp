@@ -255,27 +255,7 @@ void PmlPartition::reset_residues()
 	memset((void*)residue_, 0, width * height * depth * sizeof(double));
 }
 
-double PmlPartition::check_reset_residues()
+void PmlPartition::add_to_pressure(int x, int y, int z, double v)
 {
-	/*
-	for (int i = 0; i <= depth_; i++)
-	{
-		for (int j = 0; j <= height_; j++)
-		{
-			for (int k = 0; k <= width_; k++)
-			{
-				auto temp = get_residue(k, j, i);
-
-				if (temp != 0)
-					return false;
-			}
-		}
-	}*/
-
-	return 0.0;
-}
-
-void PmlPartition::update_pressure(bool a)
-{
-	return;
+	p_[GetIndex(x, y, z)] = p_[GetIndex(x, y, z)] + v;
 }

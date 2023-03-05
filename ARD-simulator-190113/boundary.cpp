@@ -2,7 +2,6 @@
 #include "partition.h"
 #include "simulation.h"
 #include <algorithm>
-#include <assert.h>
 
 
 Boundary::Boundary(BoundaryType type, double absorp, std::shared_ptr<Partition> a, std::shared_ptr<Partition> b,
