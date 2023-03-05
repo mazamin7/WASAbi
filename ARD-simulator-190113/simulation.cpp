@@ -311,6 +311,7 @@ int Simulation::Update()
 		part->reset_residues();
 		part->reset_forces();
 
+		// CHECK DEBUG
 		double temp = part->check_reset_residues();
 		if(temp > 0.0)
 			std::cout << "NOOOOO! " + std::to_string(temp) << std::endl;
@@ -338,6 +339,7 @@ int Simulation::Update()
 	{
 		partitions_[i]->ComputeSourceForcingTerms(time_step);
 		partitions_[i]->Update();
+		partitions_[i]->update_pressure(false);
 		//std::cout << "update partition " << partition->info_.id << " ";
 	}
 

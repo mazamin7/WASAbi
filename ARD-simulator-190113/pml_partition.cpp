@@ -274,3 +274,8 @@ double PmlPartition::check_reset_residues()
 
 	return 0.0;
 }
+
+void PmlPartition::update_pressure(bool a)
+{
+	return;
+}

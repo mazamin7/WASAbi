@@ -43,6 +43,8 @@ public:
 
 	virtual double check_reset_residues();
 
+	virtual void update_pressure(bool);
+
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 
 	std::vector<double> get_xy_force_plane(int z);

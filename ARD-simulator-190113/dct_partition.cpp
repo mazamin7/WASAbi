@@ -65,10 +65,18 @@ DctPartition::~DctPartition()
 	free(inv_w2_);
 }
 
+void DctPartition::update_pressure(bool direct)
+{
+	if (direct)
+		pressure_.ExcuteDct();
+	else
+		pressure_.ExcuteIdct();
+}
+
 void DctPartition::Update()
 {
 	force_.ExcuteDct();
-	// pressure_.ExcuteDct();
+	// pressure_.ExcuteDct(); THIS BREAKS CODE
 
 	for (int i = 0; i < depth_; i++)
 	{
@@ -92,7 +100,7 @@ void DctPartition::Update()
 	memcpy((void *)prev_modes_, (void *)pressure_.modes_, depth_ * width_ * height_ * sizeof(double));
 	memcpy((void *)pressure_.modes_, (void *)next_modes_, depth_ * width_ * height_ * sizeof(double));
 
-	pressure_.ExcuteIdct();
+	// pressure_.ExcuteIdct();
 }
 
 double* DctPartition::get_pressure_field()
