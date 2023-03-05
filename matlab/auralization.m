@@ -1,6 +1,7 @@
 clear
 
-dh = 0.05;
+dh = 0.2;
+% dh = 0.05;
 % dh = 0.1;
 
 % absorp = 1.0;
@@ -15,12 +16,15 @@ switch dh
     case 0.1
         sr = 8000;
         fcut = 1500;
+    case 0.2
+        sr = 4000;
+        fcut = 750;
 end
         
 
 
-rr = load([num2str(dh) '_' num2str(absorp)  '/response_0.txt']);
-src = load([num2str(dh) '_' num2str(absorp) '/source_0.txt']);
+rr = load([fileparts(pwd) '\ARD-simulator-190113\output\' num2str(dh,'%.6f') '_' num2str(absorp,'%.6f')  '\response_0.txt']);
+src = load([fileparts(pwd) '\ARD-simulator-190113\output\' num2str(dh,'%.6f') '_' num2str(absorp,'%.6f') '\source_0.txt']);
 Ns = size(rr,1);
 
 rt =int16(0.16*7600/2720/absorp*sr);
@@ -44,13 +48,16 @@ title('Room impluse response');
 % figure
 % t60(rir,sr,1);
 
-[file,path] = uigetfile({'*.mp3';'*.wav'});
-[filepath,name,ext] = fileparts(file);
-[x ori_sr] = audioread([path file]);
+%[file,path] = uigetfile({'*.mp3';'*.wav'});
+%[filepath,name,ext] = fileparts(file);
+audio_fn = [fileparts(pwd) '\ARD-simulator-190113\output\' num2str(dh,'%.6f') '_' num2str(absorp,'%.6f')  '\audio-input.mp3'];
+name = 'audio-input';
+%[x ori_sr] = audioread([path file]);
+[x ori_sr] = audioread(audio_fn);
 
 x = resample(x, sr, ori_sr);
 
-audiowrite([num2str(dh) '_' num2str(absorp)  '/' name '-resample.wav'],x, sr);
+audiowrite([fileparts(pwd) '\ARD-simulator-190113\output\' num2str(dh,'%.6f') '_' num2str(absorp,'%.6f') '\' name '-resample.wav'],x, sr);
 
 
 
@@ -76,4 +83,4 @@ y2 = fftfilt(b,x);
 y = y1+0.9*y2;
 y = normalizeIR(y);
 
-audiowrite([num2str(dh) '_' num2str(absorp)  '/' name '-reverb-' num2str(absorp) '.wav'],y, sr);
+audiowrite([fileparts(pwd) '\ARD-simulator-190113\output\' num2str(dh,'%.6f') '_' num2str(absorp,'%.6f')  '\' name '-reverb-' num2str(absorp) '.wav'],y, sr);
