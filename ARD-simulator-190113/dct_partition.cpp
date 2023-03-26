@@ -3,13 +3,13 @@
 #include "dct_partition.h"
 
 
-DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double h_abs)
-	: Partition(xs, ys, zs, w, h, d, h_abs), pressure_(w, h, d), force_(w, h, d), residue_(w, h, d)
+DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs)
+	: Partition(xs, ys, zs, w, h, d, alpha_abs), pressure_(w, h, d), force_(w, h, d), residue_(w, h, d)
 {
 	should_render_ = true;
 	info_.type = "DCT";
 
-	is_damped_ = h_abs != 0;
+	is_damped_ = alpha_abs != 0;
 
 	prev_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
 	next_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
@@ -17,12 +17,14 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double h
 
 	cwt_ = (double*)calloc(width_*height_*depth_, sizeof(double));
 	swt_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
-	alpha_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
-	alpha2_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
-	eatm_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	w_omega_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
+	w2_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	inv_w_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	inv_w2_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
+
+	double alpha_ = alpha_abs;
+	double alpha2_ = alpha_ * alpha_;
+	double eatm_ = exp(-alpha_ * dt_);
 
 	lx2_ = width_ * width_*dh_*dh_;
 	ly2_ = height_ * height_*dh_*dh_;
@@ -38,10 +40,8 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double h
 				double w = c0_ * M_PI * sqrt(i * i / lz2_ + j * j / ly2_ + k * k / lx2_);
 				cwt_[idx] = cos(w * dt_);
 				swt_[idx] = sin(w * dt_);
-				alpha_[idx] = w * h_abs;
-				alpha2_[idx] = alpha_[idx] * alpha_[idx];
-				eatm_[idx] = exp(-alpha_[idx] * dt_);
 				w_omega_[idx] = w;
+				w2_[idx] = w * w;
 				inv_w_[idx] = 1 / w;
 				inv_w2_[idx] = inv_w_[idx] * inv_w_[idx];
 			}
@@ -57,10 +57,8 @@ DctPartition::~DctPartition()
 	free(velocity_);
 	free(cwt_);
 	free(swt_);
-	free(alpha_);
-	free(alpha2_);
-	free(eatm_);
 	free(w_omega_);
+	free(w2_);
 	free(inv_w_);
 	free(inv_w2_);
 }
@@ -81,9 +79,10 @@ void DctPartition::Update()
 				if (!is_damped_)
 					next_modes_[idx] = 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_modes_[idx] + (2.0 * force_.modes_[idx] * inv_w2_[idx]) * (1.0 - cwt_[idx]);
 				else{
-					double xe = force_.modes_[idx] * inv_w2_[idx];
-					next_modes_[idx] = xe + eatm_[idx] * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_[idx] * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_[idx]);
-					velocity_[idx] = eatm_[idx] * (velocity_[idx] * (cwt_[idx] - alpha_[idx] * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_[idx] * inv_w_[idx]) * (pressure_.modes_[idx] - xe) * swt_[idx]);
+					next_modes_[idx] = (2.0 - w2_[idx] * dt_)/(1 + alpha_ * dt_ / 2) * pressure_.modes_[idx] - (1 - alpha_ * dt_ / 2) / (1 + alpha_ * dt_/2) * prev_modes_[idx] + dt_ * dt_ / (1 + alpha_ * dt_ / 2) * force_.modes_[idx];
+					// double xe = force_.modes_[idx] * inv_w2_[idx];
+					// next_modes_[idx] = xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_[idx]);
+					// velocity_[idx] = eatm_ * (velocity_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (pressure_.modes_[idx] - xe) * swt_[idx]);
 				}
 			}
 		}

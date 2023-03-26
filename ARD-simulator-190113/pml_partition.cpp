@@ -54,7 +54,7 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	memset((void *)phi_z_, 0, size * sizeof(double));
 	memset((void *)phi_z_new_, 0, size * sizeof(double));
 	memset((void *)force_, 0, size * sizeof(double));
-	memset((void*)residue_, 0, size * sizeof(double));
+	memset((void *)residue_, 0, size * sizeof(double));
 
 	zetax_ = (double*)calloc(size, sizeof(double));
 	zetay_ = (double*)calloc(size, sizeof(double));
@@ -135,15 +135,18 @@ void PmlPartition::Update()
 			for (int i = 0; i < width; i++)
 			{
 				double coefs[] = { 2.0, -27.0, 270.0, -490.0, 270.0, -27.0, 2.0 };
+				
 				double d2udx2 = 0.0;
 				double d2udy2 = 0.0;
 				double d2udz2 = 0.0;
+				
 				for (int m = 0; m < 7; m++)
 				{
 					d2udx2 += coefs[m] * p_[GetIndex(i + m - 3, j, k)];
 					d2udy2 += coefs[m] * p_[GetIndex(i, j + m - 3, k)];
 					d2udz2 += coefs[m] * p_[GetIndex(i, j, k + m - 3)];
 				}
+				
 				d2udx2 /= (180.0 * dh * dh);
 				d2udy2 /= (180.0 * dh * dh);
 				d2udz2 /= (180.0 * dh * dh);
@@ -155,18 +158,22 @@ void PmlPartition::Update()
 				double term5 = -(zetax_[GetIndex(i, j, k)] * zetay_[GetIndex(i, j, k)] + zetay_[GetIndex(i, j, k)] * zetaz_[GetIndex(i, j, k)] + zetax_[GetIndex(i, j, k)] * zetaz_[GetIndex(i, j, k)]) * p_[GetIndex(i, j, k)];
 
 				double fourthCoefs[] = { 1.0, -8.0, 0.0, 8.0, -1.0 };
+				
 				double dphidx = 0.0;
 				double dphidy = 0.0;
 				double dphidz = 0.0;
+				
 				for (int m = 0; m < 5; m++)
 				{
 					dphidx += fourthCoefs[m] * phi_x_[GetIndex(i + m - 2, j, k)];
 					dphidy += fourthCoefs[m] * phi_y_[GetIndex(i, j + m - 2, k)];
 					dphidz += fourthCoefs[m] * phi_z_[GetIndex(i, j, k + m - 2)];
 				}
+				
 				dphidx /= (12.0 * dh);
 				dphidy /= (12.0 * dh);
 				dphidz /= (12.0 * dh);
+				
 				double term6 = dphidx + dphidy + dphidz;
 
 				p_new_[GetIndex(i, j, k)] = term1 + term2 + dt * dt * (term3 + term4 + term5 + term6 + force_[GetIndex(i, j, k)]);
@@ -181,9 +188,11 @@ void PmlPartition::Update()
 					dudy += fourthCoefs[m] * p_[GetIndex(i, j + m - 2, k)];
 					dudz += fourthCoefs[m] * p_[GetIndex(i, j, k + m - 2)];
 				}
+				
 				dudx /= (12.0 * dh);
 				dudy /= (12.0 * dh);
 				dudz /= (12.0 * dh);
+				
 				phi_x_new_[GetIndex(i, j, k)] = phi_x_[GetIndex(i, j, k)] - dt * zetax_[GetIndex(i, j, k)] * phi_x_[GetIndex(i, j, k)] + dt * (zetay_[GetIndex(i, j, k)] + zetaz_[GetIndex(i, j, k)] - zetax_[GetIndex(i, j, k)]) * dudx;
 				phi_y_new_[GetIndex(i, j, k)] = phi_y_[GetIndex(i, j, k)] - dt * zetay_[GetIndex(i, j, k)] * phi_y_[GetIndex(i, j, k)] + dt * (zetax_[GetIndex(i, j, k)] + zetaz_[GetIndex(i, j, k)] - zetay_[GetIndex(i, j, k)]) * dudy;
 				phi_z_new_[GetIndex(i, j, k)] = phi_z_[GetIndex(i, j, k)] - dt * zetaz_[GetIndex(i, j, k)] * phi_z_[GetIndex(i, j, k)] + dt * (zetax_[GetIndex(i, j, k)] + zetay_[GetIndex(i, j, k)] - zetaz_[GetIndex(i, j, k)]) * dudz;

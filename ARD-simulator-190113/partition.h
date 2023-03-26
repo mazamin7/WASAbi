@@ -13,7 +13,7 @@ protected:
 	double dh_;
 	double dt_;
 	double c0_;
-	double h_abs_;
+	double alpha_abs_;
 
 	int x_start_, x_end_;
 	int y_start_, y_end_;
@@ -45,7 +45,7 @@ protected:
 public:
 	static double absorption_;
 
-	Partition(int xs, int ys, int zs, int w, int h, int d, double h_abs);
+	Partition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs);
 	~Partition();
 
 	virtual void Update() = 0;

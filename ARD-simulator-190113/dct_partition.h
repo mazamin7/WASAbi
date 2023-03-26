@@ -7,12 +7,13 @@ class DctPartition : public Partition
 	double lx2_, ly2_, lz2_;	// actual length ^2
 	double *cwt_{ nullptr };	// cos(wt)
 	double* swt_{ nullptr };	// sin(wt)
-	double* alpha_{ nullptr };	// alpha
-	double* alpha2_{ nullptr };	// alpha^2
-	double* eatm_{ nullptr };	// exp(-alpha*t)
 	double* w_omega_{ nullptr };	// w
+	double* w2_{ nullptr };		// w^2
 	double* inv_w_{ nullptr };	// w^-1
 	double* inv_w2_{ nullptr };	// w^-2
+	double alpha_;	// alpha
+	double alpha2_;	// alpha^2
+	double eatm_;	// exp(-alpha*t)
 
 	bool is_damped_;
 
@@ -25,7 +26,7 @@ class DctPartition : public Partition
 	double *velocity_{ nullptr };
 
 public:
-	DctPartition(int xs, int ys, int zs, int w, int h, int d, double h_abs);
+	DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs);
 	~DctPartition();
 
 	virtual void Update();

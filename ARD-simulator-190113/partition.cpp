@@ -7,8 +7,8 @@
 #include <fstream>
 #include <iostream>
 
-Partition::Partition(int xs, int ys, int zs, int w, int h, int d, double h_abs)
-	: x_start_(xs), y_start_(ys), z_start_(zs), width_(w), height_(h), depth_(d), h_abs_(h_abs)
+Partition::Partition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs)
+	: x_start_(xs), y_start_(ys), z_start_(zs), width_(w), height_(h), depth_(d), alpha_abs_(alpha_abs)
 {
 	static int id_generator = 0;
 	info_.id = id_generator++;
@@ -158,15 +158,15 @@ std::vector<std::shared_ptr<Partition>> Partition::ImportPartitions(std::string 
 	{
 		int x_start, y_start, z_start;
 		int width, height, depth;
-		double h_abs;
+		double alpha_abs;
 
 		file >> x_start >> y_start >> z_start;
 		file >> width >> height >> depth;
-		file >> h_abs;
+		file >> alpha_abs;
 
 		if (file.eof()) break;
 
-		partitions.push_back(std::make_shared<DctPartition>(x_start / Simulation::dh_, y_start / Simulation::dh_, z_start / Simulation::dh_, width / Simulation::dh_, height / Simulation::dh_, depth / Simulation::dh_, h_abs));
+		partitions.push_back(std::make_shared<DctPartition>(x_start / Simulation::dh_, y_start / Simulation::dh_, z_start / Simulation::dh_, width / Simulation::dh_, height / Simulation::dh_, depth / Simulation::dh_, alpha_abs));
 	}
 	file.close();
 	return partitions;
@@ -177,7 +177,7 @@ void Partition::Info()
 	std::cout << info_.type << " Partition " << info_.id << ": "
 		<< x_start_ << "," << y_start_ << "," << z_start_ << "->"
 		<< x_end_ << "," << y_end_ << "," << z_end_ << "; "
-		<< "Dimensionless abs. coeff.: " << h_abs_ << std::endl;
+		<< "Dimensionless abs. coeff.: " << alpha_abs_ << std::endl;
 	std::cout << "    -> " << std::to_string(info_.num_sources) << " sources; "
 		<< std::to_string(info_.num_boundaries) << " boundaries; " << std::endl;
 }
