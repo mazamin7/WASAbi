@@ -24,7 +24,8 @@ class DctPartition : public Partition
 
 	double *prev_modes_{ nullptr };
 	double *next_modes_{ nullptr };
-	double *velocity_modal_{ nullptr };
+	double *prev_velocity_modes_{ nullptr };
+	double *next_velocity_modes_{ nullptr };
 
 public:
 	DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs);

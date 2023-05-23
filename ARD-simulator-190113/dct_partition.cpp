@@ -13,7 +13,8 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double a
 
 	prev_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
 	next_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
-	velocity_modal_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
+	prev_velocity_modes_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
+	next_velocity_modes_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 
 	cwt_ = (double*)calloc(width_*height_*depth_, sizeof(double));
 	swt_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
@@ -37,7 +38,7 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double a
 			for (int k = 1; k <= width_; k++)
 			{
 				int idx = (i - 1) * height_ * width_ + (j - 1) * width_ + (k - 1);
-				double w = c0_ * M_PI * sqrt(i * i / lz2_ + j * j / ly2_ + k * k / lx2_);
+				double w = c0_ * M_PI * sqrt((i - 1) * (i - 1) / lz2_ + (j - 1) * (j - 1) / ly2_ + (k - 1) * (k - 1) / lx2_);
 				cwt_[idx] = cos(w * dt_);
 				swt_[idx] = sin(w * dt_);
 				w_omega_[idx] = w;
@@ -54,7 +55,8 @@ DctPartition::~DctPartition()
 {
 	free(prev_modes_);
 	free(next_modes_);
-	free(velocity_modal_);
+	free(prev_velocity_modes_);
+	free(next_velocity_modes_);
 	free(cwt_);
 	free(swt_);
 	free(w_omega_);
@@ -77,13 +79,22 @@ void DctPartition::Update()
 			{
 				int idx = i * height_ * width_ + j * width_ + k;
 				
-				if (second_order_)
-					next_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_modes_[idx] + (2.0 * force_.modes_[idx] * inv_w2_[idx]) * (1.0 - cwt_[idx]) );
-				else{
-					// next_modes_[idx] = (2.0 - w2_[idx] * dt_)/(1 + alpha_ * dt_ / 2) * pressure_.modes_[idx] - (1 - alpha_ * dt_ / 2) / (1 + alpha_ * dt_/2) * prev_modes_[idx] + dt_ * dt_ / (1 + alpha_ * dt_ / 2) * force_.modes_[idx];
-					double xe = force_.modes_[idx] * inv_w2_[idx];
-					next_modes_[idx] = (1 - 1e-10) * (xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_modal_[idx]) );
-					velocity_modal_[idx] = eatm_ * (velocity_modal_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (pressure_.modes_[idx] - xe) * swt_[idx]);
+				if (idx == 0) {
+					if (second_order_)
+						next_modes_[idx] = 2.0 * pressure_.modes_[idx] - prev_modes_[idx] + dt_ * dt_ * force_.modes_[idx];
+					else{
+						next_modes_[idx] = prev_modes_[idx] + 2 * dt_ * velocity_.modes_[idx];
+						next_velocity_modes_[idx] = prev_velocity_modes_[idx] + 2 * dt_ * (-2 * alpha_abs_ * velocity_.modes_[idx] + force_.modes_[idx]);
+					}
+				}else{
+					if (second_order_)
+						next_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_modes_[idx] + (2.0 * force_.modes_[idx] * inv_w2_[idx]) * (1.0 - cwt_[idx]) );
+					else{
+						// next_modes_[idx] = (2.0 - w2_[idx] * dt_)/(1 + alpha_ * dt_ / 2) * pressure_.modes_[idx] - (1 - alpha_ * dt_ / 2) / (1 + alpha_ * dt_/2) * prev_modes_[idx] + dt_ * dt_ / (1 + alpha_ * dt_ / 2) * force_.modes_[idx];
+						double xe = force_.modes_[idx] * inv_w2_[idx];
+						next_modes_[idx] = (1 - 1e-10) * (xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_.modes_[idx]) );
+						next_velocity_modes_[idx] = eatm_ * (velocity_.modes_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (pressure_.modes_[idx] - xe) * swt_[idx]);
+					}
 				}
 			}
 		}
@@ -91,6 +102,9 @@ void DctPartition::Update()
 
 	memcpy((void *)prev_modes_, (void *)pressure_.modes_, depth_ * width_ * height_ * sizeof(double));
 	memcpy((void *)pressure_.modes_, (void *)next_modes_, depth_ * width_ * height_ * sizeof(double));
+
+	memcpy((void*)prev_velocity_modes_, (void*)velocity_.modes_, depth_ * width_ * height_ * sizeof(double));
+	memcpy((void*)velocity_.modes_, (void*)next_velocity_modes_, depth_ * width_ * height_ * sizeof(double));
 
 	pressure_.ExcuteIdct();
 	velocity_.ExcuteIdct();
