@@ -65,16 +65,14 @@ void Boundary::ComputeResidues()
 					{
 						//sip = sip1 + sip2;
 						sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
-						old = left->get_residue(left_x, left_y, left_z);
-						res = sip * (Simulation::c0_ * Simulation::c0_) * (Simulation::dt_ * Simulation::dt_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						left->set_residue(left_x, left_y, left_z, absorption_ * res + old);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						left->add_to_residue(left_x, left_y, left_z, absorption_ * res);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
-						old = right->get_residue(right_x, right_y, right_z);
-						res = sip * (Simulation::c0_ * Simulation::c0_) * (Simulation::dt_ * Simulation::dt_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						right->set_residue(right_x, right_y, right_z, absorption_ * res + old);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						right->add_to_residue(right_x, right_y, right_z, absorption_ * res);
 					}
 				}
 
@@ -118,16 +116,14 @@ void Boundary::ComputeResidues()
 					{
 						//sip = sip1 + sip2;
 						sip = top->include_self_terms_ ? (sip1 + sip2) : sip2;
-						old = top->get_residue(top_x, top_y, top_z);
-						res = sip * (Simulation::c0_ * Simulation::c0_) * (Simulation::dt_ * Simulation::dt_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						top->set_residue(top_x, top_y, top_z, absorption_ * res + old);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						top->add_to_residue(top_x, top_y, top_z, absorption_ * res);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = bottom->include_self_terms_ ? (sip1 + sip2) : sip1;
-						old = bottom->get_residue(bottom_x, bottom_y, bottom_z);
-						res = sip * (Simulation::c0_ * Simulation::c0_) * (Simulation::dt_ * Simulation::dt_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						bottom->set_residue(bottom_x, bottom_y, bottom_z, absorption_ * res + old);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						bottom->add_to_residue(bottom_x, bottom_y, bottom_z, absorption_ * res);
 					}
 				}
 
@@ -171,16 +167,14 @@ void Boundary::ComputeResidues()
 					{
 						//sip = sip1 + sip2;
 						sip = front->include_self_terms_ ? (sip1 + sip2) : sip2;
-						old = front->get_residue(front_x, front_y, front_z);
-						res = sip * (Simulation::c0_ * Simulation::c0_) * (Simulation::dt_ * Simulation::dt_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						front->set_residue(front_x, front_y, front_z, absorption_ * res + old);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						front->add_to_residue(front_x, front_y, front_z, absorption_ * res);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = back->include_self_terms_ ? (sip1 + sip2) : sip1;
-						old = back->get_residue(back_x, back_y, back_z);
-						res = sip * (Simulation::c0_ * Simulation::c0_) * (Simulation::dt_ * Simulation::dt_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						back->set_residue(back_x, back_y, back_z, absorption_ * res + old);
+						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+						back->add_to_residue(back_x, back_y, back_z, absorption_ * res);
 					}
 				}
 

@@ -178,8 +178,6 @@ void PmlPartition::Update()
 
 				p_new_[GetIndex(i, j, k)] = term1 + term2 + dt * dt * (term3 + term4 + term5 + term6 + force_[GetIndex(i, j, k)]);
 
-				v_[GetIndex(i, j, k)] = (p_new_[GetIndex(i, j, k)] - p_[GetIndex(i, j, k)]) / dt_; // WRONG
-
 				double dudx = 0.0;
 				double dudy = 0.0;
 				double dudz = 0.0;

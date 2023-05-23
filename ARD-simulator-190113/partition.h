@@ -78,7 +78,6 @@ public:
 	virtual void reset_residues() = 0;
 
 	void PreMerge();
-	void PostMerge();
 
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 

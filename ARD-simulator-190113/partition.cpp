@@ -207,32 +207,7 @@ void Partition::PreMerge()
 			for (int k = 0; k < width_; k++)
 			{
 				auto res = get_residue(k, j, i);
-
-				if (second_order_)
-					res = res / dt_ / dt_;
-				else
-					res = res / 2 / dt_;
-
 				add_to_force(k, j, i, res);
-			}
-		}
-	}
-}
-
-void Partition::PostMerge()
-{
-	for (int i = 0; i < depth_; i++)
-	{
-		for (int j = 0; j < height_; j++)
-		{
-			for (int k = 0; k < width_; k++)
-			{
-				auto res = get_residue(k, j, i);
-
-				if (second_order_)
-					add_to_pressure(k, j, i, res);
-				else
-					add_to_velocity(k, j, i, res);
 			}
 		}
 	}

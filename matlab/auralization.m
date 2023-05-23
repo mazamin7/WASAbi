@@ -19,6 +19,9 @@ switch dh
     case 0.2
         sr = 4000;
         fcut = 750;
+    case 0.5
+        sr = 1600;
+        fcut = 300;
 end
         
 

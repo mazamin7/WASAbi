@@ -33,8 +33,6 @@ class Simulation
 		std::vector<std::vector<char>> model_map;
 	} info_;
 
-	bool is_pre_merge = false;
-
 public:
 
 	static double duration_;
