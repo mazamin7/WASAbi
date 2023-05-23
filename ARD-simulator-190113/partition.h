@@ -15,6 +15,8 @@ protected:
 	double c0_;
 	double alpha_abs_;
 
+	bool second_order_; // true -> second order, false -> first order
+
 	int x_start_, x_end_;
 	int y_start_, y_end_;
 	int z_start_, z_end_;
@@ -58,15 +60,22 @@ public:
 
 	virtual double get_pressure(int x, int y, int z) = 0;
 	virtual void set_pressure(int x, int y, int z, double v) = 0;
+	virtual void add_to_pressure(int x, int y, int z, double v) = 0;
+
+	virtual double get_velocity(int x, int y, int z) = 0;
+	virtual void set_velocity(int x, int y, int z, double v) = 0;
+	virtual void add_to_velocity(int x, int y, int z, double v) = 0;
+
 	virtual double get_residue(int x, int y, int z) = 0;
 	virtual void set_residue(int x, int y, int z, double v) = 0;
+	virtual void add_to_residue(int x, int y, int z, double v) = 0;
+
 	virtual double get_force(int x, int y, int z) = 0;
-	virtual void set_force(int x, int y, int z, double f) = 0;
+	virtual void set_force(int x, int y, int z, double v) = 0;
+	virtual void add_to_force(int x, int y, int z, double v) = 0;
 
 	virtual void reset_forces() = 0;
 	virtual void reset_residues() = 0;
-
-	virtual void add_to_pressure(int x, int y, int z, double v) = 0;
 
 	void PreMerge();
 	void PostMerge();

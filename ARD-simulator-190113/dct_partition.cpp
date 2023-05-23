@@ -4,16 +4,16 @@
 
 
 DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs)
-	: Partition(xs, ys, zs, w, h, d, alpha_abs), pressure_(w, h, d), force_(w, h, d), residue_(w, h, d)
+	: Partition(xs, ys, zs, w, h, d, alpha_abs), pressure_(w, h, d), velocity_(w, h, d), force_(w, h, d), residue_(w, h, d)
 {
 	should_render_ = true;
 	info_.type = "DCT";
 
-	is_damped_ = alpha_abs != 0;
+	second_order_ = alpha_abs == 0;
 
 	prev_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
 	next_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
-	velocity_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
+	velocity_modal_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 
 	cwt_ = (double*)calloc(width_*height_*depth_, sizeof(double));
 	swt_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
@@ -54,7 +54,7 @@ DctPartition::~DctPartition()
 {
 	free(prev_modes_);
 	free(next_modes_);
-	free(velocity_);
+	free(velocity_modal_);
 	free(cwt_);
 	free(swt_);
 	free(w_omega_);
@@ -65,8 +65,9 @@ DctPartition::~DctPartition()
 
 void DctPartition::Update()
 {
-	force_.ExcuteDct();
 	pressure_.ExcuteDct();
+	velocity_.ExcuteDct();
+	force_.ExcuteDct();
 
 	for (int i = 0; i < depth_; i++)
 	{
@@ -76,13 +77,13 @@ void DctPartition::Update()
 			{
 				int idx = i * height_ * width_ + j * width_ + k;
 				
-				if (!is_damped_)
-					next_modes_[idx] = 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_modes_[idx] + (2.0 * force_.modes_[idx] * inv_w2_[idx]) * (1.0 - cwt_[idx]);
+				if (second_order_)
+					next_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_modes_[idx] + (2.0 * force_.modes_[idx] * inv_w2_[idx]) * (1.0 - cwt_[idx]) );
 				else{
-					next_modes_[idx] = (2.0 - w2_[idx] * dt_)/(1 + alpha_ * dt_ / 2) * pressure_.modes_[idx] - (1 - alpha_ * dt_ / 2) / (1 + alpha_ * dt_/2) * prev_modes_[idx] + dt_ * dt_ / (1 + alpha_ * dt_ / 2) * force_.modes_[idx];
-					// double xe = force_.modes_[idx] * inv_w2_[idx];
-					// next_modes_[idx] = xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_[idx]);
-					// velocity_[idx] = eatm_ * (velocity_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (pressure_.modes_[idx] - xe) * swt_[idx]);
+					// next_modes_[idx] = (2.0 - w2_[idx] * dt_)/(1 + alpha_ * dt_ / 2) * pressure_.modes_[idx] - (1 - alpha_ * dt_ / 2) / (1 + alpha_ * dt_/2) * prev_modes_[idx] + dt_ * dt_ / (1 + alpha_ * dt_ / 2) * force_.modes_[idx];
+					double xe = force_.modes_[idx] * inv_w2_[idx];
+					next_modes_[idx] = (1 - 1e-10) * (xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_modal_[idx]) );
+					velocity_modal_[idx] = eatm_ * (velocity_modal_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (pressure_.modes_[idx] - xe) * swt_[idx]);
 				}
 			}
 		}
@@ -92,6 +93,7 @@ void DctPartition::Update()
 	memcpy((void *)pressure_.modes_, (void *)next_modes_, depth_ * width_ * height_ * sizeof(double));
 
 	pressure_.ExcuteIdct();
+	velocity_.ExcuteIdct();
 }
 
 double* DctPartition::get_pressure_field()
@@ -114,6 +116,21 @@ void DctPartition::add_to_pressure(int x, int y, int z, double v)
 	pressure_.set_value(x, y, z, pressure_.get_value(x, y, z) + v);
 }
 
+double DctPartition::get_velocity(int x, int y, int z)
+{
+	return velocity_.get_value(x, y, z);
+}
+
+void DctPartition::set_velocity(int x, int y, int z, double v)
+{
+	velocity_.set_value(x, y, z, v);
+}
+
+void DctPartition::add_to_velocity(int x, int y, int z, double v)
+{
+	velocity_.set_value(x, y, z, velocity_.get_value(x, y, z) + v);
+}
+
 double DctPartition::get_residue(int x, int y, int z)
 {
 	return residue_.get_value(x, y, z);
@@ -124,14 +141,24 @@ void DctPartition::set_residue(int x, int y, int z, double v)
 	residue_.set_value(x, y, z, v);
 }
 
+void DctPartition::add_to_residue(int x, int y, int z, double v)
+{
+	residue_.set_value(x, y, z, residue_.get_value(x, y, z) + v);
+}
+
 double DctPartition::get_force(int x, int y, int z)
 {
 	return force_.get_value(x, y, z);
 }
 
-void DctPartition::set_force(int x, int y, int z, double f)
+void DctPartition::set_force(int x, int y, int z, double v)
 {
-	force_.set_value(x, y, z, f);
+	force_.set_value(x, y, z, v);
+}
+
+void DctPartition::add_to_force(int x, int y, int z, double v)
+{
+	force_.set_value(x, y, z, force_.get_value(x, y, z) + v);
 }
 
 void DctPartition::reset_forces()

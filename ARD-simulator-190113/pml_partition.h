@@ -13,7 +13,9 @@ class PmlPartition : public Partition
 	double* p_{ nullptr };
 	double* p_new_{ nullptr };
 
+	double* v_{ nullptr };
 	double* residue_{ nullptr };
+	double* force_;
 
 	double* phi_x_;
 	double* phi_x_new_;
@@ -21,7 +23,6 @@ class PmlPartition : public Partition
 	double* phi_y_new_;
 	double* phi_z_;
 	double* phi_z_new_;
-	double* force_;
 
 	double* zetax_;
 	double* zetay_;
@@ -53,16 +54,24 @@ public:
 	virtual void Update();
 
 	virtual double* get_pressure_field();
+
 	virtual double get_pressure(int x, int y, int z);
 	virtual void set_pressure(int x, int y, int z, double v);
+	virtual void add_to_pressure(int x, int y, int z, double v);
+
+	virtual double get_velocity(int x, int y, int z);
+	virtual void set_velocity(int x, int y, int z, double v);
+	virtual void add_to_velocity(int x, int y, int z, double v);
+
 	virtual double get_residue(int x, int y, int z);
 	virtual void set_residue(int x, int y, int z, double v);
+	virtual void add_to_residue(int x, int y, int z, double v);
+
 	virtual double get_force(int x, int y, int z);
-	virtual void set_force(int x, int y, int z, double f);
+	virtual void set_force(int x, int y, int z, double v);
+	virtual void add_to_force(int x, int y, int z, double v);
 
 	virtual void reset_forces();
 	virtual void reset_residues();
-
-	virtual void add_to_pressure(int x, int y, int z, double v);
 };
 

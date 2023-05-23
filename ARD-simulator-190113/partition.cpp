@@ -12,9 +12,13 @@ Partition::Partition(int xs, int ys, int zs, int w, int h, int d, double alpha_a
 {
 	static int id_generator = 0;
 	info_.id = id_generator++;
+
 	dh_ = Simulation::dh_;
 	dt_ = Simulation::dt_;
 	c0_ = Simulation::c0_;
+
+	second_order_ = alpha_abs_ == 0;
+
 	x_end_ = x_start_ + width_;
 	y_end_ = y_start_ + height_;
 	z_end_ = z_start_ + depth_;
@@ -202,9 +206,14 @@ void Partition::PreMerge()
 		{
 			for (int k = 0; k < width_; k++)
 			{
-				auto old = get_force(k, j, i);
 				auto res = get_residue(k, j, i);
-				set_force(k, j, i, res + old);
+
+				if (second_order_)
+					res = res / dt_ / dt_;
+				else
+					res = res / 2 / dt_;
+
+				add_to_force(k, j, i, res);
 			}
 		}
 	}
@@ -212,8 +221,6 @@ void Partition::PreMerge()
 
 void Partition::PostMerge()
 {
-	double dt2 = Simulation::dt_ * Simulation::dt_;
-
 	for (int i = 0; i < depth_; i++)
 	{
 		for (int j = 0; j < height_; j++)
@@ -221,7 +228,11 @@ void Partition::PostMerge()
 			for (int k = 0; k < width_; k++)
 			{
 				auto res = get_residue(k, j, i);
-				add_to_pressure(k, j, i, res * dt2);
+
+				if (second_order_)
+					add_to_pressure(k, j, i, res);
+				else
+					add_to_velocity(k, j, i, res);
 			}
 		}
 	}

@@ -15,15 +15,16 @@ class DctPartition : public Partition
 	double alpha2_;	// alpha^2
 	double eatm_;	// exp(-alpha*t)
 
-	bool is_damped_;
+	bool second_order_; // true -> second order, false -> first order
 
 	DctVolume pressure_;
-	DctVolume force_;
+	DctVolume velocity_;
 	DctVolume residue_;
+	DctVolume force_;
 
 	double *prev_modes_{ nullptr };
 	double *next_modes_{ nullptr };
-	double *velocity_{ nullptr };
+	double *velocity_modal_{ nullptr };
 
 public:
 	DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs);
@@ -32,17 +33,25 @@ public:
 	virtual void Update();
 
 	virtual double* get_pressure_field();
+
 	virtual double get_pressure(int x, int y, int z);
 	virtual void set_pressure(int x, int y, int z, double v);
+	virtual void add_to_pressure(int x, int y, int z, double v);
+
+	virtual double get_velocity(int x, int y, int z);
+	virtual void set_velocity(int x, int y, int z, double v);
+	virtual void add_to_velocity(int x, int y, int z, double v);
+
 	virtual double get_residue(int x, int y, int z);
 	virtual void set_residue(int x, int y, int z, double v);
+	virtual void add_to_residue(int x, int y, int z, double v);
+
 	virtual double get_force(int x, int y, int z);
-	virtual void set_force(int x, int y, int z, double f);
+	virtual void set_force(int x, int y, int z, double v);
+	virtual void add_to_force(int x, int y, int z, double v);
 
 	virtual void reset_forces();
 	virtual void reset_residues();
-
-	virtual void add_to_pressure(int x, int y, int z, double v);
 
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 

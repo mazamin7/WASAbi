@@ -40,9 +40,9 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	phi_z_ = (double *)malloc(size * sizeof(double));
 	phi_z_new_ = (double *)malloc(size * sizeof(double));
 
-	force_ = (double *)malloc(size * sizeof(double));
-
+	v_ = (double*)malloc(size * sizeof(double));
 	residue_ = (double*)malloc(size * sizeof(double));
+	force_ = (double *)malloc(size * sizeof(double));
 
 	memset((void *)p_old_, 0, size * sizeof(double));
 	memset((void *)p_, 0, size * sizeof(double));
@@ -178,6 +178,8 @@ void PmlPartition::Update()
 
 				p_new_[GetIndex(i, j, k)] = term1 + term2 + dt * dt * (term3 + term4 + term5 + term6 + force_[GetIndex(i, j, k)]);
 
+				v_[GetIndex(i, j, k)] = (p_new_[GetIndex(i, j, k)] - p_[GetIndex(i, j, k)]) / dt_; // WRONG
+
 				double dudx = 0.0;
 				double dudy = 0.0;
 				double dudz = 0.0;
@@ -226,6 +228,26 @@ void PmlPartition::set_pressure(int x, int y, int z, double v)
 	p_[GetIndex(x, y, z)] = v;
 }
 
+void PmlPartition::add_to_pressure(int x, int y, int z, double v)
+{
+	p_[GetIndex(x, y, z)] = p_[GetIndex(x, y, z)] + v;
+}
+
+double PmlPartition::get_velocity(int x, int y, int z)
+{
+	return v_[GetIndex(x, y, z)];
+}
+
+void PmlPartition::set_velocity(int x, int y, int z, double v)
+{
+	v_[GetIndex(x, y, z)] = v;
+}
+
+void PmlPartition::add_to_velocity(int x, int y, int z, double v)
+{
+	v_[GetIndex(x, y, z)] = v_[GetIndex(x, y, z)] + v;
+}
+
 double PmlPartition::get_residue(int x, int y, int z)
 {
 	return residue_[GetIndex(x, y, z)];
@@ -236,6 +258,11 @@ void PmlPartition::set_residue(int x, int y, int z, double v)
 	residue_[GetIndex(x, y, z)] = v;
 }
 
+void PmlPartition::add_to_residue(int x, int y, int z, double v)
+{
+	residue_[GetIndex(x, y, z)] = residue_[GetIndex(x, y, z)] + v;
+}
+
 double PmlPartition::get_force(int x, int y, int z)
 {
 	return force_[GetIndex(x, y, z)];
@@ -244,6 +271,11 @@ double PmlPartition::get_force(int x, int y, int z)
 void PmlPartition::set_force(int x, int y, int z, double f)
 {
 	force_[GetIndex(x, y, z)] = f;
+}
+
+void PmlPartition::add_to_force(int x, int y, int z, double v)
+{
+	force_[GetIndex(x, y, z)] = force_[GetIndex(x, y, z)] + v;
 }
 
 void PmlPartition::reset_forces()
@@ -262,9 +294,4 @@ void PmlPartition::reset_residues()
 	int depth = depth_;
 
 	memset((void*)residue_, 0, width * height * depth * sizeof(double));
-}
-
-void PmlPartition::add_to_pressure(int x, int y, int z, double v)
-{
-	p_[GetIndex(x, y, z)] = p_[GetIndex(x, y, z)] + v;
 }
