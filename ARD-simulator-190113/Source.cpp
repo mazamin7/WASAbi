@@ -37,10 +37,12 @@ double Simulation::duration_ = 2;		// Duration of the whole simulation (seconds)
 //double Simulation::dt_ = 2e-4;
 
 double Simulation::dh_ = 0.5;
-double Simulation::dt_ = 6.25e-4;
+//double Simulation::dt_ = 6.25e-4;
 
 double Simulation::c0_ = 3.435e2;		// Speed of sound
 int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
+
+double Simulation::dt_ = 0.2 * Simulation::dh_ / Simulation::c0_;
 
 int main()
 {

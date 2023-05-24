@@ -23,9 +23,9 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double a
 	inv_w_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	inv_w2_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 
-	double alpha_ = alpha_abs;
-	double alpha2_ = alpha_ * alpha_;
-	double eatm_ = exp(-alpha_ * dt_);
+	alpha_ = alpha_abs;
+	alpha2_ = alpha_ * alpha_;
+	eatm_ = exp(-alpha_ * dt_);
 
 	lx2_ = width_ * width_*dh_*dh_;
 	ly2_ = height_ * height_*dh_*dh_;
@@ -90,7 +90,6 @@ void DctPartition::Update()
 					if (second_order_)
 						next_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_modes_[idx] + (2.0 * force_.modes_[idx] * inv_w2_[idx]) * (1.0 - cwt_[idx]) );
 					else{
-						// next_modes_[idx] = (2.0 - w2_[idx] * dt_)/(1 + alpha_ * dt_ / 2) * pressure_.modes_[idx] - (1 - alpha_ * dt_ / 2) / (1 + alpha_ * dt_/2) * prev_modes_[idx] + dt_ * dt_ / (1 + alpha_ * dt_ / 2) * force_.modes_[idx];
 						double xe = force_.modes_[idx] * inv_w2_[idx];
 						next_modes_[idx] = (1 - 1e-10) * (xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_.modes_[idx]) );
 						next_velocity_modes_[idx] = eatm_ * (velocity_.modes_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (pressure_.modes_[idx] - xe) * swt_[idx]);
