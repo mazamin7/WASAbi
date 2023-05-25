@@ -16,7 +16,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 	: partitions_(partitions), sources_(sources)
 {
 
-	// Find all shared boundaried of partitions
+	// Find all shared boundaries of partitions
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		auto part_a = partitions_[i];
