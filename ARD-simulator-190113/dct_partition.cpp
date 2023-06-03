@@ -67,9 +67,9 @@ DctPartition::~DctPartition()
 
 void DctPartition::Update()
 {
-	pressure_.ExcuteDct();
-	velocity_.ExcuteDct();
-	force_.ExcuteDct();
+	pressure_.ExecuteDct();
+	velocity_.ExecuteDct();
+	force_.ExecuteDct();
 
 	for (int i = 0; i < depth_; i++)
 	{
@@ -105,8 +105,8 @@ void DctPartition::Update()
 	memcpy((void*)prev_velocity_modes_, (void*)velocity_.modes_, depth_ * width_ * height_ * sizeof(double));
 	memcpy((void*)velocity_.modes_, (void*)next_velocity_modes_, depth_ * width_ * height_ * sizeof(double));
 
-	pressure_.ExcuteIdct();
-	velocity_.ExcuteIdct();
+	pressure_.ExecuteIdct();
+	velocity_.ExecuteIdct();
 }
 
 double* DctPartition::get_pressure_field()

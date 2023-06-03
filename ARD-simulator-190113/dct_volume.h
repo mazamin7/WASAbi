@@ -15,8 +15,8 @@ class DctVolume
 public:
 	DctVolume(int w, int h, int d);
 	~DctVolume();
-	void ExcuteDct();
-	void ExcuteIdct();
+	void ExecuteDct();
+	void ExecuteIdct();
 	double get_value(int x, int y, int z);
 	double get_mode(int x, int y, int z);
 	void set_value(int x, int y, int z, double v);

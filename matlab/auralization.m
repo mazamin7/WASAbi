@@ -17,7 +17,7 @@ switch dh
         sr = 8000;
         fcut = 1500;
     case 0.2
-        sr = 4000;
+        sr = 5000;
         fcut = 750;
     case 0.5
         sr = 1600;
@@ -50,6 +50,8 @@ title('Room impluse response');
 % subplot(313)
 % figure
 % t60(rir,sr,1);
+
+%%
 
 %[file,path] = uigetfile({'*.mp3';'*.wav'});
 %[filepath,name,ext] = fileparts(file);

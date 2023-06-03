@@ -16,7 +16,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 	: partitions_(partitions), sources_(sources)
 {
 
-	// Find all shared boundaried of partitions
+	// Find all shared boundaries of partitions
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		auto part_a = partitions_[i];
@@ -305,11 +305,11 @@ int Simulation::Update()
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
 	// Reset residues and forces
+#pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
-		auto part = partitions_[i];
-		part->reset_residues();
-		part->reset_forces();
+		partitions_[i]->reset_residues();
+		partitions_[i]->reset_forces();
 	}
 
 #pragma omp parallel for
@@ -335,6 +335,7 @@ int Simulation::Update()
 	}
 
 	// Visualization
+	if (time_step % 10 == 1)
 	{
 		SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
 		int v_coef = 10;

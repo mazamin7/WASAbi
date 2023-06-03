@@ -19,7 +19,7 @@ DctVolume::~DctVolume()
 	free(modes_);
 }
 
-void DctVolume::ExcuteDct()
+void DctVolume::ExecuteDct()
 {
 	fftw_execute(dct_plan_);
 
@@ -37,7 +37,7 @@ void DctVolume::ExcuteDct()
 	}
 }
 
-void DctVolume::ExcuteIdct()
+void DctVolume::ExecuteIdct()
 {
 	fftw_execute(idct_plan_);
 
