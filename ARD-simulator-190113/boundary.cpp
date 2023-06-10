@@ -6,7 +6,7 @@
 
 Boundary::Boundary(BoundaryType type, double absorp, std::shared_ptr<Partition> a, std::shared_ptr<Partition> b,
 	int xs, int xe, int ys, int ye, int zs, int ze)
-	: type_(type), absorption_(absorp), a_(a), b_(b), x_start_(xs), x_end_(xe), y_start_(ys), y_end_(ye), z_start_(zs), z_end_(ze)
+	: type_(type), boundary_absorption_(absorp), a_(a), b_(b), x_start_(xs), x_end_(xe), y_start_(ys), y_end_(ye), z_start_(zs), z_end_(ze)
 {
 	static int id_generator = 0;
 	info_.id = id_generator++;
@@ -66,13 +66,13 @@ void Boundary::ComputeResidues()
 						//sip = sip1 + sip2;
 						sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
 						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						left->add_to_residue(left_x, left_y, left_z, absorption_ * res);
+						left->add_to_residue(left_x, left_y, left_z, boundary_absorption_ * res);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
 						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						right->add_to_residue(right_x, right_y, right_z, absorption_ * res);
+						right->add_to_residue(right_x, right_y, right_z, boundary_absorption_ * res);
 					}
 				}
 
@@ -117,13 +117,13 @@ void Boundary::ComputeResidues()
 						//sip = sip1 + sip2;
 						sip = top->include_self_terms_ ? (sip1 + sip2) : sip2;
 						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						top->add_to_residue(top_x, top_y, top_z, absorption_ * res);
+						top->add_to_residue(top_x, top_y, top_z, boundary_absorption_ * res);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = bottom->include_self_terms_ ? (sip1 + sip2) : sip1;
 						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						bottom->add_to_residue(bottom_x, bottom_y, bottom_z, absorption_ * res);
+						bottom->add_to_residue(bottom_x, bottom_y, bottom_z, boundary_absorption_ * res);
 					}
 				}
 
@@ -168,13 +168,13 @@ void Boundary::ComputeResidues()
 						//sip = sip1 + sip2;
 						sip = front->include_self_terms_ ? (sip1 + sip2) : sip2;
 						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						front->add_to_residue(front_x, front_y, front_z, absorption_ * res);
+						front->add_to_residue(front_x, front_y, front_z, boundary_absorption_ * res);
 					}
 					else {
 						//sip = sip1 + sip2;
 						sip = back->include_self_terms_ ? (sip1 + sip2) : sip1;
 						res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-						back->add_to_residue(back_x, back_y, back_z, absorption_ * res);
+						back->add_to_residue(back_x, back_y, back_z, boundary_absorption_ * res);
 					}
 				}
 

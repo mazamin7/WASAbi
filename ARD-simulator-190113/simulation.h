@@ -40,6 +40,7 @@ public:
 	static double dh_;
 	static double dt_;
 	static double c0_;
+	static double air_absorption_;
 	static int n_pml_layers_;
 
 	static bool is_pre_merge;

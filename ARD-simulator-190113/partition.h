@@ -13,7 +13,7 @@ protected:
 	double dh_;
 	double dt_;
 	double c0_;
-	double alpha_abs_;
+	double air_absorption_;
 
 	bool second_order_; // true -> second order, false -> first order
 
@@ -45,9 +45,9 @@ protected:
 	bool is_z_pml_{ false };
 	
 public:
-	static double absorption_;
+	static double boundary_absorption_;
 
-	Partition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs);
+	Partition(int xs, int ys, int zs, int w, int h, int d);
 	~Partition();
 
 	virtual void Update_pressure() = 0;

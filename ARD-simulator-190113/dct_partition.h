@@ -29,7 +29,7 @@ class DctPartition : public Partition
 	double *next_velocity_modes_{ nullptr };
 
 public:
-	DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs);
+	DctPartition(int xs, int ys, int zs, int w, int h, int d);
 	~DctPartition();
 
 	virtual void Update_pressure();

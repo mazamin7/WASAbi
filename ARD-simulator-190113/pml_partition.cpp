@@ -15,7 +15,7 @@ int PmlPartition::GetIndex(int x, int y, int z)
 }
 
 PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d)
-	: Partition(xs, ys, zs, w, h, d, 0), type_(type), neighbor_part_(neighbor_part)
+	: Partition(xs, ys, zs, w, h, d), type_(type), neighbor_part_(neighbor_part)
 {
 	include_self_terms_ = false;
 	should_render_ = false;

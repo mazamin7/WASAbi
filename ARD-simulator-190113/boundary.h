@@ -21,7 +21,7 @@ class Boundary
 	std::shared_ptr<Partition> a_;
 	std::shared_ptr<Partition> b_;
 
-	double absorption_{ 1.0 };
+	double boundary_absorption_{ 1.0 };
 
 public:
 

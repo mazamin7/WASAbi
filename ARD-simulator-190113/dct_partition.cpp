@@ -3,11 +3,13 @@
 #include "dct_partition.h"
 
 
-DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs)
-	: Partition(xs, ys, zs, w, h, d, alpha_abs), pressure_(w, h, d), velocity_(w, h, d), residue_(w, h, d), force_(w, h, d), force_r_(w, h, d)
+DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
+	: Partition(xs, ys, zs, w, h, d), pressure_(w, h, d), velocity_(w, h, d), residue_(w, h, d), force_(w, h, d), force_r_(w, h, d)
 {
 	should_render_ = true;
 	info_.type = "DCT";
+
+	auto alpha_abs = air_absorption_;
 
 	second_order_ = alpha_abs == 0;
 
@@ -129,7 +131,7 @@ void DctPartition::Update_velocity()
 
 				if (idx == 0) {
 					// v_next_dct(n) = (v_curr_dct(n) + dt * force_dct(n)) / (1 + 2 * dt * alpha_abs);
-					next_velocity_modes_[idx] = (velocity_.modes_[idx] + dt_ * force_r_.modes_[idx]) / (1 + 2 * dt_ * alpha_abs_);
+					next_velocity_modes_[idx] = (velocity_.modes_[idx] + dt_ * force_r_.modes_[idx]) / (1 + 2 * dt_ * air_absorption_);
 				}
 				else {
 					double xe = force_r_.modes_[idx] * inv_w2_[idx];
