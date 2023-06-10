@@ -73,7 +73,7 @@ void DctPartition::Update_pressure()
 	pressure_.ExecuteDct(); // current pressure
 	velocity_.ExecuteDct(); // current velocity
 	force_.ExecuteDct(); // current force
-	residue_.ExecuteDct(); // current residual
+	force_r_.ExecuteDct(); // current corrected force
 
 	for (int i = 0; i < depth_; i++)
 	{
@@ -85,19 +85,15 @@ void DctPartition::Update_pressure()
 				
 				if (idx == 0) {
 					if (second_order_)
-						// p_next_dct(n) = 2 * p_curr_dct(n) - p_prev_dct(n) + dt*dt * force_dct(n);
-						next_pressure_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] - prev_pressure_modes_[idx] + dt_ * dt_ * (force_.modes_[idx] + residue_.modes_[idx]));
+						next_pressure_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] - prev_pressure_modes_[idx] + dt_ * dt_ * force_r_.modes_[idx]);
 					else{
-						// p_next_dct(n) = p_curr_dct(n) + dt * v_curr_dct(n);
 						next_pressure_modes_[idx] = (1 - 1e-10) * ( pressure_.modes_[idx] + dt_ * velocity_.modes_[idx] );
 					}
 				}else{
 					if (second_order_)
-						// p_next_dct(n) = 2 * p_curr_dct(n) .* cwt(n) - p_prev_dct(n) + (2 * force_dct(n) . / w2(n)) .* (1 - cwt(n));
-						next_pressure_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_pressure_modes_[idx] + (2.0 * (force_.modes_[idx] + residue_.modes_[idx]) * inv_w2_[idx]) * (1.0 - cwt_[idx]) );
+						next_pressure_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_pressure_modes_[idx] + (2.0 * force_r_.modes_[idx] * inv_w2_[idx]) * (1.0 - cwt_[idx]) );
 					else{
 						double xe = force_.modes_[idx] * inv_w2_[idx];
-						// p_next_dct(n) = xe + eatm * ((p_curr_dct(n) - xe) .* (cwt(n) + alpha_abs * inv_w(n) .* swt(n)) + swt(n) .* inv_w(n) .* v_curr_dct(n));
 						next_pressure_modes_[idx] = (1 - 1e-10) * (xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_.modes_[idx]) );
 					}
 				}
@@ -130,12 +126,10 @@ void DctPartition::Update_velocity()
 				int idx = i * height_ * width_ + j * width_ + k;
 
 				if (idx == 0) {
-					// v_next_dct(n) = (v_curr_dct(n) + dt * force_dct(n)) / (1 + 2 * dt * alpha_abs);
 					next_velocity_modes_[idx] = (velocity_.modes_[idx] + dt_ * force_r_.modes_[idx]) / (1 + 2 * dt_ * air_absorption_);
 				}
 				else {
 					double xe = force_r_.modes_[idx] * inv_w2_[idx];
-					// v_next_dct(n) = eatm * (v_curr_dct(n) .* (cwt(n) - alpha_abs * inv_w(n) .* swt(n)) - (w(n) + alpha2 * inv_w(n)) .* (p_curr_dct(n) - xe) .* swt(n));
 					next_velocity_modes_[idx] = eatm_ * (velocity_.modes_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (prev_pressure_modes_[idx] - xe) * swt_[idx]);
 				}
 			}
