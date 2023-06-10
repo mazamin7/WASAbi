@@ -319,12 +319,14 @@ int Simulation::Update()
 	}
 	//std::cout << std::endl;
 
+	if (is_pre_merge) {
 #pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
-		partitions_[i]->PreMerge();
+		for (int i = 0; i < partitions_.size(); i++)
+		{
+			partitions_[i]->PreMerge();
+		}
+		//std::cout << std::endl;
 	}
-	//std::cout << std::endl;
 
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
@@ -332,6 +334,15 @@ int Simulation::Update()
 		partitions_[i]->ComputeSourceForcingTerms(time_step);
 		partitions_[i]->Update();
 		//std::cout << "update partition " << partition->info_.id << " ";
+	}
+
+	if (!is_pre_merge) {
+#pragma omp parallel for
+		for (int i = 0; i < partitions_.size(); i++)
+		{
+			partitions_[i]->PostMerge();
+		}
+		//std::cout << std::endl;
 	}
 
 	// Visualization
@@ -469,6 +480,11 @@ void Simulation::Info()
 	{
 		std::cout << "Source " << s->id_ << ": " << s->x() << "," << s->y() << "," << s->z() << std::endl;
 	}
+	std::cout << "------------------------------------------------------------" << std::endl;
+	if (is_pre_merge)
+		std::cout << "Using Pre-merge" << std::endl;
+	else
+		std::cout << "Using Post-merge" << std::endl;
 	std::cout << "------------------------------------------------------------" << std::endl;
 }
 
