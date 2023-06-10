@@ -240,11 +240,15 @@ void Partition::PostMerge(int phase)
 			{
 				auto res = get_residue(k, j, i);
 
-				if (second_order_ && phase == 1)
+				if (second_order_ && phase == 1){
+					res = dt_ * dt_ / (1 + dt_ * air_absorption_) * res;
 					add_to_pressure(k, j, i, res);
+				}
 
-				if (!second_order_ && phase == 2)
+				if (!second_order_ && phase == 2) {
+					res = dt_ / (1 + 2 * dt_ * air_absorption_) * res;
 					add_to_velocity(k, j, i, res);
+				}
 			}
 		}
 	}
