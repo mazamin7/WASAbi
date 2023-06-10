@@ -51,7 +51,8 @@ public:
 	PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d);
 	~PmlPartition();
 
-	virtual void Update();
+	virtual void Update_pressure();
+	virtual void Update_velocity();
 
 	virtual double* get_pressure_field();
 
@@ -69,7 +70,9 @@ public:
 
 	virtual double get_force(int x, int y, int z);
 	virtual void set_force(int x, int y, int z, double v);
-	virtual void add_to_force(int x, int y, int z, double v);
+
+	virtual double get_force_r(int x, int y, int z);
+	virtual void set_force_r(int x, int y, int z, double v);
 
 	virtual void reset_forces();
 	virtual void reset_residues();

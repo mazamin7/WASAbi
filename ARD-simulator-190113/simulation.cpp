@@ -15,7 +15,6 @@
 Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std::vector<std::shared_ptr<SoundSource>> &sources)
 	: partitions_(partitions), sources_(sources)
 {
-
 	// Find all shared boundaries of partitions
 	for (int i = 0; i < partitions_.size(); i++)
 	{
@@ -304,14 +303,32 @@ int Simulation::Update()
 	//std::cout << "#" << std::setw(5) << time_step << " : ";
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
-	// Reset residues and forces
+	// update pressure
+#pragma omp parallel for
+	for (int i = 0; i < partitions_.size(); i++)
+	{
+		partitions_[i]->Update_pressure();
+		//std::cout << "update pressure partition " << partition->info_.id << " ";
+	}
+
+	// post-merge phase 1 (correct pressure)
+	if (!is_pre_merge) {
+#pragma omp parallel for
+		for (int i = 0; i < partitions_.size(); i++)
+		{
+			partitions_[i]->PostMerge(1);
+		}
+		//std::cout << std::endl;
+	}
+
+	// reset residue
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->reset_residues();
-		partitions_[i]->reset_forces();
 	}
 
+	// compute residue
 #pragma omp parallel for
 	for (int i = 0; i < boundaries_.size(); i++)
 	{
@@ -319,28 +336,53 @@ int Simulation::Update()
 	}
 	//std::cout << std::endl;
 
-	if (is_pre_merge) {
+	// reset force
 #pragma omp parallel for
-		for (int i = 0; i < partitions_.size(); i++)
-		{
-			partitions_[i]->PreMerge();
-		}
-		//std::cout << std::endl;
+	for (int i = 0; i < partitions_.size(); i++)
+	{
+		partitions_[i]->reset_forces();
 	}
 
+	// compute force
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->ComputeSourceForcingTerms(time_step);
-		partitions_[i]->Update();
-		//std::cout << "update partition " << partition->info_.id << " ";
+		//std::cout << "impose force partition " << partition->info_.id << " ";
 	}
 
+	// pre-merge (correct force)
+	if (is_pre_merge) {
+#pragma omp parallel for
+		for (int i = 0; i < partitions_.size(); i++)
+		{
+			partitions_[i]->PreMerge(); // use corrected force
+		}
+		//std::cout << std::endl;
+	}
+	else {
+#pragma omp parallel for
+		for (int i = 0; i < partitions_.size(); i++)
+		{
+			partitions_[i]->NoPreMerge(); // use not corrected force
+		}
+		//std::cout << std::endl;
+	}
+
+	// update velocity
+#pragma omp parallel for
+	for (int i = 0; i < partitions_.size(); i++)
+	{
+		partitions_[i]->Update_velocity();
+		//std::cout << "update velocity partition " << partition->info_.id << " ";
+	}
+
+	// post-merge phase 2 (correct velocity)
 	if (!is_pre_merge) {
 #pragma omp parallel for
 		for (int i = 0; i < partitions_.size(); i++)
 		{
-			partitions_[i]->PostMerge();
+			partitions_[i]->PostMerge(2);
 		}
 		//std::cout << std::endl;
 	}

@@ -33,8 +33,6 @@ class Simulation
 		std::vector<std::vector<char>> model_map;
 	} info_;
 
-	bool is_pre_merge = false;
-
 public:
 
 	static double duration_;
@@ -43,6 +41,8 @@ public:
 	static double dt_;
 	static double c0_;
 	static int n_pml_layers_;
+
+	static bool is_pre_merge;
 
 	int time_step_{ 0 };
 

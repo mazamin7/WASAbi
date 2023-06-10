@@ -4,19 +4,19 @@
 
 
 DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs)
-	: Partition(xs, ys, zs, w, h, d, alpha_abs), pressure_(w, h, d), velocity_(w, h, d), force_(w, h, d), residue_(w, h, d)
+	: Partition(xs, ys, zs, w, h, d, alpha_abs), pressure_(w, h, d), velocity_(w, h, d), residue_(w, h, d), force_(w, h, d), force_r_(w, h, d)
 {
 	should_render_ = true;
 	info_.type = "DCT";
 
 	second_order_ = alpha_abs == 0;
 
-	prev_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
-	next_modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
+	prev_pressure_modes_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
+	next_pressure_modes_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	prev_velocity_modes_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	next_velocity_modes_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 
-	cwt_ = (double*)calloc(width_*height_*depth_, sizeof(double));
+	cwt_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	swt_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	w_omega_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
 	w2_ = (double*)calloc(width_ * height_ * depth_, sizeof(double));
@@ -53,8 +53,8 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d, double a
 
 DctPartition::~DctPartition()
 {
-	free(prev_modes_);
-	free(next_modes_);
+	free(prev_pressure_modes_);
+	free(next_pressure_modes_);
 	free(prev_velocity_modes_);
 	free(next_velocity_modes_);
 	free(cwt_);
@@ -65,11 +65,13 @@ DctPartition::~DctPartition()
 	free(inv_w2_);
 }
 
-void DctPartition::Update()
+void DctPartition::Update_pressure()
 {
-	pressure_.ExecuteDct();
-	velocity_.ExecuteDct();
-	force_.ExecuteDct();
+	// prev_pressure_modes_ previous pressure
+	pressure_.ExecuteDct(); // current pressure
+	velocity_.ExecuteDct(); // current velocity
+	force_.ExecuteDct(); // current force
+	residue_.ExecuteDct(); // current residual
 
 	for (int i = 0; i < depth_; i++)
 	{
@@ -81,31 +83,66 @@ void DctPartition::Update()
 				
 				if (idx == 0) {
 					if (second_order_)
-						next_modes_[idx] = 2.0 * pressure_.modes_[idx] - prev_modes_[idx] + dt_ * dt_ * force_.modes_[idx];
+						// p_next_dct(n) = 2 * p_curr_dct(n) - p_prev_dct(n) + dt*dt * force_dct(n);
+						next_pressure_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] - prev_pressure_modes_[idx] + dt_ * dt_ * (force_.modes_[idx] + residue_.modes_[idx]));
 					else{
-						next_modes_[idx] = prev_modes_[idx] + 2 * dt_ * velocity_.modes_[idx];
-						next_velocity_modes_[idx] = prev_velocity_modes_[idx] + 2 * dt_ * (-2 * alpha_abs_ * velocity_.modes_[idx] + force_.modes_[idx]);
+						// p_next_dct(n) = p_curr_dct(n) + dt * v_curr_dct(n);
+						next_pressure_modes_[idx] = (1 - 1e-10) * ( pressure_.modes_[idx] + dt_ * velocity_.modes_[idx] );
 					}
 				}else{
 					if (second_order_)
-						next_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_modes_[idx] + (2.0 * force_.modes_[idx] * inv_w2_[idx]) * (1.0 - cwt_[idx]) );
+						// p_next_dct(n) = 2 * p_curr_dct(n) .* cwt(n) - p_prev_dct(n) + (2 * force_dct(n) . / w2(n)) .* (1 - cwt(n));
+						next_pressure_modes_[idx] = (1 - 1e-10) * ( 2.0 * pressure_.modes_[idx] * cwt_[idx] - prev_pressure_modes_[idx] + (2.0 * (force_.modes_[idx] + residue_.modes_[idx]) * inv_w2_[idx]) * (1.0 - cwt_[idx]) );
 					else{
 						double xe = force_.modes_[idx] * inv_w2_[idx];
-						next_modes_[idx] = (1 - 1e-10) * (xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_.modes_[idx]) );
-						next_velocity_modes_[idx] = eatm_ * (velocity_.modes_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (pressure_.modes_[idx] - xe) * swt_[idx]);
+						// p_next_dct(n) = xe + eatm * ((p_curr_dct(n) - xe) .* (cwt(n) + alpha_abs * inv_w(n) .* swt(n)) + swt(n) .* inv_w(n) .* v_curr_dct(n));
+						next_pressure_modes_[idx] = (1 - 1e-10) * (xe + eatm_ * ((pressure_.modes_[idx] - xe) * (cwt_[idx] + alpha_ * inv_w_[idx] * swt_[idx]) + swt_[idx] * inv_w_[idx] * velocity_.modes_[idx]) );
 					}
 				}
 			}
 		}
 	}
 
-	memcpy((void *)prev_modes_, (void *)pressure_.modes_, depth_ * width_ * height_ * sizeof(double));
-	memcpy((void *)pressure_.modes_, (void *)next_modes_, depth_ * width_ * height_ * sizeof(double));
+	memcpy((void *)prev_pressure_modes_, (void *)pressure_.modes_, depth_ * width_ * height_ * sizeof(double));
+	memcpy((void *)pressure_.modes_, (void *)next_pressure_modes_, depth_ * width_ * height_ * sizeof(double));
+
+	pressure_.ExecuteIdct();
+}
+
+void DctPartition::Update_velocity()
+{
+	if (second_order_) // velocity is not considered in the second order case
+		return;
+
+	// prev_pressure_modes_ current pressure
+	velocity_.ExecuteDct(); // current velocity
+	force_.ExecuteDct(); // next force
+	force_r_.ExecuteDct(); // next corrected force
+
+	for (int i = 0; i < depth_; i++)
+	{
+		for (int j = 0; j < height_; j++)
+		{
+			for (int k = 0; k < width_; k++)
+			{
+				int idx = i * height_ * width_ + j * width_ + k;
+
+				if (idx == 0) {
+					// v_next_dct(n) = (v_curr_dct(n) + dt * force_dct(n)) / (1 + 2 * dt * alpha_abs);
+					next_velocity_modes_[idx] = (velocity_.modes_[idx] + dt_ * force_r_.modes_[idx]) / (1 + 2 * dt_ * alpha_abs_);
+				}
+				else {
+					double xe = force_r_.modes_[idx] * inv_w2_[idx];
+					// v_next_dct(n) = eatm * (v_curr_dct(n) .* (cwt(n) - alpha_abs * inv_w(n) .* swt(n)) - (w(n) + alpha2 * inv_w(n)) .* (p_curr_dct(n) - xe) .* swt(n));
+					next_velocity_modes_[idx] = eatm_ * (velocity_.modes_[idx] * (cwt_[idx] - alpha_ * inv_w_[idx] * swt_[idx]) - (w_omega_[idx] + alpha2_ * inv_w_[idx]) * (prev_pressure_modes_[idx] - xe) * swt_[idx]);
+				}
+			}
+		}
+	}
 
 	memcpy((void*)prev_velocity_modes_, (void*)velocity_.modes_, depth_ * width_ * height_ * sizeof(double));
 	memcpy((void*)velocity_.modes_, (void*)next_velocity_modes_, depth_ * width_ * height_ * sizeof(double));
 
-	pressure_.ExecuteIdct();
 	velocity_.ExecuteIdct();
 }
 
@@ -169,14 +206,20 @@ void DctPartition::set_force(int x, int y, int z, double v)
 	force_.set_value(x, y, z, v);
 }
 
-void DctPartition::add_to_force(int x, int y, int z, double v)
+double DctPartition::get_force_r(int x, int y, int z)
 {
-	force_.set_value(x, y, z, force_.get_value(x, y, z) + v);
+	return force_r_.get_value(x, y, z);
+}
+
+void DctPartition::set_force_r(int x, int y, int z, double v)
+{
+	force_r_.set_value(x, y, z, v);
 }
 
 void DctPartition::reset_forces()
 {
 	force_.reset();
+	force_r_.reset();
 }
 
 void DctPartition::reset_residues()

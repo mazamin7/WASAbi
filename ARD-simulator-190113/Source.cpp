@@ -43,6 +43,8 @@ double Simulation::dt_ = 2e-4;
 double Simulation::c0_ = 3.435e2;		// Speed of sound
 int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
 
+bool Simulation::is_pre_merge = true;	// Interpartition interface handling method
+
 int main()
 {
 	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the consuming time.

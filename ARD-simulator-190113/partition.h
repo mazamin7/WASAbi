@@ -50,7 +50,8 @@ public:
 	Partition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs);
 	~Partition();
 
-	virtual void Update() = 0;
+	virtual void Update_pressure() = 0;
+	virtual void Update_velocity() = 0;
 
 	virtual double* get_pressure_field() = 0;
 
@@ -72,13 +73,16 @@ public:
 
 	virtual double get_force(int x, int y, int z) = 0;
 	virtual void set_force(int x, int y, int z, double v) = 0;
-	virtual void add_to_force(int x, int y, int z, double v) = 0;
+
+	virtual double get_force_r(int x, int y, int z) = 0;
+	virtual void set_force_r(int x, int y, int z, double v) = 0;
 
 	virtual void reset_forces() = 0;
 	virtual void reset_residues() = 0;
 
 	void PreMerge();
-	void PostMerge();
+	void NoPreMerge();
+	void PostMerge(int);
 
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 

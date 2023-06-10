@@ -200,6 +200,7 @@ void Partition::ComputeSourceForcingTerms(double t)
 
 void Partition::PreMerge()
 {
+#pragma omp parallel for
 	for (int i = 0; i < depth_; i++)
 	{
 		for (int j = 0; j < height_; j++)
@@ -207,14 +208,32 @@ void Partition::PreMerge()
 			for (int k = 0; k < width_; k++)
 			{
 				auto res = get_residue(k, j, i);
-				add_to_force(k, j, i, res);
+				auto force = get_force(k, j, i);
+				set_force_r(k, j, i, force + res);
 			}
 		}
 	}
 }
 
-void Partition::PostMerge()
+void Partition::NoPreMerge()
 {
+#pragma omp parallel for
+	for (int i = 0; i < depth_; i++)
+	{
+		for (int j = 0; j < height_; j++)
+		{
+			for (int k = 0; k < width_; k++)
+			{
+				auto force = get_force(k, j, i);
+				set_force_r(k, j, i, force);
+			}
+		}
+	}
+}
+
+void Partition::PostMerge(int phase)
+{
+#pragma omp parallel for
 	for (int i = 0; i < depth_; i++)
 	{
 		for (int j = 0; j < height_; j++)
@@ -223,9 +242,10 @@ void Partition::PostMerge()
 			{
 				auto res = get_residue(k, j, i);
 
-				if (second_order_)
+				if (second_order_ && phase == 1)
 					add_to_pressure(k, j, i, res);
-				else
+
+				if (!second_order_ && phase == 2)
 					add_to_velocity(k, j, i, res);
 			}
 		}

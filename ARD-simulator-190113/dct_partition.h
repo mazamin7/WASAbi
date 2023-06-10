@@ -21,9 +21,10 @@ class DctPartition : public Partition
 	DctVolume velocity_;
 	DctVolume residue_;
 	DctVolume force_;
+	DctVolume force_r_;
 
-	double *prev_modes_{ nullptr };
-	double *next_modes_{ nullptr };
+	double *prev_pressure_modes_{ nullptr };
+	double *next_pressure_modes_{ nullptr };
 	double *prev_velocity_modes_{ nullptr };
 	double *next_velocity_modes_{ nullptr };
 
@@ -31,7 +32,8 @@ public:
 	DctPartition(int xs, int ys, int zs, int w, int h, int d, double alpha_abs);
 	~DctPartition();
 
-	virtual void Update();
+	virtual void Update_pressure();
+	virtual void Update_velocity();
 
 	virtual double* get_pressure_field();
 
@@ -49,7 +51,9 @@ public:
 
 	virtual double get_force(int x, int y, int z);
 	virtual void set_force(int x, int y, int z, double v);
-	virtual void add_to_force(int x, int y, int z, double v);
+
+	virtual double get_force_r(int x, int y, int z);
+	virtual void set_force_r(int x, int y, int z, double v);
 
 	virtual void reset_forces();
 	virtual void reset_residues();

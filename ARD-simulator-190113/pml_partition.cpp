@@ -21,6 +21,8 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	should_render_ = false;
 	info_.type = "PML";
 
+	second_order_ = true;
+
 	if (type_ == P_LEFT || type_ == P_RIGHT) is_x_pml_ = true;
 	if (type_ == P_TOP || type_ == P_BOTTOM) is_y_pml_ = true;
 	if (type_ == P_FRONT || type_ == P_BACK) is_z_pml_ = true;
@@ -113,7 +115,7 @@ PmlPartition::~PmlPartition()
 	free(zetaz_);
 }
 
-void PmlPartition::Update()
+void PmlPartition::Update_pressure()
 {
 	int width = width_;
 	int height = height_;
@@ -211,6 +213,11 @@ void PmlPartition::Update()
 	memset((void *)force_, 0, width * height * depth * sizeof(double));
 }
 
+void PmlPartition::Update_velocity()
+{
+	return; // velocity not considered in second order
+}
+
 double* PmlPartition::get_pressure_field()
 {
 	return p_;
@@ -271,9 +278,14 @@ void PmlPartition::set_force(int x, int y, int z, double f)
 	force_[GetIndex(x, y, z)] = f;
 }
 
-void PmlPartition::add_to_force(int x, int y, int z, double v)
+double PmlPartition::get_force_r(int x, int y, int z)
 {
-	force_[GetIndex(x, y, z)] = force_[GetIndex(x, y, z)] + v;
+	return force_[GetIndex(x, y, z)];
+}
+
+void PmlPartition::set_force_r(int x, int y, int z, double f)
+{
+	force_[GetIndex(x, y, z)] = f;
 }
 
 void PmlPartition::reset_forces()
