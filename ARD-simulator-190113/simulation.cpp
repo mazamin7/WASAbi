@@ -369,15 +369,15 @@ int Simulation::Update()
 		//std::cout << std::endl;
 	}
 
-	// update velocity
+	// update pressure velocity
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->Update_velocity();
-		//std::cout << "update velocity partition " << partition->info_.id << " ";
+		//std::cout << "update pressure velocity partition " << partition->info_.id << " ";
 	}
 
-	// post-merge phase 2 (correct velocity)
+	// post-merge phase 2 (correct pressure velocity)
 	if (!is_pre_merge) {
 #pragma omp parallel for
 		for (int i = 0; i < partitions_.size(); i++)

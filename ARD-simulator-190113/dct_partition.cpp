@@ -71,7 +71,7 @@ void DctPartition::Update_pressure()
 {
 	// prev_pressure_modes_ previous pressure
 	pressure_.ExecuteDct(); // current pressure
-	velocity_.ExecuteDct(); // current velocity
+	velocity_.ExecuteDct(); // current pressure velocity
 	force_.ExecuteDct(); // current force
 	force_r_.ExecuteDct(); // current corrected force
 
@@ -109,11 +109,11 @@ void DctPartition::Update_pressure()
 
 void DctPartition::Update_velocity()
 {
-	if (second_order_) // velocity is not considered in the second order case
+	if (second_order_) // pressure velocity is not considered in the second order case
 		return;
 
 	// prev_pressure_modes_ current pressure
-	velocity_.ExecuteDct(); // current velocity
+	velocity_.ExecuteDct(); // current pressure velocity
 	force_.ExecuteDct(); // next force
 	force_r_.ExecuteDct(); // next corrected force
 
