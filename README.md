@@ -1,15 +1,22 @@
-# Adaptive rectangular decomposition simulator
+<p align="center">
+  <img src="logo.png">
+</p>
 
-A 3D sound propagation simulator.
+# WASAbi 2.5D
+
+C++ implementation of WASAbi in 2.5D (3D with constant height), a Wave-based Acoustic Simulation Algorithm.
 
 Theory:
 > Raghuvanshi, Nikunj, Rahul Narain, and Ming C. Lin. "Efficient and accurate sound propagation using adaptive rectangular decomposition." IEEE Transactions on Visualization and Computer Graphics 15.5 (2009): 789-801.
 >
 > Grote, Marcus J., and Imbo Sim. "Efficient PML for the wave equation." arXiv preprint arXiv:1001.0319 (2010).
+>
+> Coming Soon
 
-Extended from 2D simulator.
-> https://github.com/thecodeboss/AcousticSimulator
+Extended from ARD-simulator by [@jinnsjj](https://github.com/jinnsjj).
+> https://github.com/jinnsjj/ARD-simulator
 
+## Input data
 `assets/*.txt` records the structure of room on x-y plane. Note that this simulator only support 2.5D room model now, that is, z should always be 0 and depth of all partition should be equal.
 
 Input example:
@@ -35,6 +42,15 @@ recorder:
 All the values above are in real world scale (meter).
 
 **Don't forget to add an extra blank line at the end of file.**
+
+## Features
+
+- Partial absorbing boundaries through PML partitions
+- Fourier method (first and second order) for air partitions
+- Rectangular Domain Decomposition (RDD)
+- Test cases included
+- Air absorption
+- Matlab auralization script
 
 ## Building and running
 
