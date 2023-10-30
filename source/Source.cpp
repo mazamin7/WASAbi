@@ -1,4 +1,4 @@
-/* ARD simulator
+/* WASAbi 2.5D
  * 
  * This is the entrance of the program. 
  * SDL is used as the interface to show the wave propagation.
