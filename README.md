@@ -51,7 +51,7 @@ All the values above are in real world scale (meter).
 - Test cases included
 - Air absorption
 - Preprocessing in jupyter notebook (room image to room geometry format)
-- Postprocessing in Matlab (room's impulse response and auralization script)
+- Postprocessing in Matlab (room's impulse response computation and auralization script)
 
 ## Preprocessing
 
