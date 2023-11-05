@@ -54,5 +54,8 @@
 *.7z
 *.suo
 *.ipynb
+
 source/output/*.*
 source/x64/Debug/WASAbi2.5D.vcxproj.FileListAbsolute.txt
+preprocessing/data/*.txt
+postprocessing/data/*.*
