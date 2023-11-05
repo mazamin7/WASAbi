@@ -53,3 +53,5 @@
 *.txt
 ARD-simulator-190113/output/0.200000_0.500000.7z
 *.7z
+.vs/WASAbi2.5D/v17/.suo
+preprocessing/.ipynb_checkpoints/preprocessing-checkpoint.ipynb

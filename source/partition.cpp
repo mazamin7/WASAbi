@@ -161,15 +161,15 @@ std::vector<std::shared_ptr<Partition>> Partition::ImportPartitions(std::string 
 	file.open(path, std::ifstream::in);
 	while (file.good())
 	{
-		int x_start, y_start, z_start;
-		int width, height, depth;
+		double x_start, y_start, z_start;
+		double width, height, depth;
 
 		file >> x_start >> y_start >> z_start;
 		file >> width >> height >> depth;
 
 		if (file.eof()) break;
 
-		partitions.push_back(std::make_shared<DctPartition>(x_start / Simulation::dh_, y_start / Simulation::dh_, z_start / Simulation::dh_, width / Simulation::dh_, height / Simulation::dh_, depth / Simulation::dh_));
+		partitions.push_back(std::make_shared<DctPartition>((int) (x_start / Simulation::dh_), (int)(y_start / Simulation::dh_), (int)(z_start / Simulation::dh_), (int)(width / Simulation::dh_), (int)(height / Simulation::dh_), (int)(depth / Simulation::dh_)));
 	}
 	file.close();
 	return partitions;

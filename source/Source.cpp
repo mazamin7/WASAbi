@@ -58,9 +58,9 @@ int main()
 	std::vector<std::shared_ptr<SoundSource>> sources;
 	std::vector<std::shared_ptr<Recorder>> recorders;
 
-	partitions = Partition::ImportPartitions("./assets/hall.txt");			// Read partition properties from file.
-	sources = SoundSource::ImportSources("./assets/hall-sources.txt");		// Read source properties from file.
-	recorders = Recorder::ImportRecorders("./assets/hall-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory. 
+	partitions = Partition::ImportPartitions("./assets/room.txt");			// Read partition properties from file.
+	sources = SoundSource::ImportSources("./assets/room-sources.txt");		// Read source properties from file.
+	recorders = Recorder::ImportRecorders("./assets/room-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory. 
 
 	//partitions = Partition::ImportPartitions("./assets/scene-2.txt");
 	//sources = SoundSource::ImportSources("./assets/sources.txt");
