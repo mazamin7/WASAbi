@@ -50,7 +50,51 @@ All the values above are in real world scale (meter).
 - Rectangular Domain Decomposition (RDD)
 - Test cases included
 - Air absorption
-- Matlab auralization script
+- Preprocessing in jupyter notebook (room image to room geometry format)
+- Postprocessing in Matlab (room's impulse response and auralization script)
+
+## Preprocessing
+
+### Installation
+1. Install Anaconda: https://docs.anaconda.com/free/anaconda/install/windows/
+2. Create environment
+   ```sh
+   conda create -n ARD -c intel python=3.6
+   ```
+3. Activate environment
+   ```sh
+   conda activate ARD
+   ```
+4. Install scipy
+   ```sh
+   conda install scipy=1.3.1
+   ```
+5. Install adaptive-boxes (see https://github.com/jnfran92/adaptive-boxes)
+   ```sh
+   pip install adaptive-boxes
+   ```
+6. Install jupyter notebook
+   ```sh
+   conda install notebook
+   ```
+
+### Running
+1. Run Anaconda terminal
+2. Set current directory
+   ```sh
+   cd $install_dir$/preprocessing/
+   ```
+3. Activate environment
+   ```sh
+   conda activate ARD
+   ```
+4. Run jupyter notebook
+   ```sh
+   jupyter notebook
+   ```
+5. Draw room's plan with MS Paint and place image in /data/ as ".png"
+6. Modify room's filename accordingly and run the script
+7. Move the geometry file to /source/assets/, edit Source.cpp accordingly and recompile the simulator
 
 ## Building and running
 
