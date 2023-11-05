@@ -24,7 +24,7 @@ bool is_record = true;
 
 /* Set constant parameters. */
 
-double Partition::boundary_absorption_ = 1;	// Absorption coefficients of the boundaries.
+double Partition::boundary_absorption_ = 0.5;	// Absorption coefficients of the boundaries.
 //double Partition::boundary_absorption_ = 0.9;
 double Simulation::air_absorption_ = 0; // Absorption coefficients of air.
 double Simulation::duration_ = 2;		// Duration of the whole simulation (seconds).
@@ -42,7 +42,7 @@ double Simulation::dt_ = 2e-4;
 //double Simulation::dt_ = 6.25e-4;
 
 double Simulation::c0_ = 3.435e2;		// Speed of sound
-int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
+int Simulation::n_pml_layers_ = 20;		// Number of pml layers.
 
 bool Simulation::is_pre_merge = false;	// Interpartition interface handling method
 
@@ -87,7 +87,7 @@ int main()
 	SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
 	int resolution_x = 800;
 	int resolution_y = resolution_x / simulation->size_x()*simulation->size_y();
-	SDL_Window* window = SDL_CreateWindow("ARD Simulator",
+	SDL_Window* window = SDL_CreateWindow("WASAbi 2.5D Simulator",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution_x, resolution_y + 20, 0);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING,
