@@ -1,6 +1,4 @@
 function [S, V] = compute_geometry_S_V(file_path)
-    % WE SHOULD CHECK IF SEGMENT IS ALREADY CONTAINED IN ANOTHER SEGMENT; NOT IF EQUAL
-
     % Read the data from the text file
     data = dlmread(file_path);
     
@@ -19,10 +17,8 @@ function [S, V] = compute_geometry_S_V(file_path)
     % Create a cell array to store the segments
     segments = {};
     
-    % Create an array to store the results of check_segment_equal
-    segmentEqualResults = {};
-
-    segmentSizes = {};
+    % Create an array to store the results of check_segment_overlap
+    segmentOverlaps = {};
 
     % Loop through each rectangle
     for i = 1:length(x_pos)
@@ -41,28 +37,24 @@ function [S, V] = compute_geometry_S_V(file_path)
 
         % Define and add the coordinates of the individual segments one by one
         top_segment = [x_pos(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i)]; % Top
-        segmentSizes{end + 1} = x_length(i);
         segments{end + 1} = top_segment;
 
         plot(top_segment(:,1), top_segment(:,2));
         
         
         right_segment = [x_pos(i) + x_length(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i) + y_length(i)]; % Right
-        segmentSizes{end + 1} = y_length(i);
         segments{end + 1} = right_segment;
 
         plot(right_segment(:,1), right_segment(:,2));
         
 
         bottom_segment = [x_pos(i) + x_length(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i) + y_length(i)]; % Bottom
-        segmentSizes{end + 1} = x_length(i);
         segments{end + 1} = bottom_segment;
 
         plot(bottom_segment(:,1), bottom_segment(:,2));
         
 
         left_segment = [x_pos(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i)]; % Left
-        segmentSizes{end + 1} = y_length(i);
         segments{end + 1} = left_segment;
 
         
@@ -80,11 +72,8 @@ function [S, V] = compute_geometry_S_V(file_path)
 
     % Loop through the existing segments
     for i = 1:numel(segments)
-        segmentEqualResults{i} = check_segment_equal(segments, segments{i});
-
-        if segmentEqualResults{i} == true
-            total_perimeter = total_perimeter - segmentSizes{i};
-        end
+        segmentOverlaps{i} = compute_segment_total_overlap(segments, segments{i});
+        total_perimeter = total_perimeter - segmentOverlaps{i};
     end
     
     % Return the results
