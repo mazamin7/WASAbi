@@ -101,7 +101,10 @@
       <AdditionalDependencies>libfftw3-3.lib;SDL2.lib;SDL2main.lib;SDL2_ttf.lib;Shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(SolutionDir)libfreetype-dll\$(PlatForm)"  "$(TargetDir)"</Command>
+      <Command>copy "$(SolutionDir)libfreetype-dll\$(PlatForm)"  "$(TargetDir)"
+copy "$(SolutionDir)SDL2-2.28.4\lib\$(PlatForm)"  "$(TargetDir)"
+copy "$(SolutionDir)SDL2_ttf-2.20.2\lib\$(PlatForm)"  "$(TargetDir)"
+copy "$(SolutionDir)fftw-3.3.5-dll\$(PlatForm)"  "$(TargetDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

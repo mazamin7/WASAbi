@@ -14,7 +14,6 @@
 # Compiled Dynamic libraries
 *.so
 *.dylib
-*.dll
 
 # Fortran module files
 *.mod
@@ -24,7 +23,6 @@
 *.lai
 *.la
 *.a
-*.lib
 
 # Executables
 *.exe
@@ -50,10 +48,7 @@
 *.idb
 *.mp3
 *.wav
-*.7z
-*.7z
 *.suo
-*.ipynb
 
 source/output/*.*
 source/x64/Debug/WASAbi2.5D.vcxproj.FileListAbsolute.txt
