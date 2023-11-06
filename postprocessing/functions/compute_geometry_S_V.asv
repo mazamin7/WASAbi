@@ -1,6 +1,4 @@
 function [S, V] = compute_geometry_S_V(file_path)
-    % WE SHOULD CHECK IF SEGMENT CONTAINS SEGMENT; NOT IF EQUAL
-
     % Read the data from the text file
     data = dlmread(file_path);
     
@@ -36,60 +34,33 @@ function [S, V] = compute_geometry_S_V(file_path)
         % Add the current perimeter to the total
         total_perimeter = total_perimeter + perimeter;
 
-
         % Define and add the coordinates of the individual segments one by one
         top_segment = [x_pos(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i)]; % Top
         
-        segmentEqualResult = check_segment_equal(segments, top_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
+        segmentEqualResults{end + 1} = check_segment_equal(segments, top_segment);
         segments{end + 1} = top_segment;
-
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*x_length(i);
-        end
 
         plot(top_segment(:,1), top_segment(:,2));
         
-        
         right_segment = [x_pos(i) + x_length(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i) + y_length(i)]; % Right
         
-        segmentEqualResult = check_segment_equal(segments, right_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
+        segmentEqualResults{end + 1} = check_segment_equal(segments, right_segment);
         segments{end + 1} = right_segment;
-
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*y_length(i);
-        end
 
         plot(right_segment(:,1), right_segment(:,2));
         
-
         bottom_segment = [x_pos(i) + x_length(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i) + y_length(i)]; % Bottom
         
-        segmentEqualResult = check_segment_equal(segments, bottom_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
+        segmentEqualResults{end + 1} = check_segment_equal(segments, bottom_segment);
         segments{end + 1} = bottom_segment;
         
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*x_length(i);
-        end
-
         plot(bottom_segment(:,1), bottom_segment(:,2));
         
-
         left_segment = [x_pos(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i)]; % Left
-        
-        segmentEqualResult = check_segment_equal(segments, left_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
         segments{end + 1} = left_segment;
-
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*y_length(i);
-        end
-
+        segmentEqualResults{end + 1} = check_segment_equal(segments, left_segment);
         plot(left_segment(:,1), left_segment(:,2));
         
-
         hold on;
     end
     
