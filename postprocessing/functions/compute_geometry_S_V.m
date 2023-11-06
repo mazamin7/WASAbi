@@ -38,37 +38,20 @@ function [S, V] = compute_geometry_S_V(file_path)
         % Define and add the coordinates of the individual segments one by one
         top_segment = [x_pos(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i)]; % Top
         segments{end + 1} = top_segment;
-
-        plot(top_segment(:,1), top_segment(:,2));
         
         
         right_segment = [x_pos(i) + x_length(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i) + y_length(i)]; % Right
         segments{end + 1} = right_segment;
-
-        plot(right_segment(:,1), right_segment(:,2));
         
 
         bottom_segment = [x_pos(i) + x_length(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i) + y_length(i)]; % Bottom
         segments{end + 1} = bottom_segment;
-
-        plot(bottom_segment(:,1), bottom_segment(:,2));
         
 
         left_segment = [x_pos(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i)]; % Left
         segments{end + 1} = left_segment;
-
         
-
-        plot(left_segment(:,1), left_segment(:,2));
-        
-
-        hold on;
     end
-    
-    % Set axis labels and title for the 2D plot
-    xlabel('X');
-    ylabel('Y');
-    title('Rectangle Segments');
 
     % Loop through the existing segments
     for i = 1:numel(segments)

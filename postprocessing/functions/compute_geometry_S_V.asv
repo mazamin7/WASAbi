@@ -1,6 +1,4 @@
 function [S, V] = compute_geometry_S_V(file_path)
-    % WE SHOULD CHECK IF SEGMENT IS ALREADY CONTAINED IN ANOTHER SEGMENT; NOT IF EQUAL
-
     % Read the data from the text file
     data = dlmread(file_path);
     
@@ -19,10 +17,10 @@ function [S, V] = compute_geometry_S_V(file_path)
     % Create a cell array to store the segments
     segments = {};
     
-    % Create an array to store the results of check_segment_equal
-    segmentEqualResults = {};
+    % Create an array to store the results of check_segment_overlap
+    segmentOverlaps = {};
 
-    segmentSize = {};
+    hold on;
 
     % Loop through each rectangle
     for i = 1:length(x_pos)
@@ -41,65 +39,40 @@ function [S, V] = compute_geometry_S_V(file_path)
 
         % Define and add the coordinates of the individual segments one by one
         top_segment = [x_pos(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i)]; % Top
-        segmentSize = x_length(i);
-
-        segmentEqualResult = check_segment_equal(segments, top_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
         segments{end + 1} = top_segment;
 
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*segmentSize(i);
-        end
-
-        plot(top_segment(:,1), top_segment(:,2));
+        plot(top_segment(:,1), top_segment(:,2), 'b');
         
         
         right_segment = [x_pos(i) + x_length(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i) + y_length(i)]; % Right
-        
-        segmentEqualResult = check_segment_equal(segments, right_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
         segments{end + 1} = right_segment;
 
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*y_length(i);
-        end
-
-        plot(right_segment(:,1), right_segment(:,2));
+        plot(right_segment(:,1), right_segment(:,2), 'r');
         
 
         bottom_segment = [x_pos(i) + x_length(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i) + y_length(i)]; % Bottom
-        
-        segmentEqualResult = check_segment_equal(segments, bottom_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
         segments{end + 1} = bottom_segment;
-        
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*x_length(i);
-        end
 
-        plot(bottom_segment(:,1), bottom_segment(:,2));
+        plot(bottom_segment(:,1), bottom_segment(:,2), 'b');
         
 
         left_segment = [x_pos(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i)]; % Left
-        
-        segmentEqualResult = check_segment_equal(segments, left_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
         segments{end + 1} = left_segment;
 
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*y_length(i);
-        end
-
-        plot(left_segment(:,1), left_segment(:,2));
+        plot(left_segment(:,1), left_segment(:,2), 'r');
         
-
-        hold on;
     end
     
     % Set axis labels and title for the 2D plot
     xlabel('X');
     ylabel('Y');
     title('Rectangle Segments');
+
+    % Loop through the existing segments
+    for i = 1:numel(segments)
+        segmentOverlaps{i} = compute_segment_total_overlap(segments, segments{i});
+        total_perimeter = total_perimeter - segmentOverlaps{i};
+    end
     
     % Return the results
     S = total_perimeter * z_length(1) + 2 * total_surface_area;
