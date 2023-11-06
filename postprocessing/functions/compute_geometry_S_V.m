@@ -1,5 +1,5 @@
 function [S, V] = compute_geometry_S_V(file_path)
-    % WE SHOULD CHECK IF SEGMENT CONTAINS SEGMENT; NOT IF EQUAL
+    % WE SHOULD CHECK IF SEGMENT IS ALREADY CONTAINED IN ANOTHER SEGMENT; NOT IF EQUAL
 
     % Read the data from the text file
     data = dlmread(file_path);
@@ -22,6 +22,8 @@ function [S, V] = compute_geometry_S_V(file_path)
     % Create an array to store the results of check_segment_equal
     segmentEqualResults = {};
 
+    segmentSizes = {};
+
     % Loop through each rectangle
     for i = 1:length(x_pos)
         % Calculate the surface area of the current rectangle
@@ -39,53 +41,31 @@ function [S, V] = compute_geometry_S_V(file_path)
 
         % Define and add the coordinates of the individual segments one by one
         top_segment = [x_pos(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i)]; % Top
-        
-        segmentEqualResult = check_segment_equal(segments, top_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
+        segmentSizes{end + 1} = x_length(i);
         segments{end + 1} = top_segment;
-
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*x_length(i);
-        end
 
         plot(top_segment(:,1), top_segment(:,2));
         
         
         right_segment = [x_pos(i) + x_length(i), y_pos(i); x_pos(i) + x_length(i), y_pos(i) + y_length(i)]; % Right
-        
-        segmentEqualResult = check_segment_equal(segments, right_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
+        segmentSizes{end + 1} = y_length(i);
         segments{end + 1} = right_segment;
-
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*y_length(i);
-        end
 
         plot(right_segment(:,1), right_segment(:,2));
         
 
         bottom_segment = [x_pos(i) + x_length(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i) + y_length(i)]; % Bottom
-        
-        segmentEqualResult = check_segment_equal(segments, bottom_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
+        segmentSizes{end + 1} = x_length(i);
         segments{end + 1} = bottom_segment;
-        
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*x_length(i);
-        end
 
         plot(bottom_segment(:,1), bottom_segment(:,2));
         
 
         left_segment = [x_pos(i), y_pos(i) + y_length(i); x_pos(i), y_pos(i)]; % Left
-        
-        segmentEqualResult = check_segment_equal(segments, left_segment);
-        segmentEqualResults{end + 1} = segmentEqualResult;
+        segmentSizes{end + 1} = y_length(i);
         segments{end + 1} = left_segment;
 
-        if segmentEqualResult == true
-            total_perimeter = total_perimeter - 2*y_length(i);
-        end
+        
 
         plot(left_segment(:,1), left_segment(:,2));
         
@@ -97,6 +77,15 @@ function [S, V] = compute_geometry_S_V(file_path)
     xlabel('X');
     ylabel('Y');
     title('Rectangle Segments');
+
+    % Loop through the existing segments
+    for i = 1:numel(segments)
+        segmentEqualResults{i} = check_segment_equal(segments, segments{i});
+
+        if segmentEqualResults{i} == true
+            total_perimeter = total_perimeter - segmentSizes{i};
+        end
+    end
     
     % Return the results
     S = total_perimeter * z_length(1) + 2 * total_surface_area;

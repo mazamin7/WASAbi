@@ -1,4 +1,6 @@
 function equal = are_segments_equal(segment1, segment2)
+    % DOESN'T WORK CORRECTLY
+
     % Check if the two segments are equal, considering opposite directions
-    equal = isequal(sort(segment1), sort(segment2));
+    equal = isequal(segment1, segment2) || isequal(segment1, flipud(segment2));
 end
