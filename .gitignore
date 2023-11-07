@@ -56,3 +56,4 @@ preprocessing/data/*.txt
 postprocessing/data/*.*
 x64/*.*
 *.asv
+preprocessing/.ipynb_checkpoints/preprocessing-checkpoint.ipynb
