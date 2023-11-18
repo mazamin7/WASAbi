@@ -26,7 +26,7 @@ bool is_record = true;
 
 double Partition::boundary_absorption_ = 0.6;	// Absorption coefficients of the boundaries.
 //double Partition::boundary_absorption_ = 0.9;
-double Simulation::air_absorption_ = 0; // Absorption coefficients of air.
+double Simulation::air_absorption_ = 2; // Absorption coefficients of air.
 double Simulation::duration_ = 2;		// Duration of the whole simulation (seconds).
 
 //double Simulation::dh_ = 0.05;			// Space sampling rate.
@@ -58,9 +58,9 @@ int main()
 	std::vector<std::shared_ptr<SoundSource>> sources;
 	std::vector<std::shared_ptr<Recorder>> recorders;
 
-	partitions = Partition::ImportPartitions("./assets/room_with_obstacles.txt");			// Read partition properties from file.
-	sources = SoundSource::ImportSources("./assets/room_with_obstacles-sources.txt");		// Read source properties from file.
-	recorders = Recorder::ImportRecorders("./assets/room_with_obstacles-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory. 
+	partitions = Partition::ImportPartitions("./assets/room.txt");			// Read partition properties from file.
+	sources = SoundSource::ImportSources("./assets/room-sources.txt");		// Read source properties from file.
+	recorders = Recorder::ImportRecorders("./assets/room-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory. 
 
 	//partitions = Partition::ImportPartitions("./assets/scene-2.txt");
 	//sources = SoundSource::ImportSources("./assets/sources.txt");

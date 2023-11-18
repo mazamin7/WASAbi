@@ -40,7 +40,8 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
 			for (int k = 1; k <= width_; k++)
 			{
 				int idx = (i - 1) * height_ * width_ + (j - 1) * width_ + (k - 1);
-				double w = c0_ * M_PI * sqrt((i - 1) * (i - 1) / lz2_ + (j - 1) * (j - 1) / ly2_ + (k - 1) * (k - 1) / lx2_);
+				double w_0 = c0_ * M_PI * sqrt((i - 1) * (i - 1) / lz2_ + (j - 1) * (j - 1) / ly2_ + (k - 1) * (k - 1) / lx2_);
+				double w = sqrt(w_0 * w_0 - alpha2_);
 				cwt_[idx] = cos(w * dt_);
 				swt_[idx] = sin(w * dt_);
 				w_omega_[idx] = w;
