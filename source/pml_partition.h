@@ -14,8 +14,6 @@ class PmlPartition : public Partition
 	double* p_new_{ nullptr };
 
 	double* v_{ nullptr };
-	double* residue_{ nullptr };
-	double* force_;
 
 	double* phi_x_;
 	double* phi_x_new_;
@@ -24,9 +22,15 @@ class PmlPartition : public Partition
 	double* phi_z_;
 	double* phi_z_new_;
 
+	double* psi_;
+	double* psi_new_;
+
 	double* zetax_;
 	double* zetay_;
 	double* zetaz_;
+
+	double* residue_{ nullptr };
+	double* force_;
 	
 	// PML damping values
 	double kxMin_{ 0.1 };
