@@ -202,16 +202,14 @@ void PmlPartition::Update_pressure()
 			}
 		}
 	}
-	std::swap(phi_x_new_, phi_x_);
-	std::swap(phi_y_new_, phi_y_);
-	std::swap(phi_z_new_, phi_z_);
+	phi_x_ = phi_x_new_;
+	phi_y_ = phi_y_new_;
+	phi_z_ = phi_z_new_;
 
-	double *temp = p_old_;
 	p_old_ = p_;
 	p_ = p_new_;
-	p_new_ = temp;
 
-	memset((void *)force_, 0, width * height * depth * sizeof(double));
+	// memset((void *)force_, 0, width * height * depth * sizeof(double));
 }
 
 void PmlPartition::Update_velocity()
