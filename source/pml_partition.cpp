@@ -17,8 +17,8 @@ int PmlPartition::GetIndex(int x, int y, int z)
 PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d)
 	: Partition(xs, ys, zs, w, h, d), type_(type), neighbor_part_(neighbor_part)
 {
-	include_self_terms_ = false;
-	should_render_ = false;
+	include_self_terms_ = true;
+	should_render_ = true;
 	info_.type = "PML";
 
 	second_order_ = true;
@@ -31,6 +31,7 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	zeta_ = Simulation::c0_ / thickness_ * log10(1 / R_);
 
 	int size = width_ * height_*depth_ + 1;
+
 	p_old_ = (double *)malloc(size * sizeof(double));
 	p_ = (double *)malloc(size * sizeof(double));
 	p_new_ = (double *)malloc(size * sizeof(double));
@@ -78,22 +79,23 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 				switch (type)
 				{
 				case PmlPartition::P_BACK:
-					zetaz_[GetIndex(i,j,k)] = zeta_ * ((k + 1) / thickness_ * dh_ - sin(2 * M_PI * (k + 1) * dh_ / thickness_) / 2 / M_PI);
+					zetaz_[GetIndex(i, j, k)] = zeta_ * ((k + 1) * dh_ / thickness_ - sin(2 * M_PI * (k + 1) * dh_ / thickness_) / 2 / M_PI);
 					break;
 				case PmlPartition::P_FRONT:
-					zetaz_[GetIndex(i, j, k)] = zeta_ * ((depth_ - k) / thickness_ * dh_ - sin(2 * M_PI * (depth_ - k) * dh_ / thickness_) / 2 / M_PI);
+					zetaz_[GetIndex(i, j, k)] = zeta_ * ((depth_ - k) * dh_ / thickness_ - sin(2 * M_PI * (depth_ - k) * dh_ / thickness_) / 2 / M_PI);
 					break;
 				case PmlPartition::P_BOTTOM:
-					zetay_[GetIndex(i, j, k)] = zeta_ * ((j + 1) / thickness_ * dh_ - sin(2 * M_PI * (j + 1) * dh_ / thickness_) / 2 / M_PI);
+					zetay_[GetIndex(i, j, k)] = zeta_ * ((j + 1) * dh_ / thickness_ - sin(2 * M_PI * (j + 1) * dh_ / thickness_) / 2 / M_PI);
 					break;
 				case PmlPartition::P_TOP:
-					zetay_[GetIndex(i, j, k)] = zeta_ * ((height_ - j) / thickness_ * dh_ - sin(2 * M_PI * (height_ - j) * dh_ / thickness_) / 2 / M_PI);
+					zetay_[GetIndex(i, j, k)] = zeta_ * ((height_ - j) * dh_ / thickness_ - sin(2 * M_PI * (height_ - j) * dh_ / thickness_) / 2 / M_PI);
 					break;
 				case PmlPartition::P_RIGHT:
-					zetax_[GetIndex(i, j, k)] = zeta_ * ((i + 1) / thickness_ * dh_ - sin(2 * M_PI * (i + 1) * dh_ / thickness_) / 2 / M_PI);
+					// zeta_x = zeta * ( (|x - a|)/L - (sin(2 Pi (|x - a|)/(L))) / (2 Pi) )
+					zetax_[GetIndex(i, j, k)] = zeta_ * ((i + 1) * dh_ / thickness_ - sin(2 * M_PI * (i + 1) * dh_ / thickness_) / 2 / M_PI);
 					break;
 				case PmlPartition::P_LEFT:
-					zetax_[GetIndex(i, j, k)] = zeta_ * ((width_ - i) / thickness_ * dh_ - sin(2 * M_PI * (width_ - i) * dh_ / thickness_) / 2 / M_PI);
+					zetax_[GetIndex(i, j, k)] = zeta_ * ((width_ - i) * dh_ / thickness_ - sin(2 * M_PI * (width_ - i) * dh_ / thickness_) / 2 / M_PI);
 					break;
 				default:
 					break;

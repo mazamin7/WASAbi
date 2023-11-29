@@ -392,7 +392,7 @@ int Simulation::Update()
 	{
 		SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
 		int v_coef = 10;
-		bool render_pml = false;
+		bool render_pml = true;
 		if (look_from_ == 0)	//xy
 		{
 			int pixels_z = sources_[0]->z();

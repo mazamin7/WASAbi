@@ -5,7 +5,7 @@ class PmlPartition : public Partition
 {
 	std::shared_ptr<Partition> neighbor_part_;
 
-	double R_{0.00001};
+	double R_{1.0E-5};
 	double zeta_;
 	double thickness_;
 
@@ -31,14 +31,6 @@ class PmlPartition : public Partition
 
 	double* residue_{ nullptr };
 	double* force_;
-	
-	// PML damping values
-	double kxMin_{ 0.1 };
-	double kxMax_{ 0.1 };
-	double kyMin_{ 0.1 };
-	double kyMax_{ 0.1 };
-	double kzMin_{ 0.1 };
-	double kzMax_{ 0.1 };
 
 	int GetIndex(int x, int y, int z);
 
