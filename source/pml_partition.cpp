@@ -156,7 +156,7 @@ void PmlPartition::Update_pressure()
 				double term1 = 2 * p_[GetIndex(i, j, k)];
 				double term2 = -p_old_[GetIndex(i, j, k)];
 				double term3 = c0 * c0 * (d2udx2 + d2udy2 + d2udz2);	// c^2*(d2udx2+d2udy2+d2udz2)
-				double term4 = -(zetax_[GetIndex(i, j, k)] + zetay_[GetIndex(i, j, k)] + zetaz_[GetIndex(i, j, k)]) * (p_[GetIndex(i, j, k)] - p_old_[GetIndex(i, j, k)]) / dt;
+				double term4 = (zetax_[GetIndex(i, j, k)] + zetay_[GetIndex(i, j, k)] + zetaz_[GetIndex(i, j, k)]) * p_old_[GetIndex(i, j, k)] / 2 / dt;
 				double term5 = -(zetax_[GetIndex(i, j, k)] * zetay_[GetIndex(i, j, k)] + zetay_[GetIndex(i, j, k)] * zetaz_[GetIndex(i, j, k)] + zetax_[GetIndex(i, j, k)] * zetaz_[GetIndex(i, j, k)]) * p_[GetIndex(i, j, k)];
 
 				double fourthCoefs[] = { 1.0, -8.0, 0.0, 8.0, -1.0 };
@@ -179,6 +179,7 @@ void PmlPartition::Update_pressure()
 				double term6 = dphidx + dphidy + dphidz;
 
 				p_new_[GetIndex(i, j, k)] = term1 + term2 + dt * dt * (term3 + term4 + term5 + term6 + force_[GetIndex(i, j, k)]);
+				p_new_[GetIndex(i, j, k)] = p_new_[GetIndex(i, j, k)] / (1 + dt / 2 * (zetax_[GetIndex(i, j, k)] + zetay_[GetIndex(i, j, k)] + zetaz_[GetIndex(i, j, k)]));
 
 				double dudx = 0.0;
 				double dudy = 0.0;
