@@ -25,7 +25,7 @@ bool is_record = true;
 /* Set constant parameters. */
 
 double Partition::boundary_absorption_ = 1;	// Absorption coefficients of the boundaries.
-double Simulation::air_absorption_ = 0.1; // Absorption coefficients of air.
+double Simulation::air_absorption_ = 10; // Absorption coefficients of air.
 double Simulation::duration_ = 1;		// Duration of the whole simulation (seconds).
 
 //double Simulation::dh_ = 0.05;			// Space sampling rate.
