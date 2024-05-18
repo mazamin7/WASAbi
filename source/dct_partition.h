@@ -5,35 +5,22 @@
 class DctPartition : public Partition
 {
 	double lx2_, ly2_, lz2_;	// actual length ^2
-	double *cwt_{ nullptr };	// cos(wt)
-	double* swt_{ nullptr };	// sin(wt)
-	double* w_omega_{ nullptr };	// w
-	double* w2_{ nullptr };		// w^2
-	double* inv_w_{ nullptr };	// w^-1
-	double* inv_w2_{ nullptr };	// w^-2
+	double* w0_{ nullptr };	// w0
 	double alpha_;	// alpha
-	double alpha2_;	// alpha^2
-	double eatm_;	// exp(-alpha*t)
-
-	bool second_order_; // true -> second order, false -> first order
 
 	DctVolume pressure_;
 	DctVolume velocity_;
 	DctVolume residue_;
 	DctVolume force_;
-	DctVolume force_r_;
 
-	double *prev_pressure_modes_{ nullptr };
 	double *next_pressure_modes_{ nullptr };
-	double *prev_velocity_modes_{ nullptr };
 	double *next_velocity_modes_{ nullptr };
 
 public:
 	DctPartition(int xs, int ys, int zs, int w, int h, int d);
 	~DctPartition();
 
-	virtual void Update_pressure();
-	virtual void Update_velocity();
+	virtual void Update();
 
 	virtual double* get_pressure_field();
 
@@ -51,9 +38,6 @@ public:
 
 	virtual double get_force(int x, int y, int z);
 	virtual void set_force(int x, int y, int z, double v);
-
-	virtual double get_force_r(int x, int y, int z);
-	virtual void set_force_r(int x, int y, int z, double v);
 
 	virtual void reset_forces();
 	virtual void reset_residues();

@@ -15,8 +15,6 @@ protected:
 	double c0_;
 	double air_absorption_;
 
-	bool second_order_; // true -> second order, false -> first order
-
 	int x_start_, x_end_;
 	int y_start_, y_end_;
 	int z_start_, z_end_;
@@ -50,8 +48,7 @@ public:
 	Partition(int xs, int ys, int zs, int w, int h, int d);
 	~Partition();
 
-	virtual void Update_pressure() = 0;
-	virtual void Update_velocity() = 0;
+	virtual void Update() = 0;
 
 	virtual double* get_pressure_field() = 0;
 
@@ -74,15 +71,10 @@ public:
 	virtual double get_force(int x, int y, int z) = 0;
 	virtual void set_force(int x, int y, int z, double v) = 0;
 
-	virtual double get_force_r(int x, int y, int z) = 0;
-	virtual void set_force_r(int x, int y, int z, double v) = 0;
-
 	virtual void reset_forces() = 0;
 	virtual void reset_residues() = 0;
 
-	void PreMerge();
-	void NoPreMerge();
-	void PostMerge(int);
+	void PostMerge();
 
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 

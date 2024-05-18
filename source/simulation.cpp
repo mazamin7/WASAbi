@@ -303,22 +303,27 @@ int Simulation::Update()
 	//std::cout << "#" << std::setw(5) << time_step << " : ";
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
-	// update pressure
+	// reset force
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
-		partitions_[i]->Update_pressure();
-		//std::cout << "update pressure partition " << partition->info_.id << " ";
+		partitions_[i]->reset_forces();
 	}
 
-	// post-merge phase 1 (correct pressure)
-	if (!is_pre_merge) {
+	// compute force
 #pragma omp parallel for
-		for (int i = 0; i < partitions_.size(); i++)
-		{
-			partitions_[i]->PostMerge(1);
-		}
-		//std::cout << std::endl;
+	for (int i = 0; i < partitions_.size(); i++)
+	{
+		partitions_[i]->ComputeSourceForcingTerms(time_step);
+		//std::cout << "impose force partition " << partition->info_.id << " ";
+	}
+
+	// update pressure and velocity
+#pragma omp parallel for
+	for (int i = 0; i < partitions_.size(); i++)
+	{
+		partitions_[i]->Update();
+		//std::cout << "update pressure partition " << partition->info_.id << " ";
 	}
 
 	// reset residue
@@ -336,63 +341,20 @@ int Simulation::Update()
 	}
 	//std::cout << std::endl;
 
-	// reset force
+	// post-merge
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
-		partitions_[i]->reset_forces();
+		partitions_[i]->PostMerge();
 	}
-
-	// compute force
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
-		partitions_[i]->ComputeSourceForcingTerms(time_step);
-		//std::cout << "impose force partition " << partition->info_.id << " ";
-	}
-
-	// pre-merge (correct force)
-	if (is_pre_merge) {
-#pragma omp parallel for
-		for (int i = 0; i < partitions_.size(); i++)
-		{
-			partitions_[i]->PreMerge(); // use corrected force
-		}
-		//std::cout << std::endl;
-	}
-	else {
-#pragma omp parallel for
-		for (int i = 0; i < partitions_.size(); i++)
-		{
-			partitions_[i]->NoPreMerge(); // use not corrected force
-		}
-		//std::cout << std::endl;
-	}
-
-	// update pressure velocity
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
-		partitions_[i]->Update_velocity();
-		//std::cout << "update pressure velocity partition " << partition->info_.id << " ";
-	}
-
-	// post-merge phase 2 (correct pressure velocity)
-	if (!is_pre_merge) {
-#pragma omp parallel for
-		for (int i = 0; i < partitions_.size(); i++)
-		{
-			partitions_[i]->PostMerge(2);
-		}
-		//std::cout << std::endl;
-	}
+	//std::cout << std::endl;
 
 	// Visualization
 	if (time_step % 10 == 1)
 	{
 		SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
-		int v_coef = 10;
-		bool render_pml = true;
+		int v_coef = 0.1;
+		bool render_pml = false;
 		if (look_from_ == 0)	//xy
 		{
 			int pixels_z = sources_[0]->z();
@@ -524,11 +486,6 @@ void Simulation::Info()
 	{
 		std::cout << "Source " << s->id_ << ": " << s->x() << "," << s->y() << "," << s->z() << std::endl;
 	}
-	std::cout << "------------------------------------------------------------" << std::endl;
-	if (is_pre_merge)
-		std::cout << "Using Pre-merge" << std::endl;
-	else
-		std::cout << "Using Post-merge" << std::endl;
 	std::cout << "------------------------------------------------------------" << std::endl;
 }
 

@@ -18,8 +18,6 @@ Partition::Partition(int xs, int ys, int zs, int w, int h, int d)
 	c0_ = Simulation::c0_;
 	air_absorption_ = Simulation::air_absorption_;
 
-	second_order_ = air_absorption_ == 0;
-
 	x_end_ = x_start_ + width_;
 	y_end_ = y_start_ + height_;
 	z_end_ = z_start_ + depth_;
@@ -196,40 +194,7 @@ void Partition::ComputeSourceForcingTerms(double t)
 	}
 }
 
-void Partition::PreMerge()
-{
-#pragma omp parallel for
-	for (int i = 0; i < depth_; i++)
-	{
-		for (int j = 0; j < height_; j++)
-		{
-			for (int k = 0; k < width_; k++)
-			{
-				auto res = get_residue(k, j, i);
-				auto force = get_force(k, j, i);
-				set_force_r(k, j, i, force + res);
-			}
-		}
-	}
-}
-
-void Partition::NoPreMerge()
-{
-#pragma omp parallel for
-	for (int i = 0; i < depth_; i++)
-	{
-		for (int j = 0; j < height_; j++)
-		{
-			for (int k = 0; k < width_; k++)
-			{
-				auto force = get_force(k, j, i);
-				set_force_r(k, j, i, force);
-			}
-		}
-	}
-}
-
-void Partition::PostMerge(int phase)
+void Partition::PostMerge()
 {
 #pragma omp parallel for
 	for (int i = 0; i < depth_; i++)
@@ -240,15 +205,9 @@ void Partition::PostMerge(int phase)
 			{
 				auto res = get_residue(k, j, i);
 
-				if (second_order_ && phase == 1){
-					res = dt_ * dt_ / (1 + dt_ * air_absorption_) * res;
-					add_to_pressure(k, j, i, res);
-				}
+				res = dt_ / (1 + 2 * dt_ * air_absorption_) * res;
+				add_to_velocity(k, j, i, res);
 
-				if (!second_order_ && phase == 2) {
-					res = dt_ / (1 + 2 * dt_ * air_absorption_) * res;
-					add_to_velocity(k, j, i, res);
-				}
 			}
 		}
 	}

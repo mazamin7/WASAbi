@@ -9,11 +9,14 @@ class PmlPartition : public Partition
 	double zeta_;
 	double thickness_;
 
-	double* p_old_{ nullptr };
 	double* p_{ nullptr };
 	double* p_new_{ nullptr };
 
 	double* v_{ nullptr };
+	double* v_new_{ nullptr };
+
+	double* psi_;
+	double* psi_new_;
 
 	double* phi_x_;
 	double* phi_x_new_;
@@ -21,9 +24,6 @@ class PmlPartition : public Partition
 	double* phi_y_new_;
 	double* phi_z_;
 	double* phi_z_new_;
-
-	double* psi_;
-	double* psi_new_;
 
 	double* zetax_;
 	double* zetay_;
@@ -47,8 +47,7 @@ public:
 	PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d);
 	~PmlPartition();
 
-	virtual void Update_pressure();
-	virtual void Update_velocity();
+	virtual void Update();
 
 	virtual double* get_pressure_field();
 
@@ -66,9 +65,6 @@ public:
 
 	virtual double get_force(int x, int y, int z);
 	virtual void set_force(int x, int y, int z, double v);
-
-	virtual double get_force_r(int x, int y, int z);
-	virtual void set_force_r(int x, int y, int z, double v);
 
 	virtual void reset_forces();
 	virtual void reset_residues();

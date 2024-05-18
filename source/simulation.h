@@ -43,8 +43,6 @@ public:
 	static double air_absorption_;
 	static int n_pml_layers_;
 
-	static bool is_pre_merge;
-
 	int time_step_{ 0 };
 
 	int look_from_{ 0 };	// 0: visualize xy plane
