@@ -16,9 +16,9 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
 
 	alpha_ = air_absorption_;
 
-	lx2_ = width_ * width_*dh_*dh_;
-	ly2_ = height_ * height_*dh_*dh_;
-	lz2_ = depth_ * depth_*dh_*dh_;
+	lx2_ = width_ * width_ * dh_ * dh_;
+	ly2_ = height_ * height_ * dh_ * dh_;
+	lz2_ = depth_ * depth_ * dh_ * dh_;
 
 	for (int i = 1; i <= depth_; i++)
 	{
