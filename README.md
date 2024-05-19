@@ -17,7 +17,7 @@ Extended from ARD-simulator by [@jinnsjj](https://github.com/jinnsjj).
 > https://github.com/jinnsjj/ARD-simulator
 
 ## Input data
-`assets/*.txt` records the structure of room on x-y plane. Note that this simulator only support 2.5D room model now, that is, z should always be 0 and depth of all partition should be equal.
+`assets/*.txt` records the structure of room on x-y plane. Note that this simulator only supports 2.5D room geometries: z should always be 0 and depth of all partition should be equal.
 
 Input example:
 
@@ -46,7 +46,7 @@ All the values above are in real world scale (meter).
 ## Features
 
 - Partial absorbing boundaries through PML partitions
-- Fourier method (first and second order) for air partitions
+- Fourier method for air partitions
 - Rectangular Domain Decomposition (RDD)
 - Test cases included
 - Air absorption
