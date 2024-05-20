@@ -7,6 +7,7 @@
 #include <iostream>
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <SDL_image.h>
 #include <omp.h>
 #include <Windows.h>
 #undef main		// https://stackoverflow.com/questions/6847360

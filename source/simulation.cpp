@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <omp.h>
 #include <assert.h>
+#include <sstream>
 
 
 Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std::vector<std::shared_ptr<SoundSource>> &sources)
@@ -448,6 +449,40 @@ int Simulation::Update()
 				}
 			}
 		}
+
+		// Assuming 'pixels_' is your pixel data and 'width' and 'height' are the dimensions of your image
+		SDL_Surface* surface = SDL_CreateRGBSurfaceFrom((void*)pixels_.data(), size_x_, size_y_, 32, size_x_ * 4, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+
+		if (surface == NULL) {
+			SDL_Log("Unable to create surface: %s\n", SDL_GetError());
+			// handle error here
+		}
+		else {
+			// Create a string stream
+			std::ostringstream filename;
+
+			std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_);
+
+			filename << dir_name << "/snapshot_" << time_step << ".bmp";
+
+			// Convert the stream to a string
+			std::string filenameStr = filename.str();
+
+			// Convert the string to a C-style string (char array)
+			const char* filenameCStr = filenameStr.c_str();
+
+			if (SDL_SaveBMP(surface, filenameCStr) != 0) {
+				SDL_Log("Unable to save snapshot: %s\n", SDL_GetError());
+				// handle error here
+			}
+			else {
+				SDL_Log("Saved snapshot at time step %d\n", time_step);
+			}
+
+			// Don't forget to free the surface when you're done with it
+			SDL_FreeSurface(surface);
+		}
+
 	}
 
 	return time_step;
