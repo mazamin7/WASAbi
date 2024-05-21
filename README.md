@@ -2,9 +2,9 @@
   <img src="logo.png">
 </p>
 
-# WASAbi 2.5D
+# WASAbi - a Wave-based Acoustic Simulation Algorithm
 
-C++ implementation of WASAbi in 2.5D (3D with constant height), a Wave-based Acoustic Simulation Algorithm.
+C++ implementation in 2.5D (3D with constant height).
 
 Theory:
 > Raghuvanshi, Nikunj, Rahul Narain, and Ming C. Lin. "Efficient and accurate sound propagation using adaptive rectangular decomposition." IEEE Transactions on Visualization and Computer Graphics 15.5 (2009): 789-801.
@@ -45,11 +45,10 @@ All the values above are in real world scale (meter).
 
 ## Features
 
-- Partial absorbing boundaries through PML partitions
-- Fourier method for air partitions
 - Rectangular Domain Decomposition (RDD)
+  Fourier method for air partitions with atmospheric absorption
+- Partial absorbing boundaries through PML partitions
 - Test cases included
-- Air absorption
 - Preprocessing in jupyter notebook (room image to room geometry format)
 - Postprocessing in Matlab (room's impulse response computation and auralization script)
 
