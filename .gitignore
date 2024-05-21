@@ -50,10 +50,8 @@
 *.wav
 *.suo
 
-source/output/*.*
-source/x64/Debug/WASAbi2.5D.vcxproj.FileListAbsolute.txt
-preprocessing/data/*.txt
-postprocessing/data/*.*
-x64/*.*
+source/output/*/*
+source/x64/*/*
+x64/*/*
 *.asv
-preprocessing/.ipynb_checkpoints/preprocessing-checkpoint.ipynb
+
