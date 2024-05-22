@@ -66,7 +66,7 @@ void DctPartition::Update()
 					double e2at = exp(-2 * alpha_ * dt_);
 
 					next_velocity_modes_[idx] = e2at * velocity_.modes_[idx] + (1 - e2at)/(2 * alpha_) * force_.modes_[idx];
-					next_pressure_modes_[idx] = (1 - e2at)/(2 * alpha_) * velocity_.modes_[idx] + pressure_.modes_[idx] + (e2at - 1) / (4 * alpha_ * alpha_) * force_.modes_[idx];
+					next_pressure_modes_[idx] = (1 - e2at)/(2 * alpha_) * velocity_.modes_[idx] + pressure_.modes_[idx] + ((e2at - 1) / (4 * alpha_ * alpha_) + 1 / (2 * alpha_) * dt_) * force_.modes_[idx];
 				}
 				else if ((idx > 0) && (alpha_ < w0_[idx]))
 				{
