@@ -351,7 +351,7 @@ int Simulation::Update()
 	//std::cout << std::endl;
 
 	// Visualization
-	if (time_step % 10 == 1)
+	if (time_step % 10 == 0)
 	{
 		SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
 		int v_coef = 1;

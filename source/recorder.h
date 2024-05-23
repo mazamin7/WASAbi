@@ -12,6 +12,7 @@ class Recorder
 	int total_steps_;
 
 	std::shared_ptr<Partition> part_;
+	std::vector<std::shared_ptr<Partition>> partitions_;
 	
 	std::fstream output_;
 	std::fstream response_;

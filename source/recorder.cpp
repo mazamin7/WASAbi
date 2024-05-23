@@ -35,24 +35,63 @@ void Recorder::FindPartition(std::vector<std::shared_ptr<Partition>> partitions)
 			break;
 		}
 	}
+
+	partitions_ = partitions;
 }
 
 void Recorder::RecordField(int time_step)
 {
-	if (time_step < total_steps_)
+	bool render_pml = false;
+
+	int x_start_, x_end_;
+	int y_start_, y_end_;
+	int z_start_, z_end_;
+
+	int size_x_, size_y_, size_z_;
+
+	x_start_ = y_start_ = z_start_ = std::numeric_limits<int>::max();
+	x_end_ = y_end_ = z_end_ = std::numeric_limits<int>::min();
+
+	for (auto partition : partitions_)
 	{
-		for (int i = -5; i < 5; i++)
+		x_start_ = std::min(x_start_, partition->x_start_);
+		y_start_ = std::min(y_start_, partition->y_start_);
+		z_start_ = std::min(z_start_, partition->z_start_);
+
+		x_end_ = std::max(x_end_, partition->x_end_);
+		y_end_ = std::max(y_end_, partition->y_end_);
+		z_end_ = std::max(z_end_, partition->z_end_);
+	}
+
+	size_x_ = x_end_ - x_start_;
+	size_y_ = y_end_ - y_start_;
+	size_z_ = z_end_ - z_start_;
+
+	if ((time_step < total_steps_) && (time_step % 10 == 0))
+	{
+		double* values_ = (double*)calloc(size_x_ * size_y_ * size_z_, sizeof(double));
+
+		for (auto partition : partitions_)
 		{
-			for (int j = -5; j < 5; j++)
+			if (!render_pml)
 			{
-				for (int k = -5; k < 5; k++)
-				{
-					output_ << part_->get_pressure(x_ + k, y_ + j, z_ + i) << " ";
+				if (!partition->should_render_) continue;
+			}
+
+			for (int i = 0; i < partition->width_; i++) {
+				for (int j = 0; j < partition->height_; j++) {
+					for (int k = 0; k < partition->depth_; k++) {
+						values_[(partition->z_start_ + k) * size_y_ * size_x_ + (partition->y_start_ + j) * size_x_ + (partition->x_start_ + i)] = partition->get_pressure(i, j, k);
+					}
 				}
 			}
 		}
+
+		for (int i = 0; i < size_x_ * size_y_ * size_z_; ++i) {
+			output_ << values_[i] << " "; // Write each value followed by a newline
+		}
+
 		output_ << std::endl;
-		response_ << part_->get_pressure(x_, y_, z_) << std::endl;
 	}
 }
 
