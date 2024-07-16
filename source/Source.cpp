@@ -20,14 +20,15 @@
 
 using namespace std;
 
-bool is_record = false;
+bool is_record_response = true;
+bool is_record_field = false;
 
 /* Set constant parameters. */
 
 double Partition::boundary_absorption_ = 0.5;	// Absorption coefficients of the boundaries.
 //double Simulation::air_absorption_ = 0; // Absorption coefficients of air.
 double Simulation::air_absorption_ = 10; // Absorption coefficients of air.
-double Simulation::duration_ = 0.1;		// Duration of the whole simulation (seconds).
+double Simulation::duration_ = 0.01;		// Duration of the whole simulation (seconds).
 
 //double Simulation::dh_ = 0.05;			// Space sampling rate.
 //double Simulation::dt_ = 0.625e-4;		// Time sampling rate.
@@ -126,7 +127,15 @@ int main()
 
 		time_step = simulation->Update();		// ! Updating sound field.
 
-		if (is_record)
+		if (is_record_response)
+		{
+			for (auto record : recorders)
+			{
+				record->RecordResponse(time_step);	// Record room's response.
+			}
+		}
+
+		if (is_record_field)
 		{
 			for (auto record : recorders)
 			{
