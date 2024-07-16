@@ -25,10 +25,10 @@ bool is_record_field = false;
 
 /* Set constant parameters. */
 
-double Partition::boundary_absorption_ = 0.5;	// Absorption coefficients of the boundaries.
-//double Simulation::air_absorption_ = 0; // Absorption coefficients of air.
-double Simulation::air_absorption_ = 10; // Absorption coefficients of air.
-double Simulation::duration_ = 0.01;		// Duration of the whole simulation (seconds).
+double Partition::boundary_absorption_ = 1.0;	// Absorption coefficients of the boundaries.
+double Simulation::air_absorption_ = 0.0; // Absorption coefficients of air.
+//double Simulation::air_absorption_ = 10; // Absorption coefficients of air.
+double Simulation::duration_ = 1.0;		// Duration of the whole simulation (seconds).
 
 //double Simulation::dh_ = 0.05;			// Space sampling rate.
 //double Simulation::dt_ = 0.625e-4;		// Time sampling rate.
