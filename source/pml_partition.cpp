@@ -28,9 +28,9 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	thickness_ = Simulation::n_pml_layers_ * dh_;
 	zeta_ = Simulation::c0_ / thickness_ * log10(1 / R_);
 
-	int size = width_ * height_*depth_ + 1;
+	int size = width_ * height_ * depth_ + 1;
 
-	p_ = (double *)malloc(size * sizeof(double));
+	/*p_ = (double *)malloc(size * sizeof(double));
 	p_new_ = (double *)malloc(size * sizeof(double));
 
 	v_ = (double*)malloc(size * sizeof(double));
@@ -62,12 +62,42 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	memset((void *)phi_z_, 0, size * sizeof(double));
 	memset((void *)phi_z_new_, 0, size * sizeof(double));
 	memset((void *)force_, 0, size * sizeof(double));
-	memset((void *)residue_, 0, size * sizeof(double));
+	memset((void *)residue_, 0, size * sizeof(double));*/
 
-	zetax_ = (double*)calloc(size, sizeof(double));
-	zetay_ = (double*)calloc(size, sizeof(double));
-	zetaz_ = (double*)calloc(size, sizeof(double));
+	p_ = std::make_unique<double[]>(size);
+	p_new_ = std::make_unique<double[]>(size);
+	v_ = std::make_unique<double[]>(size);
+	v_new_ = std::make_unique<double[]>(size);
+	psi_ = std::make_unique<double[]>(size);
+	psi_new_ = std::make_unique<double[]>(size);
+	phi_x_ = std::make_unique<double[]>(size);
+	phi_x_new_ = std::make_unique<double[]>(size);
+	phi_y_ = std::make_unique<double[]>(size);
+	phi_y_new_ = std::make_unique<double[]>(size);
+	phi_z_ = std::make_unique<double[]>(size);
+	phi_z_new_ = std::make_unique<double[]>(size);
+	residue_ = std::make_unique<double[]>(size);
+	force_ = std::make_unique<double[]>(size);
+	zetax_ = std::make_unique<double[]>(size);
+	zetay_ = std::make_unique<double[]>(size);
+	zetaz_ = std::make_unique<double[]>(size);
 
+	std::memset(p_.get(), 0, size * sizeof(double));
+	std::memset(p_new_.get(), 0, size * sizeof(double));
+	std::memset(v_.get(), 0, size * sizeof(double));
+	std::memset(v_new_.get(), 0, size * sizeof(double));
+	std::memset(psi_.get(), 0, size * sizeof(double));
+	std::memset(psi_new_.get(), 0, size * sizeof(double));
+	std::memset(phi_x_.get(), 0, size * sizeof(double));
+	std::memset(phi_x_new_.get(), 0, size * sizeof(double));
+	std::memset(phi_y_.get(), 0, size * sizeof(double));
+	std::memset(phi_y_new_.get(), 0, size * sizeof(double));
+	std::memset(phi_z_.get(), 0, size * sizeof(double));
+	std::memset(phi_z_new_.get(), 0, size * sizeof(double));
+	std::memset(force_.get(), 0, size * sizeof(double));
+	std::memset(residue_.get(), 0, size * sizeof(double));
+
+#pragma omp parallel for
 	for (int k = 0; k < depth_; k++)
 	{
 		for (int j = 0; j < height_; j++)
@@ -106,8 +136,7 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 
 PmlPartition::~PmlPartition()
 {
-	free(p_);
-	free(p_new_);
+	/*free(p_);
 	free(v_);
 	free(v_new_);
 	free(psi_);
@@ -125,6 +154,7 @@ PmlPartition::~PmlPartition()
 	free(zetax_);
 	free(zetay_);
 	free(zetaz_);
+	free(p_new_);*/
 }
 
 void PmlPartition::Update()
@@ -294,19 +324,17 @@ void PmlPartition::Update()
 		}
 	}
 
-	v_ = v_new_;
-	p_ = p_new_;
-
-	psi_ = psi_new_;
-
-	phi_x_ = phi_x_new_;
-	phi_y_ = phi_y_new_;
-	phi_z_ = phi_z_new_;
+	std::swap(v_, v_new_);
+	std::swap(p_, p_new_);
+	std::swap(psi_, psi_new_);
+	std::swap(phi_x_, phi_x_new_);
+	std::swap(phi_y_, phi_y_new_);
+	std::swap(phi_z_, phi_z_new_);
 }
 
 double* PmlPartition::get_pressure_field()
 {
-	return p_;
+	return p_.get();
 }
 
 double PmlPartition::get_pressure(int x, int y, int z)
@@ -351,6 +379,7 @@ void PmlPartition::set_residue(int x, int y, int z, double v)
 
 void PmlPartition::add_to_residue(int x, int y, int z, double v)
 {
+	// #pragma omp atomic
 	residue_[GetIndex(x, y, z)] = residue_[GetIndex(x, y, z)] + v;
 }
 
@@ -370,7 +399,7 @@ void PmlPartition::reset_forces()
 	int height = height_;
 	int depth = depth_;
 
-	memset((void*)force_, 0, width * height * depth * sizeof(double));
+	memset((void*)force_.get(), 0, width * height * depth * sizeof(double));
 }
 
 void PmlPartition::reset_residues()
@@ -379,5 +408,5 @@ void PmlPartition::reset_residues()
 	int height = height_;
 	int depth = depth_;
 
-	memset((void*)residue_, 0, width * height * depth * sizeof(double));
+	memset((void*)residue_.get(), 0, width * height * depth * sizeof(double));
 }

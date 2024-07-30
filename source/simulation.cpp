@@ -336,10 +336,10 @@ int Simulation::Update()
 
 	// compute residue
 #pragma omp parallel for
-	for (int i = 0; i < boundaries_.size(); i++)
-	{
+	for (int i = 0; i < boundaries_.size(); i++) {
 		boundaries_[i]->ComputeResidues();
 	}
+
 	//std::cout << std::endl;
 
 	// post-merge
@@ -374,29 +374,30 @@ int Simulation::Update()
 				int y_offset = partition->y_start_ - y_start_;
 				std::vector<double> partition_xy;
 				partition_xy = partition->get_xy_plane(pixels_z);
+#pragma omp parallel for
 				for (int i = 0; i < partition->height_; i++) {
 					for (int j = 0; j < partition->width_; j++) {
-						double pressure = partition_xy[i*partition->width_ + j];
-						double norm = 0.5*std::max(-1.0, std::min(1.0, pressure*v_coef)) + 0.5;
+						double pressure = partition_xy[i * partition->width_ + j];
+						double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
 						int r, g, b;
 						if (norm >= 0.5)
 						{
-							r = static_cast<int> (255 - round(255.0*2.0*(norm - 0.5)));
-							g = static_cast<int> (255 - round(255.0*2.0*(norm - 0.5)));
+							r = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
+							g = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
 							b = 255;
 						}
 						else {
 							r = 255;
-							g = static_cast<int> (255 - round(255.0*(1.0 - 2.0*norm)));
-							b = static_cast<int> (255 - round(255.0*(1.0 - 2.0*norm)));
+							g = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
+							b = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
 						}
 						if (partition->should_render_)
 						{
-							pixels_[(y_offset + i)*size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
+							pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
 						}
 						else
 						{
-							pixels_[(y_offset + i)*size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5*r, 0.5*g, 0.5*b);
+							pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
 						}
 					}
 				}
@@ -421,29 +422,30 @@ int Simulation::Update()
 				std::vector<double> partition_yz;
 				partition_yz = partition->get_yz_plane(pixels_x);
 
+#pragma omp parallel for
 				for (int i = 0; i < partition->depth_; i++) {
 					for (int j = 0; j < partition->height_; j++) {
-						double pressure = partition_yz[i*partition->height_ + j];
-						double norm = 0.5*std::max(-1.0, std::min(1.0, pressure*v_coef)) + 0.5;
+						double pressure = partition_yz[i * partition->height_ + j];
+						double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
 						int r, g, b;
 						if (norm >= 0.5)
 						{
-							r = static_cast<int> (255 - round(255.0*2.0*(norm - 0.5)));
-							g = static_cast<int> (255 - round(255.0*2.0*(norm - 0.5)));
+							r = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
+							g = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
 							b = 255;
 						}
 						else {
 							r = 255;
-							g = static_cast<int> (255 - round(255.0*(1.0 - 2.0*norm)));
-							b = static_cast<int> (255 - round(255.0*(1.0 - 2.0*norm)));
+							g = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
+							b = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
 						}
 						if (partition->should_render_)
 						{
-							pixels_[(z_offset + i)*size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
+							pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
 						}
 						else
 						{
-							pixels_[(z_offset + i)*size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5*r, 0.5*g, 0.5*b);
+							pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
 						}
 					}
 				}

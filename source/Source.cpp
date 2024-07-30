@@ -20,12 +20,12 @@
 
 using namespace std;
 
-bool is_record_response = true;
+bool is_record_response = false;
 bool is_record_field = false;
 
 /* Set constant parameters. */
 
-double Partition::boundary_absorption_ = 1.0;	// Absorption coefficients of the boundaries.
+double Partition::boundary_absorption_ = 0.8;	// Absorption coefficients of the boundaries.
 double Simulation::air_absorption_ = 0.0; // Absorption coefficients of air.
 //double Simulation::air_absorption_ = 10; // Absorption coefficients of air.
 double Simulation::duration_ = 1.0;		// Duration of the whole simulation (seconds).
@@ -111,6 +111,8 @@ int main()
 	std::string message;
 
 	double time2 = omp_get_wtime();
+	/*std::cout << omp_get_num_procs() << std::endl;
+	omp_set_num_threads(omp_get_num_procs())*/;
 	std::cout << "Initialization finished. (" << time2 - time1 << " s)" << std::endl;
 	std::cout << "############################################################" << std::endl;
 
