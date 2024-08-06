@@ -26,7 +26,8 @@ bool is_record_field = false;
 /* Set constant parameters. */
 
 double Partition::boundary_absorption_ = 0.0;	// Absorption coefficients of the boundaries.
-double Simulation::air_absorption_ = 1.0; // Absorption coefficients of air.
+double Simulation::air_absorption_alpha1_ = 0.0; // Coefficient of constant part of air absorption.
+double Simulation::air_absorption_alpha2_ = 1.0 / 10000; // Coefficient of frequency dependent part of air absorption.
 //double Simulation::air_absorption_ = 10; // Absorption coefficients of air.
 double Simulation::duration_ = 1.0;		// Duration of the whole simulation (seconds).
 
@@ -49,7 +50,7 @@ int main()
 {
 	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the consuming time.
 
-	std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_);
+	std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_alpha1_) + "_" + std::to_string(Simulation::air_absorption_alpha2_);
 	CreateDirectory(dir_name.c_str(), NULL);	// Prepare for the output folder.
 												// ! Without this and the corresponding folder does not exist, the program will not write the output data.
 

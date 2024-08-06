@@ -464,7 +464,8 @@ void Simulation::Info()
 	std::cout << "dh = " << std::to_string(Simulation::dh_)
 		<< "(m), dt = " << std::to_string(Simulation::dt_)
 		<< "(s), c0 = " << std::to_string(Simulation::c0_)
-		<< "(m/s), air absorption = " << std::to_string(Simulation::air_absorption_) << "(1/s)"
+		<< "(m/s), alpha1 = " << std::to_string(Simulation::air_absorption_alpha1_)
+		<< "(1/s), alpha2 = " << std::to_string(Simulation::air_absorption_alpha2_) << "(1/s)"
 		<< std::endl;
 	std::cout << "Number of dct_partitions: " << info_.num_dct_partitions << std::endl;
 	std::cout << "Number of pml_partitions: " << info_.num_pml_partitions << std::endl;

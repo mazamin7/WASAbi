@@ -16,7 +16,8 @@ Partition::Partition(int xs, int ys, int zs, int w, int h, int d)
 	dh_ = Simulation::dh_;
 	dt_ = Simulation::dt_;
 	c0_ = Simulation::c0_;
-	air_absorption_ = Simulation::air_absorption_;
+	air_absorption_alpha1_ = Simulation::air_absorption_alpha1_;
+	air_absorption_alpha2_ = Simulation::air_absorption_alpha2_;
 
 	x_end_ = x_start_ + width_;
 	y_end_ = y_start_ + height_;
@@ -205,7 +206,7 @@ void Partition::PostMerge()
 			{
 				auto res = get_residue(k, j, i);
 
-				res = dt_ / (1 + 2 * dt_ * air_absorption_) * res;
+				res = dt_ / (1 + 2 * dt_ * air_absorption_alpha1_) * res;
 				add_to_velocity(k, j, i, res);
 
 			}

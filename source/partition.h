@@ -13,7 +13,8 @@ protected:
 	double dh_;
 	double dt_;
 	double c0_;
-	double air_absorption_;
+	double air_absorption_alpha1_;
+	double air_absorption_alpha2_;
 
 	int x_start_, x_end_;
 	int y_start_, y_end_;
