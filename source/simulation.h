@@ -40,7 +40,8 @@ public:
 	static double dh_;
 	static double dt_;
 	static double c0_;
-	static double air_absorption_;
+	static double air_absorption_alpha1_;
+	static double air_absorption_alpha2_;
 	static int n_pml_layers_;
 
 	int time_step_{ 0 };

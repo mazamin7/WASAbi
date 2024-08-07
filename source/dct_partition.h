@@ -6,7 +6,7 @@ class DctPartition : public Partition
 {
 	double lx2_, ly2_, lz2_;	// actual length ^2
 	double* w0_{ nullptr };	// w0
-	double alpha_;	// alpha
+	double* alpha_{ nullptr };	// alpha
 
 	DctVolume pressure_;
 	DctVolume velocity_;
