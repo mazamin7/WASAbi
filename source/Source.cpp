@@ -47,6 +47,9 @@ int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
 
 int main()
 {
+	// Enable nested parallelism
+	omp_set_nested(1);
+
 	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the consuming time.
 
 	std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_alpha1_) + "_" + std::to_string(Simulation::air_absorption_alpha2_);

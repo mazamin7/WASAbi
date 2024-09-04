@@ -97,7 +97,7 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	std::memset(force_.get(), 0, size * sizeof(double));
 	std::memset(residue_.get(), 0, size * sizeof(double));
 
-#pragma omp parallel for
+#pragma omp parallel for collapse(2)
 	for (int k = 0; k < depth_; k++)
 	{
 		for (int j = 0; j < height_; j++)
@@ -178,7 +178,7 @@ void PmlPartition::Update()
 
 	double fourthCoefs[] = { 1.0, -8.0, 0.0, 8.0, -1.0 };
 
-#pragma omp parallel for
+#pragma omp parallel for collapse(2)
 	for (int k = 0; k < depth; k++)
 	{
 		//#pragma omp parallel for
@@ -192,7 +192,7 @@ void PmlPartition::Update()
 		}
 	}
 
-#pragma omp parallel for
+#pragma omp parallel for collapse(2)
 	for (int k = 0; k < depth; k++)
 	{
 		//#pragma omp parallel for

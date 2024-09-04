@@ -20,6 +20,7 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
 	ly2_ = height_ * height_ * dh_ * dh_;
 	lz2_ = depth_ * depth_ * dh_ * dh_;
 
+#pragma omp parallel for collapse(2)
 	for (int i = 1; i <= depth_; i++)
 	{
 		for (int j = 1; j <= height_; j++)
@@ -50,6 +51,7 @@ void DctPartition::Update()
 	velocity_.ExecuteDct(); // current pressure velocity
 	force_.ExecuteDct(); // current force
 
+#pragma omp parallel for collapse(2)
 	for (int i = 0; i < depth_; i++)
 	{
 		for (int j = 0; j < height_; j++)
