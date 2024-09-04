@@ -111,6 +111,8 @@ int main()
 	std::string message;
 
 	double time2 = omp_get_wtime();
+	/*std::cout << omp_get_num_procs() << std::endl;
+	omp_set_num_threads(omp_get_num_procs())*/;
 	std::cout << "Initialization finished. (" << time2 - time1 << " s)" << std::endl;
 	std::cout << "############################################################" << std::endl;
 

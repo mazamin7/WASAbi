@@ -66,7 +66,8 @@ void Recorder::RecordField(int time_step)
 	size_x_ = x_end_ - x_start_;
 	size_y_ = y_end_ - y_start_;
 	size_z_ = z_end_ - z_start_;
-
+	
+	// NOTE THAT IT SAVES 1 EVERY 10 TIME STEPS
 	if ((time_step < total_steps_) && (time_step % 10 == 0))
 	{
 		double* values_ = (double*)calloc(size_x_ * size_y_ * size_z_, sizeof(double));
