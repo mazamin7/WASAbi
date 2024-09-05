@@ -27,8 +27,8 @@ bool is_record_field = false;
 
 double Partition::boundary_absorption_ = 0.5;	// Absorption coefficients of the boundaries.
 double Simulation::air_absorption_alpha1_ = 0.0; // Coefficient of constant part of air absorption.
-double Simulation::air_absorption_alpha2_ = 1.e-6; // Coefficient of frequency dependent part of air absorption.
-double Simulation::duration_ = 1.0;		// Duration of the whole simulation (seconds).
+double Simulation::air_absorption_alpha2_ = 1e-6; // Coefficient of frequency dependent part of air absorption.
+double Simulation::duration_ = 2e-2;		// Duration of the whole simulation (seconds).
 
 //double Simulation::dh_ = 0.05;			// Space sampling rate.
 //double Simulation::dt_ = 0.625e-4;		// Time sampling rate.
