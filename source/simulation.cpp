@@ -375,7 +375,7 @@ int Simulation::Update()
 				std::vector<double> partition_xy;
 				partition_xy = partition->get_xy_plane(pixels_z);
 
-#pragma omp parallel for collapse(2)
+#pragma omp parallel for
 				for (int i = 0; i < partition->height_; i++) {
 					for (int j = 0; j < partition->width_; j++) {
 						double pressure = partition_xy[i * partition->width_ + j];
