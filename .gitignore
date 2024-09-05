@@ -455,3 +455,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+/DawnCache
+/GPUCache
+/source/Intel® VTune™ Profiler Results
