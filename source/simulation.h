@@ -11,6 +11,8 @@ class SoundSource;
 class Simulation
 {
 	std::vector<std::shared_ptr<Partition>> partitions_;
+	std::vector<std::shared_ptr<Partition>> dct_partitions_;
+	std::vector<std::shared_ptr<Partition>> pml_partitions_;
 	std::vector<std::shared_ptr<Boundary>> boundaries_;
 	std::vector<std::shared_ptr<SoundSource>> sources_;
 

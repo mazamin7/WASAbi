@@ -51,6 +51,8 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 	info_.num_boundaries = boundaries_.size();
 	info_.num_sources = sources_.size();
 
+	dct_partitions_ = partitions_;
+
 
 	// Find and create PML partitions.
 	for (int cnt = 0; cnt < info_.num_dct_partitions; cnt++)
@@ -266,7 +268,13 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 		}
 	}
 
-
+	// Iterate over partitions_ and add elements that are not in dct_partitions_
+	for (const auto& partition : partitions_) {
+		// Check if the partition is not in dct_partitions_
+		if (std::find(dct_partitions_.begin(), dct_partitions_.end(), partition) == dct_partitions_.end()) {
+			pml_partitions_.push_back(partition); // Add to pml_partitions_ if not found in dct_partitions_
+		}
+	}
 
 	/*------------- partitions includes pml partition --------------------------*/
 
@@ -305,21 +313,39 @@ int Simulation::Update()
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
 #pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
+	for (int i = 0; i < dct_partitions_.size(); i++)
 	{
 		// reset force
-		//partitions_[i]->reset_forces();
+		//dct_partitions_[i]->reset_forces();
 
 		// compute force
-		partitions_[i]->ComputeSourceForcingTerms(time_step);
+		dct_partitions_[i]->ComputeSourceForcingTerms(time_step);
 		//std::cout << "impose force partition " << partition->info_.id << " ";
 
 		// update pressure and velocity
-		partitions_[i]->Update();
+		dct_partitions_[i]->Update();
 		//std::cout << "update pressure partition " << partition->info_.id << " ";
 
 		// reset residue
-		partitions_[i]->reset_residues();
+		dct_partitions_[i]->reset_residues();
+	}
+
+#pragma omp parallel for
+	for (int i = 0; i < pml_partitions_.size(); i++)
+	{
+		// reset force
+		//pml_partitions_[i]->reset_forces();
+
+		// compute force
+		pml_partitions_[i]->ComputeSourceForcingTerms(time_step);
+		//std::cout << "impose force partition " << partition->info_.id << " ";
+
+		// update pressure and velocity
+		pml_partitions_[i]->Update();
+		//std::cout << "update pressure partition " << partition->info_.id << " ";
+
+		// reset residue
+		pml_partitions_[i]->reset_residues();
 	}
 
 	// compute residue
