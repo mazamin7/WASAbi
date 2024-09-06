@@ -197,19 +197,19 @@ void Partition::ComputeSourceForcingTerms(double t)
 
 void Partition::PostMerge()
 {
+	int total_size = depth_ * height_ * width_;  // Calculate total number of iterations.
+
 #pragma omp parallel for
-	for (int i = 0; i < depth_; i++)
+	for (int idx = 0; idx < total_size; idx++)
 	{
-		for (int j = 0; j < height_; j++)
-		{
-			for (int k = 0; k < width_; k++)
-			{
-				auto res = get_residue(k, j, i);
+		// Calculate the 3D indices (i, j, k) from the linear index.
+		int i = idx / (height_ * width_);
+		int j = (idx % (height_ * width_)) / width_;
+		int k = idx % width_;
 
-				res = dt_ / (1 + 2 * dt_ * air_absorption_alpha1_) * res;
-				add_to_velocity(k, j, i, res);
+		auto res = get_residue(k, j, i);
 
-			}
-		}
+		res = dt_ / (1 + 2 * dt_ * air_absorption_alpha1_) * res;
+		add_to_velocity(k, j, i, res);
 	}
 }
