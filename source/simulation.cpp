@@ -305,14 +305,14 @@ int Simulation::Update()
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
 	// reset force
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->reset_forces();
 	}
 
 	// compute force
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->ComputeSourceForcingTerms(time_step);
@@ -320,7 +320,7 @@ int Simulation::Update()
 	}
 
 	// update pressure and velocity
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->Update();
@@ -328,14 +328,14 @@ int Simulation::Update()
 	}
 
 	// reset residue
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->reset_residues();
 	}
 
 	// compute residue
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < boundaries_.size(); i++) {
 		boundaries_[i]->ComputeResidues();
 	}
@@ -343,7 +343,7 @@ int Simulation::Update()
 	//std::cout << std::endl;
 
 	// post-merge
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->PostMerge();
@@ -375,7 +375,7 @@ int Simulation::Update()
 				std::vector<double> partition_xy;
 				partition_xy = partition->get_xy_plane(pixels_z);
 
-#pragma omp parallel for
+				//#pragma omp parallel for
 				for (int i = 0; i < partition->height_; i++) {
 					for (int j = 0; j < partition->width_; j++) {
 						double pressure = partition_xy[i * partition->width_ + j];
@@ -423,7 +423,7 @@ int Simulation::Update()
 				std::vector<double> partition_yz;
 				partition_yz = partition->get_yz_plane(pixels_x);
 
-#pragma omp parallel for
+				//#pragma omp parallel for
 				for (int i = 0; i < partition->depth_; i++) {
 					for (int j = 0; j < partition->height_; j++) {
 						double pressure = partition_yz[i * partition->height_ + j];
