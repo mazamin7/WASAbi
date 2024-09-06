@@ -42,105 +42,144 @@ void Boundary::ComputeResidues()
 				int right_y = i - right->y_start_;
 				int left_z = j - left->z_start_;
 				int right_z = j - right->z_start_;
-				int left_x, right_x;
-				double sip, sip1, sip2, res;
 
 				// Unrolled iteration for m = -3
-				left_x = left->width_ - 3;
-				right_x = -3;
+				{
+					int left_x = left->width_ - 3;
+					int right_x = -3;
 
-				sip1 = coefs[0][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
-				sip1 += coefs[0][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
-				sip1 += coefs[0][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
+					double sip1 = 0.0;
+					double sip2 = 0.0;
+					double sip;
+					double res;
 
-				sip2 = coefs[0][3] * right->get_pressure(0, right_y, right_z);
-				sip2 += coefs[0][4] * right->get_pressure(1, right_y, right_z);
-				sip2 += coefs[0][5] * right->get_pressure(2, right_y, right_z);
+					sip1 = coefs[0][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
+					sip1 += coefs[0][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
+					sip1 += coefs[0][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
 
-				sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
-				res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-				left->add_to_residue(left_x, left_y, left_z, boundary_absorption_ * res);
+					sip2 = coefs[0][3] * right->get_pressure(0, right_y, right_z);
+					sip2 += coefs[0][4] * right->get_pressure(1, right_y, right_z);
+					sip2 += coefs[0][5] * right->get_pressure(2, right_y, right_z);
+
+					sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
+					res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+					left->add_to_residue(left_x, left_y, left_z, boundary_absorption_ * res);
+				}
 
 				// Unrolled iteration for m = -2
-				left_x = left->width_ - 2;
-				right_x = -2;
+				{
+					int left_x = left->width_ - 2;
+					int right_x = -2;
 
-				sip1 = coefs[1][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
-				sip1 += coefs[1][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
-				sip1 += coefs[1][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
+					double sip1 = 0.0;
+					double sip2 = 0.0;
+					double sip;
+					double res;
 
-				sip2 = coefs[1][3] * right->get_pressure(0, right_y, right_z);
-				sip2 += coefs[1][4] * right->get_pressure(1, right_y, right_z);
-				sip2 += coefs[1][5] * right->get_pressure(2, right_y, right_z);
+					sip1 = coefs[1][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
+					sip1 += coefs[1][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
+					sip1 += coefs[1][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
 
-				sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
-				res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-				left->add_to_residue(left_x, left_y, left_z, boundary_absorption_ * res);
+					sip2 = coefs[1][3] * right->get_pressure(0, right_y, right_z);
+					sip2 += coefs[1][4] * right->get_pressure(1, right_y, right_z);
+					sip2 += coefs[1][5] * right->get_pressure(2, right_y, right_z);
 
+					sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
+					res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+					left->add_to_residue(left_x, left_y, left_z, boundary_absorption_ * res);
+				}
+				
 				// Unrolled iteration for m = -1
-				left_x = left->width_ - 1;
-				right_x = -1;
+				{
+					int left_x = left->width_ - 1;
+					int right_x = -1;
 
-				sip1 = coefs[2][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
-				sip1 += coefs[2][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
-				sip1 += coefs[2][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
+					double sip1 = 0.0;
+					double sip2 = 0.0;
+					double sip;
+					double res;
 
-				sip2 = coefs[2][3] * right->get_pressure(0, right_y, right_z);
-				sip2 += coefs[2][4] * right->get_pressure(1, right_y, right_z);
-				sip2 += coefs[2][5] * right->get_pressure(2, right_y, right_z);
+					sip1 = coefs[2][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
+					sip1 += coefs[2][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
+					sip1 += coefs[2][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
 
-				sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
-				res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-				left->add_to_residue(left_x, left_y, left_z, boundary_absorption_ * res);
+					sip2 = coefs[2][3] * right->get_pressure(0, right_y, right_z);
+					sip2 += coefs[2][4] * right->get_pressure(1, right_y, right_z);
+					sip2 += coefs[2][5] * right->get_pressure(2, right_y, right_z);
+
+					sip = left->include_self_terms_ ? (sip1 + sip2) : sip2;
+					res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+					left->add_to_residue(left_x, left_y, left_z, boundary_absorption_ * res);
+				}
 
 				// Unrolled iteration for m = 0
-				left_x = left->width_;
-				right_x = 0;
+				{
+					int left_x = left->width_;
+					int right_x = 0;
 
-				sip1 = coefs[3][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
-				sip1 += coefs[3][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
-				sip1 += coefs[3][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
+					double sip1 = 0.0;
+					double sip2 = 0.0;
+					double sip;
+					double res;
 
-				sip2 = coefs[3][3] * right->get_pressure(0, right_y, right_z);
-				sip2 += coefs[3][4] * right->get_pressure(1, right_y, right_z);
-				sip2 += coefs[3][5] * right->get_pressure(2, right_y, right_z);
+					sip1 = coefs[3][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
+					sip1 += coefs[3][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
+					sip1 += coefs[3][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
 
-				sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
-				res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-				right->add_to_residue(right_x, right_y, right_z, boundary_absorption_ * res);
+					sip2 = coefs[3][3] * right->get_pressure(0, right_y, right_z);
+					sip2 += coefs[3][4] * right->get_pressure(1, right_y, right_z);
+					sip2 += coefs[3][5] * right->get_pressure(2, right_y, right_z);
+
+					sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
+					res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+					right->add_to_residue(right_x, right_y, right_z, boundary_absorption_ * res);
+				}
 
 				// Unrolled iteration for m = 1
-				left_x = left->width_ + 1;
-				right_x = 1;
+				{
+					int left_x = left->width_ + 1;
+					int right_x = 1;
 
-				sip1 = coefs[4][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
-				sip1 += coefs[4][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
-				sip1 += coefs[4][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
+					double sip1 = 0.0;
+					double sip2 = 0.0;
+					double sip;
+					double res;
 
-				sip2 = coefs[4][3] * right->get_pressure(0, right_y, right_z);
-				sip2 += coefs[4][4] * right->get_pressure(1, right_y, right_z);
-				sip2 += coefs[4][5] * right->get_pressure(2, right_y, right_z);
+					sip1 = coefs[4][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
+					sip1 += coefs[4][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
+					sip1 += coefs[4][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
 
-				sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
-				res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-				right->add_to_residue(right_x, right_y, right_z, boundary_absorption_ * res);
+					sip2 = coefs[4][3] * right->get_pressure(0, right_y, right_z);
+					sip2 += coefs[4][4] * right->get_pressure(1, right_y, right_z);
+					sip2 += coefs[4][5] * right->get_pressure(2, right_y, right_z);
+
+					sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
+					res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+					right->add_to_residue(right_x, right_y, right_z, boundary_absorption_* res);
+				}
 
 				// Unrolled iteration for m = 2
-				left_x = left->width_ + 2;
-				right_x = 2;
+				{
+					int left_x = left->width_ + 2;
+					int right_x = 2;
 
-				sip1 = coefs[5][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
-				sip1 += coefs[5][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
-				sip1 += coefs[5][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
+					double sip1 = 0.0;
+					double sip2 = 0.0;
+					double sip;
+					double res;
 
-				sip2 = coefs[5][3] * right->get_pressure(0, right_y, right_z);
-				sip2 += coefs[5][4] * right->get_pressure(1, right_y, right_z);
-				sip2 += coefs[5][5] * right->get_pressure(2, right_y, right_z);
+					sip1 = coefs[5][0] * left->get_pressure(left->width_ - 3, left_y, left_z);
+					sip1 += coefs[5][1] * left->get_pressure(left->width_ - 2, left_y, left_z);
+					sip1 += coefs[5][2] * left->get_pressure(left->width_ - 1, left_y, left_z);
 
-				sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
-				res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
-				right->add_to_residue(right_x, right_y, right_z, boundary_absorption_ * res);
+					sip2 = coefs[5][3] * right->get_pressure(0, right_y, right_z);
+					sip2 += coefs[5][4] * right->get_pressure(1, right_y, right_z);
+					sip2 += coefs[5][5] * right->get_pressure(2, right_y, right_z);
 
+					sip = right->include_self_terms_ ? (sip1 + sip2) : sip1;
+					res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
+					right->add_to_residue(right_x, right_y, right_z, boundary_absorption_* res);
+				}
 			}
 		}
 	}
@@ -295,7 +334,6 @@ void Boundary::ComputeResidues()
 					res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
 					bottom->add_to_residue(bottom_x, bottom_y, bottom_z, boundary_absorption_ * res);
 				}
-
 			}
 		}
 	}
@@ -450,7 +488,6 @@ void Boundary::ComputeResidues()
 					res = sip * (Simulation::c0_ * Simulation::c0_) / (180.0 * Simulation::dh_ * Simulation::dh_);
 					back->add_to_residue(back_x, back_y, back_z, boundary_absorption_ * res);
 				}
-
 			}
 		}
 	}
