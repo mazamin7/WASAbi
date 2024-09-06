@@ -20,20 +20,21 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
 	ly2_ = height_ * height_ * dh_ * dh_;
 	lz2_ = depth_ * depth_ * dh_ * dh_;
 
-#pragma omp parallel for collapse(2)
-	for (int i = 1; i <= depth_; i++)
+#pragma omp parallel for
+	for (int idx = 0; idx < depth_ * height_ * width_; idx++)
 	{
-		for (int j = 1; j <= height_; j++)
-		{
-			for (int k = 1; k <= width_; k++)
-			{
-				int idx = (i - 1) * height_ * width_ + (j - 1) * width_ + (k - 1);
-				double w0 = c0_ * M_PI * sqrt((i - 1) * (i - 1) / lz2_ + (j - 1) * (j - 1) / ly2_ + (k - 1) * (k - 1) / lx2_);
-				double alpha = air_absorption_alpha1_ + air_absorption_alpha2_ * w0 * w0;
-				w0_[idx] = w0;
-				alpha_[idx] = alpha;
-			}
-		}
+		// Compute the indices for i, j, k
+		int i = idx / (height_ * width_);
+		int j = (idx % (height_ * width_)) / width_;
+		int k = (idx % (height_ * width_)) % width_;
+
+		// Compute the original indices and calculations
+		double w0 = c0_ * M_PI * sqrt(i * i / lz2_ + j * j / ly2_ + k * k / lx2_);
+		double alpha = air_absorption_alpha1_ + air_absorption_alpha2_ * w0 * w0;
+
+		// Store the results
+		w0_[idx] = w0;
+		alpha_[idx] = alpha;
 	}
 }
 
@@ -47,68 +48,66 @@ DctPartition::~DctPartition()
 
 void DctPartition::Update()
 {
-	pressure_.ExecuteDct(); // current pressure
-	velocity_.ExecuteDct(); // current pressure velocity
-	force_.ExecuteDct(); // current force
+	pressure_.ExecuteDct();  // current pressure
+	velocity_.ExecuteDct();  // current pressure velocity
+	force_.ExecuteDct();     // current force
 
-#pragma omp parallel for collapse(2)
-	for (int i = 0; i < depth_; i++)
+#pragma omp parallel for
+	for (int idx = 0; idx < depth_ * height_ * width_; idx++)
 	{
-		for (int j = 0; j < height_; j++)
+		// Compute the indices i, j, and k from the flattened index
+		int i = idx / (height_ * width_);
+		int j = (idx % (height_ * width_)) / width_;
+		int k = idx % width_;
+
+		double w0 = w0_[idx];
+		double alpha = alpha_[idx];
+
+		if ((idx == 0) && (alpha == 0.0))
 		{
-			for (int k = 0; k < width_; k++)
-			{
-				int idx = i * height_ * width_ + j * width_ + k;
-				double w0 = w0_[idx];
-				double alpha = alpha_[idx];
+			next_velocity_modes_[idx] = velocity_.modes_[idx] + dt_ * force_.modes_[idx];
+			next_pressure_modes_[idx] = dt_ * velocity_.modes_[idx] + pressure_.modes_[idx] + dt_ * dt_ / 2 * force_.modes_[idx];
+		}
+		else if ((idx == 0) && (alpha > 0.0))
+		{
+			double e2at = exp(-2 * alpha * dt_);
 
-				if ((idx == 0) && (alpha == 0.0))
-				{
-					next_velocity_modes_[idx] = velocity_.modes_[idx] + dt_ * force_.modes_[idx];
-					next_pressure_modes_[idx] = dt_ * velocity_.modes_[idx] + pressure_.modes_[idx] + dt_*dt_/2 * force_.modes_[idx];
-				}
-				else if ((idx == 0) && (alpha > 0.0))
-				{
-					double e2at = exp(-2 * alpha * dt_);
+			next_velocity_modes_[idx] = e2at * velocity_.modes_[idx] + (1 - e2at) / (2 * alpha) * force_.modes_[idx];
+			next_pressure_modes_[idx] = (1 - e2at) / (2 * alpha) * velocity_.modes_[idx] + pressure_.modes_[idx] + ((e2at - 1) / (4 * alpha * alpha) + 1 / (2 * alpha) * dt_) * force_.modes_[idx];
+		}
+		else if ((idx > 0) && (alpha < w0))
+		{
+			double inv_w02 = 1 / w0 / w0;
+			double alpha_sqr = alpha * alpha;
 
-					next_velocity_modes_[idx] = e2at * velocity_.modes_[idx] + (1 - e2at)/(2 * alpha) * force_.modes_[idx];
-					next_pressure_modes_[idx] = (1 - e2at)/(2 * alpha) * velocity_.modes_[idx] + pressure_.modes_[idx] + ((e2at - 1) / (4 * alpha * alpha) + 1 / (2 * alpha) * dt_) * force_.modes_[idx];
-				}
-				else if ((idx > 0) && (alpha < w0))
-				{
-					double inv_w02 = 1 / w0 / w0;
-					double alpha_sqr = alpha * alpha;
+			double w = sqrt(w0 * w0 - alpha_sqr);
 
-					double w = sqrt(w0 * w0 - alpha_sqr);
+			double cwt = cos(w * dt_);
+			double swt = sin(w * dt_);
+			double eatm = exp(-alpha * dt_);
 
-					double cwt = cos(w * dt_);
-					double swt = sin(w * dt_);
-					double eatm = exp(-alpha * dt_);
+			double w2 = w * w;
+			double inv_w = 1 / w;
 
-					double w2 = w * w;
-					double inv_w = 1 / w;
+			double xe = force_.modes_[idx] * inv_w02;
 
-					double xe = force_.modes_[idx] * inv_w02;
+			next_velocity_modes_[idx] = eatm * (velocity_.modes_[idx] * (cwt - alpha * inv_w * swt) - (w + alpha_sqr * inv_w) * (pressure_.modes_[idx] - xe) * swt);
+			next_pressure_modes_[idx] = xe + eatm * ((pressure_.modes_[idx] - xe) * (cwt + alpha * inv_w * swt) + swt * inv_w * velocity_.modes_[idx]);
+		}
+		else if ((idx > 0) && (alpha > w0))
+		{
+			double inv_w02 = 1 / w0 / w0;
+			double alpha_sqr = alpha * alpha;
 
-					next_velocity_modes_[idx] = eatm * (velocity_.modes_[idx] * (cwt - alpha * inv_w * swt) - (w + alpha_sqr * inv_w) * (pressure_.modes_[idx] - xe) * swt);
-					next_pressure_modes_[idx] = xe + eatm * ((pressure_.modes_[idx] - xe) * (cwt + alpha * inv_w * swt) + swt * inv_w * velocity_.modes_[idx]);
-				}
-				else if ((idx > 0) && (alpha > w0))
-				{
-					double inv_w02 = 1 / w0 / w0;
-					double alpha_sqr = alpha * alpha;
+			double alphad = sqrt(alpha_sqr - w0 * w0);
+			double alpha1 = alpha + alphad;
+			double alpha2 = alpha - alphad;
 
-					double alphad = sqrt(alpha_sqr - w0 * w0);
-					double alpha1 = alpha + alphad;
-					double alpha2 = alpha - alphad;
+			double eat1 = exp(-alpha1 * dt_);
+			double eat2 = exp(-alpha2 * dt_);
 
-					double eat1 = exp(-alpha1 * dt_);
-					double eat2 = exp(-alpha2 * dt_);
-
-					next_velocity_modes_[idx] = (0.5*(eat1 + eat2) + 0.5/alphad * alpha * (eat1 - eat2)) * velocity_.modes_[idx] + (-0.5 * (alpha1 * eat1 +  alpha2 * eat2) - 0.5 / alphad * alpha * (alpha2 * eat2 - alpha1 * eat1)) * pressure_.modes_[idx] + inv_w02 * 0.5 * (alpha1 * eat1 + alpha2 * eat2 + alpha /alphad * (alpha2 * eat2 - alpha1 * eat1)) * force_.modes_[idx];
-					next_pressure_modes_[idx] = 0.5 / alphad * (eat2 - eat1) * velocity_.modes_[idx] + (eat1 + eat2 + 0.5 / alphad * (alpha2 * eat2 - alpha1 * eat1)) * pressure_.modes_[idx] + inv_w02 * (1 - alpha1 - alpha2 - 0.5 / alphad * (alpha2 * eat2 - alpha1 * eat1)) * force_.modes_[idx];
-				}
-			}
+			next_velocity_modes_[idx] = (0.5 * (eat1 + eat2) + 0.5 / alphad * alpha * (eat1 - eat2)) * velocity_.modes_[idx] + (-0.5 * (alpha1 * eat1 + alpha2 * eat2) - 0.5 / alphad * alpha * (alpha2 * eat2 - alpha1 * eat1)) * pressure_.modes_[idx] + inv_w02 * 0.5 * (alpha1 * eat1 + alpha2 * eat2 + alpha / alphad * (alpha2 * eat2 - alpha1 * eat1)) * force_.modes_[idx];
+			next_pressure_modes_[idx] = 0.5 / alphad * (eat2 - eat1) * velocity_.modes_[idx] + (eat1 + eat2 + 0.5 / alphad * (alpha2 * eat2 - alpha1 * eat1)) * pressure_.modes_[idx] + inv_w02 * (1 - alpha1 - alpha2 - 0.5 / alphad * (alpha2 * eat2 - alpha1 * eat1)) * force_.modes_[idx];
 		}
 	}
 

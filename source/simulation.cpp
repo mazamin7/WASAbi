@@ -374,31 +374,39 @@ int Simulation::Update()
 				int y_offset = partition->y_start_ - y_start_;
 				std::vector<double> partition_xy;
 				partition_xy = partition->get_xy_plane(pixels_z);
-#pragma omp parallel for collapse(2)
-				for (int i = 0; i < partition->height_; i++) {
-					for (int j = 0; j < partition->width_; j++) {
-						double pressure = partition_xy[i * partition->width_ + j];
-						double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
-						int r, g, b;
-						if (norm >= 0.5)
-						{
-							r = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
-							g = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
-							b = 255;
-						}
-						else {
-							r = 255;
-							g = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
-							b = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
-						}
-						if (partition->should_render_)
-						{
-							pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
-						}
-						else
-						{
-							pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
-						}
+
+				int height = partition->height_;
+				int width = partition->width_;
+
+#pragma omp parallel for
+				for (int idx = 0; idx < height * width; idx++) {
+					// Compute the indices i and j from the flattened index idx
+					int i = idx / width;
+					int j = idx % width;
+
+					double pressure = partition_xy[i * width + j];
+					double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
+					int r, g, b;
+
+					if (norm >= 0.5)
+					{
+						r = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
+						g = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
+						b = 255;
+					}
+					else {
+						r = 255;
+						g = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
+						b = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
+					}
+
+					if (partition->should_render_)
+					{
+						pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
+					}
+					else
+					{
+						pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
 					}
 				}
 			}
@@ -422,31 +430,40 @@ int Simulation::Update()
 				std::vector<double> partition_yz;
 				partition_yz = partition->get_yz_plane(pixels_x);
 
-#pragma omp parallel for collapse(2)
-				for (int i = 0; i < partition->depth_; i++) {
-					for (int j = 0; j < partition->height_; j++) {
-						double pressure = partition_yz[i * partition->height_ + j];
-						double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
-						int r, g, b;
-						if (norm >= 0.5)
-						{
-							r = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
-							g = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
-							b = 255;
-						}
-						else {
-							r = 255;
-							g = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
-							b = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
-						}
-						if (partition->should_render_)
-						{
-							pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
-						}
-						else
-						{
-							pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
-						}
+				int depth = partition->depth_;
+				int height = partition->height_;
+
+#pragma omp parallel for
+				for (int idx = 0; idx < depth * height; idx++)
+				{
+					// Compute the original indices i and j from the flattened index
+					int i = idx / height;
+					int j = idx % height;
+
+					double pressure = partition_yz[idx];
+					double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
+					int r, g, b;
+
+					if (norm >= 0.5)
+					{
+						r = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
+						g = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
+						b = 255;
+					}
+					else
+					{
+						r = 255;
+						g = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
+						b = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
+					}
+
+					if (partition->should_render_)
+					{
+						pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
+					}
+					else
+					{
+						pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
 					}
 				}
 			}

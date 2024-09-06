@@ -30,40 +30,6 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 
 	int size = width_ * height_ * depth_ + 1;
 
-	/*p_ = (double *)malloc(size * sizeof(double));
-	p_new_ = (double *)malloc(size * sizeof(double));
-
-	v_ = (double*)malloc(size * sizeof(double));
-	v_new_ = (double*)malloc(size * sizeof(double));
-
-	psi_ = (double*)malloc(size * sizeof(double));
-	psi_new_ = (double*)malloc(size * sizeof(double));
-
-	phi_x_ = (double *)malloc(size * sizeof(double));
-	phi_x_new_ = (double *)malloc(size * sizeof(double));
-	phi_y_ = (double *)malloc(size * sizeof(double));
-	phi_y_new_ = (double *)malloc(size * sizeof(double));
-	phi_z_ = (double *)malloc(size * sizeof(double));
-	phi_z_new_ = (double *)malloc(size * sizeof(double));
-
-	residue_ = (double*)malloc(size * sizeof(double));
-	force_ = (double *)malloc(size * sizeof(double));
-
-	memset((void *)p_, 0, size * sizeof(double));
-	memset((void *)p_new_, 0, size * sizeof(double));
-	memset((void*)v_, 0, size * sizeof(double));
-	memset((void*)v_new_, 0, size * sizeof(double));
-	memset((void*)psi_, 0, size * sizeof(double));
-	memset((void*)psi_new_, 0, size * sizeof(double));
-	memset((void *)phi_x_, 0, size * sizeof(double));
-	memset((void *)phi_x_new_, 0, size * sizeof(double));
-	memset((void *)phi_y_, 0, size * sizeof(double));
-	memset((void *)phi_y_new_, 0, size * sizeof(double));
-	memset((void *)phi_z_, 0, size * sizeof(double));
-	memset((void *)phi_z_new_, 0, size * sizeof(double));
-	memset((void *)force_, 0, size * sizeof(double));
-	memset((void *)residue_, 0, size * sizeof(double));*/
-
 	p_ = std::make_unique<double[]>(size);
 	p_new_ = std::make_unique<double[]>(size);
 	v_ = std::make_unique<double[]>(size);
@@ -97,38 +63,37 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 	std::memset(force_.get(), 0, size * sizeof(double));
 	std::memset(residue_.get(), 0, size * sizeof(double));
 
-#pragma omp parallel for collapse(2)
-	for (int k = 0; k < depth_; k++)
+#pragma omp parallel for
+	for (int idx = 0; idx < depth_ * height_ * width_; idx++)
 	{
-		for (int j = 0; j < height_; j++)
+		// Compute the indices for k, j, i
+		int k = idx / (height_ * width_);
+		int j = (idx % (height_ * width_)) / width_;
+		int i = (idx % (height_ * width_)) % width_;
+
+		// Apply the switch-case logic with the calculated i, j, k
+		switch (type)
 		{
-			for (int i = 0; i < width_; i++)
-			{
-				switch (type)
-				{
-				case PmlPartition::P_BACK:
-					zetaz_[GetIndex(i, j, k)] = zeta_ * ((k + 1) * dh_ / thickness_ - sin(2 * M_PI * (k + 1) * dh_ / thickness_) / 2 / M_PI);
-					break;
-				case PmlPartition::P_FRONT:
-					zetaz_[GetIndex(i, j, k)] = zeta_ * ((depth_ - k) * dh_ / thickness_ - sin(2 * M_PI * (depth_ - k) * dh_ / thickness_) / 2 / M_PI);
-					break;
-				case PmlPartition::P_BOTTOM:
-					zetay_[GetIndex(i, j, k)] = zeta_ * ((j + 1) * dh_ / thickness_ - sin(2 * M_PI * (j + 1) * dh_ / thickness_) / 2 / M_PI);
-					break;
-				case PmlPartition::P_TOP:
-					zetay_[GetIndex(i, j, k)] = zeta_ * ((height_ - j) * dh_ / thickness_ - sin(2 * M_PI * (height_ - j) * dh_ / thickness_) / 2 / M_PI);
-					break;
-				case PmlPartition::P_RIGHT:
-					// zeta_x = zeta * ( (|x - a|)/L - (sin(2 Pi (|x - a|)/(L))) / (2 Pi) )
-					zetax_[GetIndex(i, j, k)] = zeta_ * ((i + 1) * dh_ / thickness_ - sin(2 * M_PI * (i + 1) * dh_ / thickness_) / 2 / M_PI);
-					break;
-				case PmlPartition::P_LEFT:
-					zetax_[GetIndex(i, j, k)] = zeta_ * ((width_ - i) * dh_ / thickness_ - sin(2 * M_PI * (width_ - i) * dh_ / thickness_) / 2 / M_PI);
-					break;
-				default:
-					break;
-				}
-			}
+		case PmlPartition::P_BACK:
+			zetaz_[GetIndex(i, j, k)] = zeta_ * ((k + 1) * dh_ / thickness_ - sin(2 * M_PI * (k + 1) * dh_ / thickness_) / 2 / M_PI);
+			break;
+		case PmlPartition::P_FRONT:
+			zetaz_[GetIndex(i, j, k)] = zeta_ * ((depth_ - k) * dh_ / thickness_ - sin(2 * M_PI * (depth_ - k) * dh_ / thickness_) / 2 / M_PI);
+			break;
+		case PmlPartition::P_BOTTOM:
+			zetay_[GetIndex(i, j, k)] = zeta_ * ((j + 1) * dh_ / thickness_ - sin(2 * M_PI * (j + 1) * dh_ / thickness_) / 2 / M_PI);
+			break;
+		case PmlPartition::P_TOP:
+			zetay_[GetIndex(i, j, k)] = zeta_ * ((height_ - j) * dh_ / thickness_ - sin(2 * M_PI * (height_ - j) * dh_ / thickness_) / 2 / M_PI);
+			break;
+		case PmlPartition::P_RIGHT:
+			zetax_[GetIndex(i, j, k)] = zeta_ * ((i + 1) * dh_ / thickness_ - sin(2 * M_PI * (i + 1) * dh_ / thickness_) / 2 / M_PI);
+			break;
+		case PmlPartition::P_LEFT:
+			zetax_[GetIndex(i, j, k)] = zeta_ * ((width_ - i) * dh_ / thickness_ - sin(2 * M_PI * (width_ - i) * dh_ / thickness_) / 2 / M_PI);
+			break;
+		default:
+			break;
 		}
 	}
 }
@@ -136,25 +101,7 @@ PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType typ
 
 PmlPartition::~PmlPartition()
 {
-	/*free(p_);
-	free(v_);
-	free(v_new_);
-	free(psi_);
-	free(psi_new_);
-	free(phi_x_);
-	free(phi_x_new_);
-	free(phi_y_);
-	free(phi_y_new_);
-	free(phi_z_);
-	free(phi_z_new_);
-	free(psi_);
-	free(psi_new_);
-	free(force_);
-	free(residue_);
-	free(zetax_);
-	free(zetay_);
-	free(zetaz_);
-	free(p_new_);*/
+	return;
 }
 
 void PmlPartition::Update()
@@ -178,29 +125,26 @@ void PmlPartition::Update()
 
 	double fourthCoefs[] = { 1.0, -8.0, 0.0, 8.0, -1.0 };
 
-#pragma omp parallel for collapse(2)
-	for (int k = 0; k < depth; k++)
+#pragma omp parallel for
+	for (int idx = 0; idx < depth * height * width; idx++)
 	{
-		//#pragma omp parallel for
-		for (int j = 0; j < height; j++)
-		{
-			//#pragma omp parallel for
-			for (int i = 0; i < width; i++)
-			{
-				p_new_[GetIndex(i, j, k)] = p_[GetIndex(i, j, k)] + dt_ * v_[GetIndex(i, j, k)];
-			}
-		}
+		// Compute the original indices i, j, and k from the flattened index
+		int k = idx / (height * width);
+		int j = (idx / width) % height;
+		int i = idx % width;
+
+		// Update p_new_ using the recalculated indices
+		p_new_[GetIndex(i, j, k)] = p_[GetIndex(i, j, k)] + dt_ * v_[GetIndex(i, j, k)];
 	}
 
-#pragma omp parallel for collapse(2)
-	for (int k = 0; k < depth; k++)
+#pragma omp parallel for
+	for (int idx = 0; idx < depth * height * width; idx++)
 	{
-		//#pragma omp parallel for
-		for (int j = 0; j < height; j++)
-		{
-			//#pragma omp parallel for
-			for (int i = 0; i < width; i++)
-			{
+		// Compute the indices for k, j, i
+		int k = idx / (height * width);
+		int j = (idx % (height * width)) / width;
+		int i = (idx % (height * width)) % width;
+
 				psi_new_[GetIndex(i, j, k)] = psi_[GetIndex(i, j, k)] + dt * p_new_[GetIndex(i, j, k)];
 
 				// --------------------------------------------------------
@@ -320,8 +264,6 @@ void PmlPartition::Update()
 				phi_x_new_[GetIndex(i, j, k)] = phi_x_term_1 + dt * (phi_x_term_2 + phi_x_term_3 + phi_x_term_4);
 				phi_y_new_[GetIndex(i, j, k)] = phi_y_term_1 + dt * (phi_y_term_2 + phi_y_term_3 + phi_y_term_4);
 				phi_z_new_[GetIndex(i, j, k)] = phi_z_term_1 + dt * (phi_z_term_2 + phi_z_term_3 + phi_z_term_4);
-			}
-		}
 	}
 
 	std::swap(v_, v_new_);

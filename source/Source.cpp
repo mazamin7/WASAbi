@@ -47,10 +47,25 @@ int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
 
 int main()
 {
-	// Enable nested parallelism
-	omp_set_nested(1);
-
 	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the consuming time.
+
+	// Check if nested parallelism is enabled
+	if (omp_get_nested()) {
+		std::cout << "Nested parallelism is already enabled." << std::endl;
+	}
+	else {
+		std::cout << "Nested parallelism is NOT enabled." << std::endl;
+		std::cout << "Enabling nested parallelism..." << std::endl;
+		omp_set_nested(1);  // Enable nested parallelism
+	}
+
+	// Verify nested parallelism
+	if (omp_get_nested()) {
+		std::cout << "Nested parallelism has been successfully enabled." << std::endl;
+	}
+	else {
+		std::cout << "Failed to enable nested parallelism." << std::endl;
+	}
 
 	std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_alpha1_) + "_" + std::to_string(Simulation::air_absorption_alpha2_);
 	CreateDirectory(dir_name.c_str(), NULL);	// Prepare for the output folder.

@@ -34,15 +34,20 @@ void Boundary::ComputeResidues()
 		auto left = is_a_left ? a_ : b_;
 		auto right = is_a_left ? b_ : a_;
 
-#pragma omp parallel for collapse(2)
-		for (int i = y_start_; i < y_end_; i++)
+		int total_y = y_end_ - y_start_;
+		int total_z = z_end_ - z_start_;
+
+#pragma omp parallel for
+		for (int k = 0; k < total_y * total_z; k++)
 		{
-			for (int j = z_start_; j < z_end_; j++)
-			{
+			int i = y_start_ + k / total_z; // Calculate the y index
+			int j = z_start_ + k % total_z; // Calculate the z index
+
 				int left_y = i - left->y_start_;
 				int right_y = i - right->y_start_;
 				int left_z = j - left->z_start_;
 				int right_z = j - right->z_start_;
+
 				for (int m = -3; m < 3; m++)
 				{
 					int left_x = left->width_ + m;
@@ -77,7 +82,6 @@ void Boundary::ComputeResidues()
 					}
 				}
 
-			}
 		}
 	}
 	else if (type_ == Y_BOUNDARY)
@@ -86,15 +90,20 @@ void Boundary::ComputeResidues()
 		auto top = is_a_top ? a_ : b_;
 		auto bottom = is_a_top ? b_ : a_;
 
-#pragma omp parallel for collapse(2)
-		for (int i = x_start_; i < x_end_; i++)
+		int total_x = x_end_ - x_start_;
+		int total_z = z_end_ - z_start_;
+
+#pragma omp parallel for
+		for (int k = 0; k < total_x * total_z; k++)
 		{
-			for (int j = z_start_; j < z_end_; j++)
-			{
+			int i = x_start_ + k / total_z; // Calculate the x index
+			int j = z_start_ + k % total_z; // Calculate the z index
+
 				int top_x = i - top->x_start_;
 				int bottom_x = i - bottom->x_start_;
 				int top_z = j - top->z_start_;
 				int bottom_z = j - bottom->z_start_;
+
 				for (int m = -3; m < 3; m++)
 				{
 					int top_y = top->height_ + m;
@@ -128,8 +137,6 @@ void Boundary::ComputeResidues()
 						bottom->add_to_residue(bottom_x, bottom_y, bottom_z, boundary_absorption_ * res);
 					}
 				}
-
-			}
 		}
 	}
 	else if (type_ == Z_BOUNDARY)
@@ -138,15 +145,20 @@ void Boundary::ComputeResidues()
 		auto front = is_a_front ? a_ : b_;
 		auto back = is_a_front ? b_ : a_;
 
-#pragma omp parallel for collapse(2)
-		for (int i = x_start_; i < x_end_; i++)
-		{
-			for (int j = y_start_; j < y_end_; j++)
+		int total_x = x_end_ - x_start_;
+		int total_y = y_end_ - y_start_;
+
+#pragma omp parallel for
+		for (int k = 0; k < total_x * total_y; k++)
 			{
+			int i = x_start_ + k / total_y; // Calculate the y index
+			int j = y_start_ + k % total_y; // Calculate the z index
+
 				int front_x = i - front->x_start_;
 				int back_x = i - back->x_start_;
 				int front_y = j - front->y_start_;
 				int back_y = j - back->y_start_;
+
 				for (int m = -3; m < 3; m++)
 				{
 					int front_z = front->depth_ + m;
@@ -180,8 +192,6 @@ void Boundary::ComputeResidues()
 						back->add_to_residue(back_x, back_y, back_z, boundary_absorption_ * res);
 					}
 				}
-
-			}
 		}
 	}
 }
