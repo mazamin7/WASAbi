@@ -28,7 +28,7 @@ bool is_record_field = false;
 double Partition::boundary_absorption_ = 0.5;	// Absorption coefficients of the boundaries.
 double Simulation::air_absorption_alpha1_ = 0.0; // Coefficient of constant part of air absorption.
 double Simulation::air_absorption_alpha2_ = 1e-6; // Coefficient of frequency dependent part of air absorption.
-double Simulation::duration_ = 2e-2;		// Duration of the whole simulation (seconds).
+double Simulation::duration_ = 5e-1;		// Duration of the whole simulation (seconds).
 
 //double Simulation::dh_ = 0.05;			// Space sampling rate.
 //double Simulation::dt_ = 0.625e-4;		// Time sampling rate.
@@ -36,11 +36,11 @@ double Simulation::duration_ = 2e-2;		// Duration of the whole simulation (secon
 //double Simulation::dh_ = 0.1;
 //double Simulation::dt_ = 1.25e-4;
 
-double Simulation::dh_ = 0.2;
-double Simulation::dt_ = 2e-4;
+//double Simulation::dh_ = 0.2;
+//double Simulation::dt_ = 2e-4;
 
-//double Simulation::dh_ = 0.5;
-//double Simulation::dt_ = 6.25e-4;
+double Simulation::dh_ = 0.5;
+double Simulation::dt_ = 6.25e-4;
 
 double Simulation::c0_ = 3.435e2;		// Speed of sound
 int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
@@ -75,9 +75,9 @@ int main()
 	std::vector<std::shared_ptr<SoundSource>> sources;
 	std::vector<std::shared_ptr<Recorder>> recorders;
 
-	partitions = Partition::ImportPartitions("./assets/hall.txt");			// Read partition properties from file.
-	sources = SoundSource::ImportSources("./assets/hall-sources.txt");		// Read source properties from file.
-	recorders = Recorder::ImportRecorders("./assets/hall-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory. 
+	partitions = Partition::ImportPartitions("./assets/hall_parallel_test.txt");			// Read partition properties from file.
+	sources = SoundSource::ImportSources("./assets/hall_parallel_test-sources.txt");		// Read source properties from file.
+	recorders = Recorder::ImportRecorders("./assets/hall_parallel_test-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory. 
 
 	for (auto record : recorders)
 	{
