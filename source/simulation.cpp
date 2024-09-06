@@ -304,33 +304,21 @@ int Simulation::Update()
 	//std::cout << "#" << std::setw(5) << time_step << " : ";
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
-	// reset force
 #pragma omp parallel for
 	for (int i = 0; i < partitions_.size(); i++)
 	{
-		partitions_[i]->reset_forces();
-	}
+		// reset force
+		//partitions_[i]->reset_forces();
 
-	// compute force
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
+		// compute force
 		partitions_[i]->ComputeSourceForcingTerms(time_step);
 		//std::cout << "impose force partition " << partition->info_.id << " ";
-	}
 
-	// update pressure and velocity
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
+		// update pressure and velocity
 		partitions_[i]->Update();
 		//std::cout << "update pressure partition " << partition->info_.id << " ";
-	}
 
-	// reset residue
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
+		// reset residue
 		partitions_[i]->reset_residues();
 	}
 
