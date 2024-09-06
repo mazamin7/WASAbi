@@ -312,7 +312,7 @@ int Simulation::Update()
 	//std::cout << "#" << std::setw(5) << time_step << " : ";
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < dct_partitions_.size(); i++)
 	{
 		// reset force
@@ -330,7 +330,7 @@ int Simulation::Update()
 		dct_partitions_[i]->reset_residues();
 	}
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < pml_partitions_.size(); i++)
 	{
 		// reset force
@@ -349,7 +349,7 @@ int Simulation::Update()
 	}
 
 	// compute residue
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < boundaries_.size(); i++) {
 		boundaries_[i]->ComputeResidues();
 	}
@@ -357,7 +357,7 @@ int Simulation::Update()
 	//std::cout << std::endl;
 
 	// post-merge
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->PostMerge();
@@ -392,7 +392,7 @@ int Simulation::Update()
 				int height = partition->height_;
 				int width = partition->width_;
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 				for (int idx = 0; idx < height * width; idx++) {
 					// Compute the indices i and j from the flattened index idx
 					int i = idx / width;
