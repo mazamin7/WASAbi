@@ -197,7 +197,7 @@ void Partition::ComputeSourceForcingTerms(double t)
 
 void Partition::PostMerge()
 {
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < depth_; i++)
 	{
 		for (int j = 0; j < height_; j++)
@@ -208,7 +208,6 @@ void Partition::PostMerge()
 
 				res = dt_ / (1 + 2 * dt_ * air_absorption_alpha1_) * res;
 				add_to_velocity(k, j, i, res);
-
 			}
 		}
 	}

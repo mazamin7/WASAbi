@@ -10,6 +10,8 @@
 #include <omp.h>
 #include <Windows.h>
 #undef main		// https://stackoverflow.com/questions/6847360
+#include "ini.h"
+#include <fstream>
 
 #include "simulation.h"
 #include "partition.h"
@@ -18,48 +20,171 @@
 #include "gaussian_source.h"
 #include "recorder.h"
 
+
 using namespace std;
 
+// Simulation and Partition classes
 bool is_record_response = false;
 bool is_record_field = false;
 
 /* Set constant parameters. */
-
 double Partition::boundary_absorption_ = 0.5;	// Absorption coefficients of the boundaries.
 double Simulation::air_absorption_alpha1_ = 0.0; // Coefficient of constant part of air absorption.
 double Simulation::air_absorption_alpha2_ = 1e-6; // Coefficient of frequency dependent part of air absorption.
-double Simulation::duration_ = 5e-1;		// Duration of the whole simulation (seconds).
+double Simulation::duration_ = 2e-2;		// Duration of the whole simulation (seconds).
+double Simulation::c0_ = 343.5;		        // Speed of sound
+double Simulation::dh_ = 0.2;		        // Space sampling rate.
+double Simulation::dt_ = 2e-4;		        // Time sampling rate.
+int Simulation::n_pml_layers_ = 5;          // Number of pml layers.
 
-//double Simulation::dh_ = 0.05;			// Space sampling rate.
-//double Simulation::dt_ = 0.625e-4;		// Time sampling rate.
+struct Config {
+	string asset_name;
+	double boundary_absorption;
+	double air_absorption_alpha1;
+	double air_absorption_alpha2;
+	double duration;
+	double c0;
+	int n_pml_layers;
+	string precision;  // User-chosen precision level
+	bool is_record_response;  // Flag to record response
+	bool is_record_field;     // Flag to record field
+};
 
-//double Simulation::dh_ = 0.1;
-//double Simulation::dt_ = 1.25e-4;
+// Callback function for inih
+int parse_ini_handler(void* user, const char* section, const char* name, const char* value) {
+	Config* config = (Config*)user;
 
-//double Simulation::dh_ = 0.2;
-//double Simulation::dt_ = 2e-4;
+	if (strcmp(section, "simulation") == 0) {
+		if (strcmp(name, "asset_name") == 0) {
+			config->asset_name = value;
+		}
+		else if (strcmp(name, "boundary_absorption") == 0) {
+			config->boundary_absorption = atof(value);
+		}
+		else if (strcmp(name, "air_absorption_alpha1") == 0) {
+			config->air_absorption_alpha1 = atof(value);
+		}
+		else if (strcmp(name, "air_absorption_alpha2") == 0) {
+			config->air_absorption_alpha2 = atof(value);
+		}
+		else if (strcmp(name, "duration") == 0) {
+			config->duration = atof(value);
+		}
+		else if (strcmp(name, "c0") == 0) {
+			config->c0 = atof(value);
+		}
+		else if (strcmp(name, "n_pml_layers") == 0) {
+			config->n_pml_layers = atoi(value);
+		}
+		else if (strcmp(name, "precision") == 0) {
+			config->precision = value;
+		}
+		else if (strcmp(name, "is_record_response") == 0) {
+			config->is_record_response = (strcmp(value, "true") == 0);
+		}
+		else if (strcmp(name, "is_record_field") == 0) {
+			config->is_record_field = (strcmp(value, "true") == 0);
+		}
+	}
+	return 1;  // Return success
+}
 
-double Simulation::dh_ = 0.5;
-double Simulation::dt_ = 6.25e-4;
 
-double Simulation::c0_ = 3.435e2;		// Speed of sound
-int Simulation::n_pml_layers_ = 5;		// Number of pml layers.
+// Function to load parameters from INI file using inih
+Config load_config(const string& filename) {
+	Config config;
+	if (ini_parse(filename.c_str(), parse_ini_handler, &config) < 0) {
+		cerr << "Can't load " << filename << endl;
+	}
+	return config;
+}
 
-int main()
-{
+// Function to determine dh and dt based on user-chosen precision level
+void set_precision_params(const string& precision, double& dh, double& dt) {
+	if (precision == "coarse") {
+		dh = 0.5;
+		dt = 6.25e-4;
+	}
+	else if (precision == "fine") {
+		dh = 0.2;
+		dt = 2e-4;
+	}
+	else if (precision == "finer") {
+		dh = 0.1;
+		dt = 1.25e-4;
+	}
+	else if (precision == "finest") {
+		dh = 0.05;
+		dt = 0.625e-4;
+	}
+	else {
+		cerr << "Invalid precision level. Defaulting to 'fine'." << endl;
+		dh = 0.2;
+		dt = 2e-4;
+	}
+}
+
+void ensureConfigExists(const std::string& config_path, const std::string& default_path) {
+	std::ifstream config_file(config_path);
+	if (!config_file) {
+		std::cout << "Config file does not exist. Copying default configuration...\n";
+		std::ifstream default_file(default_path, std::ios::binary);
+		std::ofstream new_file(config_path, std::ios::binary);
+
+		if (default_file && new_file) {
+			new_file << default_file.rdbuf();
+			std::cout << "Copied default configuration to '" << config_path << "'\n";
+		}
+		else {
+			std::cerr << "Error reading default file or creating config file.\n";
+			exit(1); // Exit if there's an error
+		}
+	}
+}
+
+int main() {
+	std::string config_path = "./config/config.ini";
+	std::string default_path = "./config/default.ini";
+
+	// Ensure the config file exists
+	ensureConfigExists(config_path, default_path);
+
+	// Load configuration from the INI file
+	Config config = load_config("./config/config.ini");
+
+	// Apply configuration values to simulation parameters
+	Partition::boundary_absorption_ = config.boundary_absorption;
+	Simulation::air_absorption_alpha1_ = config.air_absorption_alpha1;
+	Simulation::air_absorption_alpha2_ = config.air_absorption_alpha2;
+	Simulation::duration_ = config.duration;
+	Simulation::c0_ = config.c0;
+	Simulation::n_pml_layers_ = config.n_pml_layers;
+
+	// Set dh and dt based on the precision level
+	set_precision_params(config.precision, Simulation::dh_, Simulation::dt_);
+
+	// Apply the recording settings
+	is_record_response = config.is_record_response;
+	is_record_field = config.is_record_field;
+
+	// Display recording flags
+	cout << "Recording response: " << (is_record_response ? "Yes" : "No") << endl;
+	cout << "Recording field: " << (is_record_field ? "Yes" : "No") << endl;
+
 	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the consuming time.
 
 	std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_alpha1_) + "_" + std::to_string(Simulation::air_absorption_alpha2_);
 	CreateDirectory(dir_name.c_str(), NULL);	// Prepare for the output folder.
-												// ! Without this and the corresponding folder does not exist, the program will not write the output data.
 
 	std::vector<std::shared_ptr<Partition>> partitions;
 	std::vector<std::shared_ptr<SoundSource>> sources;
 	std::vector<std::shared_ptr<Recorder>> recorders;
 
-	partitions = Partition::ImportPartitions("./assets/hall_parallel_test.txt");			// Read partition properties from file.
-	sources = SoundSource::ImportSources("./assets/hall_parallel_test-sources.txt");		// Read source properties from file.
-	recorders = Recorder::ImportRecorders("./assets/hall_parallel_test-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory. 
+	// Using the asset name from the INI file for sources, recorders, and partitions
+	std::string asset_name = config.asset_name;
+	partitions = Partition::ImportPartitions("./assets/" + asset_name + ".txt");			// Read partition properties from file.
+	sources = SoundSource::ImportSources("./assets/" + asset_name + "-sources.txt");		// Read source properties from file.
+	recorders = Recorder::ImportRecorders("./assets/" + asset_name + "-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory.
 
 	for (auto record : recorders)
 	{

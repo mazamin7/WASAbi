@@ -51,6 +51,8 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 	info_.num_boundaries = boundaries_.size();
 	info_.num_sources = sources_.size();
 
+	dct_partitions_ = partitions_;
+
 
 	// Find and create PML partitions.
 	for (int cnt = 0; cnt < info_.num_dct_partitions; cnt++)
@@ -266,7 +268,13 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 		}
 	}
 
-
+	// Iterate over partitions_ and add elements that are not in dct_partitions_
+	for (const auto& partition : partitions_) {
+		// Check if the partition is not in dct_partitions_
+		if (std::find(dct_partitions_.begin(), dct_partitions_.end(), partition) == dct_partitions_.end()) {
+			pml_partitions_.push_back(partition); // Add to pml_partitions_ if not found in dct_partitions_
+		}
+	}
 
 	/*------------- partitions includes pml partition --------------------------*/
 
@@ -304,38 +312,44 @@ int Simulation::Update()
 	//std::cout << "#" << std::setw(5) << time_step << " : ";
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
-	// reset force
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
+#pragma omp parallel for schedule(dynamic)
+	for (int i = 0; i < dct_partitions_.size(); i++)
 	{
-		partitions_[i]->reset_forces();
-	}
+		// reset force
+		//dct_partitions_[i]->reset_forces();
 
-	// compute force
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
-		partitions_[i]->ComputeSourceForcingTerms(time_step);
+		// compute force
+		dct_partitions_[i]->ComputeSourceForcingTerms(time_step);
 		//std::cout << "impose force partition " << partition->info_.id << " ";
-	}
 
-	// update pressure and velocity
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
-	{
-		partitions_[i]->Update();
+		// update pressure and velocity
+		dct_partitions_[i]->Update();
 		//std::cout << "update pressure partition " << partition->info_.id << " ";
+
+		// reset residue
+		dct_partitions_[i]->reset_residues();
 	}
 
-	// reset residue
-#pragma omp parallel for
-	for (int i = 0; i < partitions_.size(); i++)
+#pragma omp parallel for schedule(dynamic)
+	for (int i = 0; i < pml_partitions_.size(); i++)
 	{
-		partitions_[i]->reset_residues();
+		// reset force
+		//pml_partitions_[i]->reset_forces();
+
+		// compute force
+		pml_partitions_[i]->ComputeSourceForcingTerms(time_step);
+		//std::cout << "impose force partition " << partition->info_.id << " ";
+
+		// update pressure and velocity
+		pml_partitions_[i]->Update();
+		//std::cout << "update pressure partition " << partition->info_.id << " ";
+
+		// reset residue
+		pml_partitions_[i]->reset_residues();
 	}
 
 	// compute residue
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < boundaries_.size(); i++) {
 		boundaries_[i]->ComputeResidues();
 	}
@@ -343,7 +357,7 @@ int Simulation::Update()
 	//std::cout << std::endl;
 
 	// post-merge
-#pragma omp parallel for
+#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->PostMerge();
@@ -374,31 +388,39 @@ int Simulation::Update()
 				int y_offset = partition->y_start_ - y_start_;
 				std::vector<double> partition_xy;
 				partition_xy = partition->get_xy_plane(pixels_z);
-#pragma omp parallel for
-				for (int i = 0; i < partition->height_; i++) {
-					for (int j = 0; j < partition->width_; j++) {
-						double pressure = partition_xy[i * partition->width_ + j];
-						double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
-						int r, g, b;
-						if (norm >= 0.5)
-						{
-							r = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
-							g = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
-							b = 255;
-						}
-						else {
-							r = 255;
-							g = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
-							b = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
-						}
-						if (partition->should_render_)
-						{
-							pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
-						}
-						else
-						{
-							pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
-						}
+
+				int height = partition->height_;
+				int width = partition->width_;
+
+#pragma omp parallel for schedule(dynamic)
+				for (int idx = 0; idx < height * width; idx++) {
+					// Compute the indices i and j from the flattened index idx
+					int i = idx / width;
+					int j = idx % width;
+
+					double pressure = partition_xy[i * width + j];
+					double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
+					int r, g, b;
+
+					if (norm >= 0.5)
+					{
+						r = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
+						g = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
+						b = 255;
+					}
+					else {
+						r = 255;
+						g = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
+						b = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
+					}
+
+					if (partition->should_render_)
+					{
+						pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
+					}
+					else
+					{
+						pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
 					}
 				}
 			}
@@ -422,31 +444,40 @@ int Simulation::Update()
 				std::vector<double> partition_yz;
 				partition_yz = partition->get_yz_plane(pixels_x);
 
+				int depth = partition->depth_;
+				int height = partition->height_;
+
 #pragma omp parallel for
-				for (int i = 0; i < partition->depth_; i++) {
-					for (int j = 0; j < partition->height_; j++) {
-						double pressure = partition_yz[i * partition->height_ + j];
-						double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
-						int r, g, b;
-						if (norm >= 0.5)
-						{
-							r = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
-							g = static_cast<int> (255 - round(255.0 * 2.0 * (norm - 0.5)));
-							b = 255;
-						}
-						else {
-							r = 255;
-							g = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
-							b = static_cast<int> (255 - round(255.0 * (1.0 - 2.0 * norm)));
-						}
-						if (partition->should_render_)
-						{
-							pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
-						}
-						else
-						{
-							pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
-						}
+				for (int idx = 0; idx < depth * height; idx++)
+				{
+					// Compute the original indices i and j from the flattened index
+					int i = idx / height;
+					int j = idx % height;
+
+					double pressure = partition_yz[idx];
+					double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
+					int r, g, b;
+
+					if (norm >= 0.5)
+					{
+						r = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
+						g = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
+						b = 255;
+					}
+					else
+					{
+						r = 255;
+						g = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
+						b = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
+					}
+
+					if (partition->should_render_)
+					{
+						pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
+					}
+					else
+					{
+						pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
 					}
 				}
 			}

@@ -458,3 +458,4 @@ FodyWeavers.xsd
 /DawnCache
 /GPUCache
 /source/Intel® VTune™ Profiler Results
+source/config/config.ini
