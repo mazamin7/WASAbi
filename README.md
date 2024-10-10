@@ -2,16 +2,12 @@
   <img src="logo.png">
 </p>
 
-# WASAbi - a Wave-based Acoustic Simulation Algorithm
+# WASAbi - a Wave-based Acoustic Simulator using ARD
 
-C++ implementation in 2.5D (3D with constant height).
+C++ implementation of Adaptive Rectangular Decomposition (ARD) with frequency dependent atmospheric absorption in 2.5D (3D with constant height).
 
 Theory:
-> Raghuvanshi, Nikunj, Rahul Narain, and Ming C. Lin. "Efficient and accurate sound propagation using adaptive rectangular decomposition." IEEE Transactions on Visualization and Computer Graphics 15.5 (2009): 789-801.
->
-> Grote, Marcus J., and Imbo Sim. "Efficient PML for the wave equation." arXiv preprint arXiv:1001.0319 (2010).
->
-> Coming Soon
+> Gerardo Cicalese, Gabriele Ciaramella, Ilario Mazzieri; Addressing atmospheric absorption in adaptive rectangular decomposition. J. Acoust. Soc. Am. 1 October 2024; 156 (4): 2328–2339. https://doi.org/10.1121/10.0030468
 
 Extended from ARD-simulator by [@jinnsjj](https://github.com/jinnsjj).
 > https://github.com/jinnsjj/ARD-simulator
@@ -45,8 +41,7 @@ All the values above are in real world scale (meter).
 
 ## Features
 
-- Rectangular Domain Decomposition (RDD)
-  Fourier method for air partitions with atmospheric absorption
+- Frequency dependent atmospheric absorption
 - Partial absorbing boundaries through PML partitions
 - Test cases included
 
