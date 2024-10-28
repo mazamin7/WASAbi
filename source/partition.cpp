@@ -197,7 +197,6 @@ void Partition::ComputeSourceForcingTerms(double t)
 
 void Partition::PostMerge()
 {
-//#pragma omp parallel for
 	for (int i = 0; i < depth_; i++)
 	{
 		for (int j = 0; j < height_; j++)

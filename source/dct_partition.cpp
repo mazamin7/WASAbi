@@ -149,7 +149,8 @@ void DctPartition::set_velocity(int x, int y, int z, double v)
 
 void DctPartition::add_to_velocity(int x, int y, int z, double v)
 {
-	velocity_.set_value(x, y, z, velocity_.get_value(x, y, z) + v);
+	#pragma omp atomic
+	velocity_.values_[z * height_ * width_ + y * width_ + x] += v;
 }
 
 double DctPartition::get_residue(int x, int y, int z)
@@ -164,7 +165,8 @@ void DctPartition::set_residue(int x, int y, int z, double v)
 
 void DctPartition::add_to_residue(int x, int y, int z, double v)
 {
-	residue_.set_value(x, y, z, residue_.get_value(x, y, z) + v);
+	#pragma omp atomic
+	residue_.values_[z * height_ * width_ + y * width_ + x] += v;
 }
 
 double DctPartition::get_force(int x, int y, int z)

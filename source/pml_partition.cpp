@@ -364,7 +364,8 @@ void PmlPartition::set_velocity(int x, int y, int z, double v)
 
 void PmlPartition::add_to_velocity(int x, int y, int z, double v)
 {
-	v_[GetIndex(x, y, z)] = v_[GetIndex(x, y, z)] + v;
+	#pragma omp atomic
+	v_[z * height_ * width_ + y * width_ + x] += v;
 }
 
 double PmlPartition::get_residue(int x, int y, int z)
@@ -379,8 +380,8 @@ void PmlPartition::set_residue(int x, int y, int z, double v)
 
 void PmlPartition::add_to_residue(int x, int y, int z, double v)
 {
-	// #pragma omp atomic
-	residue_[GetIndex(x, y, z)] = residue_[GetIndex(x, y, z)] + v;
+	#pragma omp atomic
+	residue_[z * height_ * width_ + y * width_ + x] += v;
 }
 
 double PmlPartition::get_force(int x, int y, int z)
