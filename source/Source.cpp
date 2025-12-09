@@ -12,7 +12,7 @@
 #include <filesystem>       // <--- NEW: For creating directories
 #include <SDL2/SDL.h>       // <--- FIXED: Linux path
 #include <SDL2/SDL_ttf.h>   // <--- FIXED: Linux path
-#undef main		// https://stackoverflow.com/questions/6847360
+//#undef main		// https://stackoverflow.com/questions/6847360
 #include "ini.h"
 #include <fstream>
 
@@ -146,7 +146,7 @@ void ensureConfigExists(const std::string& config_path, const std::string& defau
 	}
 }
 
-int main() {
+int main(int argc, char* argv[]) {
 	std::string config_path = "./config/config.ini";
 	std::string default_path = "./config/default.ini";
 
