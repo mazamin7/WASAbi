@@ -57,6 +57,4 @@ cmake --build . --parallel "$(nproc)" || error_exit "Compilation failed."
 # --- 6. Success Message ---
 echo "--------------------------------------"
 echo "✅ Build Success!"
-echo "To run the app:"
-echo "./$BUILD_DIR/$EXECUTABLE_NAME"
 echo "--------------------------------------"

@@ -18,8 +18,7 @@ make -j$(nproc)  # Uses all CPU cores for faster build
 # 5. Success Message
 if [ $? -eq 0 ]; then
     echo "--------------------------------------"
-    echo "Build Success! Run it with:"
-    echo "./source/build/WASAbiApp"
+	echo "✅ Build Success!"
     echo "--------------------------------------"
 else
     echo "Build Failed."
