@@ -1,6 +1,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include "dct_partition.h"
+#include <cstring>
 
 
 DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)

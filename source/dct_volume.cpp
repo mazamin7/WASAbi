@@ -1,4 +1,5 @@
 #include "dct_volume.h"
+#include <cstring>
 
 DctVolume::DctVolume(int w, int h, int d) :width_(w), height_(h), depth_(d)
 {

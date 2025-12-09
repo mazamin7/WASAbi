@@ -8,7 +8,10 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <omp.h>
-#include <Windows.h>
+//#include <Windows.h>
+#include <filesystem>       // <--- NEW: For creating directories
+#include <SDL2/SDL.h>       // <--- FIXED: Linux path
+#include <SDL2/SDL_ttf.h>   // <--- FIXED: Linux path
 #undef main		// https://stackoverflow.com/questions/6847360
 #include "ini.h"
 #include <fstream>
@@ -19,6 +22,7 @@
 #include "sound_source.h"
 #include "gaussian_source.h"
 #include "recorder.h"
+#include <cstring>
 
 
 using namespace std;
@@ -174,7 +178,8 @@ int main() {
 	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the consuming time.
 
 	std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_alpha1_) + "_" + std::to_string(Simulation::air_absorption_alpha2_);
-	CreateDirectory(dir_name.c_str(), NULL);	// Prepare for the output folder.
+	//CreateDirectory(dir_name.c_str(), NULL);	// Prepare for the output folder.
+	std::filesystem::create_directories(dir_name);
 
 	std::vector<std::shared_ptr<Partition>> partitions;
 	std::vector<std::shared_ptr<SoundSource>> sources;

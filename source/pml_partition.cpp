@@ -1,6 +1,8 @@
 #include "pml_partition.h"
 #include "simulation.h"
 #include <omp.h>
+#include <cstring>
+#include <cmath>
 
 
 int PmlPartition::GetIndex(int x, int y, int z)
