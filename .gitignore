@@ -124,3 +124,4 @@ source/Intel® VTune™ Profiler Results/
 *.zip
 *.rar
 *.tar.gz
+.vscode/tasks.json
