@@ -1,3 +1,0 @@
-/home/mazamin/WASAbi/source/build/CMakeFiles/WASAbiApp.dir
-/home/mazamin/WASAbi/source/build/CMakeFiles/edit_cache.dir
-/home/mazamin/WASAbi/source/build/CMakeFiles/rebuild_cache.dir
