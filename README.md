@@ -63,7 +63,8 @@ chmod +x build_linux.sh
 ./build_linux.sh
 
 # Or run manually later:
-./source/build/WASAbiApp
+cd source/build
+./WASAbiApp
 ```
 
 ### 🪟 Windows (Option A: MSYS2 / MinGW)
@@ -83,7 +84,8 @@ Run this script from the **MSYS2 MinGW x64** terminal:
 ./build_windows.sh
 
 # Or run manually later:
-./source/build/WASAbiApp.exe
+cd source/build
+./WASAbiApp.exe
 ```
 
 ### 💜 Windows (Option B: Visual Studio 2022)
