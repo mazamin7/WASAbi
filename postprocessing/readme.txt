@@ -1,0 +1,1 @@
+place these scripts in the output folder (where the source.txt and other files are) to visualize room's impulse response

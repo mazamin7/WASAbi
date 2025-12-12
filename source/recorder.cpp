@@ -1,6 +1,8 @@
 #include "recorder.h"
 #include "simulation.h"
 #include <iostream>
+#include <fstream>
+#include <string>
 
 
 Recorder::Recorder(int x, int y, int z, int total_steps)
@@ -106,18 +108,69 @@ void Recorder::RecordResponse(int time_step)
 
 std::vector<std::shared_ptr<Recorder>> Recorder::ImportRecorders(std::string path)
 {
-	std::vector<std::shared_ptr<Recorder>> recorders;
+    std::vector<std::shared_ptr<Recorder>> recorders;
 
-	std::ifstream file;
-	file.open(path, std::ifstream::in);
-	while (file.good())
-	{
-		int x, y, z;
-		file >> x >> y >> z;
-		if (file.eof()) break;
-		recorders.push_back(std::make_shared<Recorder>(x / Simulation::dh_, y / Simulation::dh_, z / Simulation::dh_, Simulation::duration_ / Simulation::dt_));
-	}
-	file.close();
+    std::ifstream file;
+    
+    // 1. Attempt to open the file
+    file.open(path, std::ifstream::in);
 
-	return recorders;
+    // --- CHECK 1: File Open Failure ---
+    if (!file.is_open()) 
+    {
+        std::cerr << "FATAL ERROR: Failed to open recorder import file." << std::endl;
+        std::cerr << "  Path attempted: " << path << std::endl;
+        // Since we can't proceed without the input, we return an empty list.
+        return recorders; 
+    }
+    std::cout << "SUCCESS: Recorder import file opened: " << path << std::endl;
+
+    int line_count = 0;
+    while (true)
+    {
+        int x, y, z;
+        
+        // 2. Attempt to read x, y, z values
+        file >> x >> y >> z;
+        line_count++;
+
+        // --- CHECK 2: Data Read Failure (Bad Format) ---
+        // If the stream is not in a 'good' state after the read attempt (e.g., hit non-numeric text),
+        // but it's not the end-of-file yet, we report an error and break.
+        if (file.fail() && !file.eof()) 
+        {
+            std::cerr << "ERROR: Invalid data format detected in recorder file." << std::endl;
+            std::cerr << "  Problem occurred near line: " << line_count << std::endl;
+            break; 
+        }
+
+        // Check 3: End of file was reached *after* attempting to read, 
+        // or a read failure occurred right at the end of the file.
+        if (file.eof()) break; 
+        
+        // --- CHECK 4: Sanity Check (Preventing Division by Zero) ---
+        // Assuming Simulation::dh_ and Simulation::dt_ must be non-zero for calculations
+        if (Simulation::dh_ == 0.0 || Simulation::dt_ == 0.0)
+        {
+             std::cerr << "FATAL ERROR: Simulation parameters (dh_ or dt_) are zero. Cannot calculate grid coordinates." << std::endl;
+             file.close();
+             return std::vector<std::shared_ptr<Recorder>>();
+        }
+        
+        // If all checks pass, create the Recorder object
+        recorders.push_back(std::make_shared<Recorder>(x / Simulation::dh_, y / Simulation::dh_, z / Simulation::dh_, Simulation::duration_ / Simulation::dt_));
+    }
+    
+    file.close();
+
+    if (recorders.empty() && line_count > 0)
+    {
+        std::cerr << "WARNING: File was read, but no valid recorders were created (check Simulation parameters)." << std::endl;
+    }
+    else if (!recorders.empty())
+    {
+        std::cout << "SUCCESS: Imported " << recorders.size() << " recorders." << std::endl;
+    }
+
+    return recorders;
 }
