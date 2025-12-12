@@ -368,7 +368,7 @@ int Simulation::Update()
 	if (time_step % 1 == 0)
 	{
 		SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
-		double v_coef = 1.0;
+		double v_coef = 0.1; // visualization amplification factor
 		bool render_pml = true;
 		if (look_from_ == 0)	//xy
 		{

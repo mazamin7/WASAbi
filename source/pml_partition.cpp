@@ -7,13 +7,39 @@
 
 int PmlPartition::GetIndex(int x, int y, int z)
 {
-	if (x < 0 || x >= width_)
-		return width_ * height_ * depth_;
-	if (y < 0 || y >= height_)
-		return width_ * height_ * depth_;
-	if (z < 0 || z >= depth_)
-		return width_ * height_ * depth_;
-	return z * height_ * width_ + y * width_ + x;
+    // --- X-axis Reflection (Neumann BC for Staggered Grid) ---
+    if (x < 0) {
+        // Reflection for lower boundary (x=0) for a staggered grid: p_{-1} -> p_0, p_{-2} -> p_1
+        x = -x - 1; 
+    }
+    else if (x >= width_) {
+        // Reflection for upper boundary (x=width) for a staggered grid: p_{N} -> p_{N-1}, p_{N+1} -> p_{N-2}
+        x = width_ - 1 - (x - width_);
+    }
+
+    // --- Y-axis Reflection ---
+    if (y < 0) {
+        y = -y - 1;
+    }
+    else if (y >= height_) {
+        y = height_ - 1 - (y - height_);
+    }
+
+    // --- Z-axis Reflection ---
+    if (z < 0) {
+        z = -z - 1;
+    }
+    else if (z >= depth_) {
+        z = depth_ - 1 - (z - depth_);
+    }
+
+    // --- Safety Check (Clamp final index to prevent issues near the edge) ---
+    x = std::min(std::max(x, 0), width_ - 1);
+    y = std::min(std::max(y, 0), height_ - 1);
+    z = std::min(std::max(z, 0), depth_ - 1);
+    
+    // --- Final Indexing ---
+    return z * height_ * width_ + y * width_ + x;
 }
 
 PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d)
