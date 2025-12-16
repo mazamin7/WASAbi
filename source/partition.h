@@ -71,11 +71,12 @@ public:
 
 	virtual double get_force(int x, int y, int z) = 0;
 	virtual void set_force(int x, int y, int z, double v) = 0;
+	virtual void add_to_force(int x, int y, int z, double v) = 0;
 
 	virtual void reset_forces() = 0;
 	virtual void reset_residues() = 0;
 
-	void PostMerge();
+	void Merge();
 
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 

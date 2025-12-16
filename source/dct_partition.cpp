@@ -180,6 +180,11 @@ void DctPartition::set_force(int x, int y, int z, double v)
 	force_.set_value(x, y, z, v);
 }
 
+void DctPartition::add_to_force(int x, int y, int z, double v)
+{
+	force_.values_[z * height_ * width_ + y * width_ + x] += v;
+}
+
 void DctPartition::reset_forces()
 {
 	force_.reset();

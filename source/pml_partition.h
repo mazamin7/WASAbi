@@ -66,6 +66,7 @@ public:
 
 	virtual double get_force(int x, int y, int z);
 	virtual void set_force(int x, int y, int z, double v);
+	virtual void add_to_force(int x, int y, int z, double v);
 
 	virtual void reset_forces();
 	virtual void reset_residues();

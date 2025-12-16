@@ -315,9 +315,6 @@ int Simulation::Update()
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < dct_partitions_.size(); i++)
 	{
-		// reset force
-		//dct_partitions_[i]->reset_forces();
-
 		// compute force
 		dct_partitions_[i]->ComputeSourceForcingTerms(time_step);
 		//std::cout << "impose force partition " << partition->info_.id << " ";
@@ -328,14 +325,14 @@ int Simulation::Update()
 
 		// reset residue
 		dct_partitions_[i]->reset_residues();
+
+		// reset force
+		dct_partitions_[i]->reset_forces();
 	}
 
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < pml_partitions_.size(); i++)
 	{
-		// reset force
-		//pml_partitions_[i]->reset_forces();
-
 		// compute force
 		pml_partitions_[i]->ComputeSourceForcingTerms(time_step);
 		//std::cout << "impose force partition " << partition->info_.id << " ";
@@ -346,6 +343,9 @@ int Simulation::Update()
 
 		// reset residue
 		pml_partitions_[i]->reset_residues();
+
+		// reset force
+		pml_partitions_[i]->reset_forces();
 	}
 
 	// compute residue
@@ -356,11 +356,11 @@ int Simulation::Update()
 
 	//std::cout << std::endl;
 
-	// post-merge
+	// merge
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < partitions_.size(); i++)
 	{
-		partitions_[i]->PostMerge();
+		partitions_[i]->Merge();
 	}
 	//std::cout << std::endl;
 

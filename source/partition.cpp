@@ -187,7 +187,7 @@ void Partition::ComputeSourceForcingTerms(double t)
 {
 	for (auto source : sources_)
 	{
-		set_force(
+		add_to_force(
 			source->x_ - x_start_,
 			source->y_ - y_start_,
 			source->z_ - z_start_,
@@ -195,7 +195,7 @@ void Partition::ComputeSourceForcingTerms(double t)
 	}
 }
 
-void Partition::PostMerge()
+void Partition::Merge()
 {
 	for (int i = 0; i < depth_; i++)
 	{
@@ -205,8 +205,8 @@ void Partition::PostMerge()
 			{
 				auto res = get_residue(k, j, i);
 
-				res = dt_ / (1 + 2 * dt_ * air_absorption_alpha1_) * res;
-				add_to_velocity(k, j, i, res);
+				//res = dt_ / (1 + 2 * dt_ * air_absorption_alpha1_) * res;
+				add_to_force(k, j, i, res);
 			}
 		}
 	}

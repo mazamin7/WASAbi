@@ -5,8 +5,8 @@ DctVolume::DctVolume(int w, int h, int d) :width_(w), height_(h), depth_(d)
 {
 	values_ = (double*)calloc(width_*height_*depth_, sizeof(double));
 	modes_ = (double*)calloc(width_*height_*depth_, sizeof(double));
-	//memset(values_, 0, width_*height_*depth_ * sizeof(double));
-	//memset(modes_, 0, width_*height_*depth_ * sizeof(double));
+	memset(values_, 0, width_*height_*depth_ * sizeof(double));
+	memset(modes_, 0, width_*height_*depth_ * sizeof(double));
 
 	dct_plan_ = fftw_plan_r2r_3d(depth_, height_, width_, values_, modes_, FFTW_REDFT10, FFTW_REDFT10, FFTW_REDFT10, FFTW_MEASURE);
 	idct_plan_ = fftw_plan_r2r_3d(depth_, height_, width_, modes_, values_, FFTW_REDFT01, FFTW_REDFT01, FFTW_REDFT01, FFTW_MEASURE);

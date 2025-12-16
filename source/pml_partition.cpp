@@ -422,6 +422,11 @@ void PmlPartition::set_force(int x, int y, int z, double f)
 	force_[GetIndex(x, y, z)] = f;
 }
 
+void PmlPartition::add_to_force(int x, int y, int z, double v)
+{
+	force_[z * height_ * width_ + y * width_ + x] += v;
+}
+
 void PmlPartition::reset_forces()
 {
 	int width = width_;
