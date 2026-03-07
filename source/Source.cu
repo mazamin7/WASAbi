@@ -142,32 +142,26 @@ Uint32 calculate_color_playback(double p, float v_coef) {
 }
 
 int main(int argc, char* argv[]) {
+    // 1. Shift current directory to root if running from build
+    try {
+        std::filesystem::path cp = std::filesystem::current_path();
+        if (cp.filename() == "build") {
+            std::filesystem::current_path("..");
+            // cout << "Running from build. Shifted working directory to project root: " << std::filesystem::current_path() << endl;
+        }
+    } catch (const std::exception& e) {
+        cerr << "Directory error: " << e.what() << endl;
+    }
+
+    // 2. Parse arguments
     CliArgs cli_args = parse_cli_args(argc, argv);
     if (cli_args.mode == RunMode::UNKNOWN) {
         cout << "Usage: WASAbiApp --mode [sim-record-field|sim-record-response|sim-viz|viz-record] ...\n";
         return 0;
     }
 
-    // Directory check and config path normalization
-    try {
-        std::filesystem::path config_path(cli_args.config_path);
-        if (config_path.is_relative()) {
-            config_path = std::filesystem::absolute(config_path);
-        }
-        cli_args.config_path = config_path.string();
-
-        std::filesystem::path cp = std::filesystem::current_path();
-        cout << "Starting in: " << cp << endl;
-        if (cp.filename() == "build") {
-            std::filesystem::current_path("..");
-            cout << "Moved to: " << std::filesystem::current_path() << endl;
-        }
-    } catch (const std::exception& e) {
-        cerr << "Directory/Path error: " << e.what() << endl;
-    }
-
+    // 3. Ensure config and load it
     ensureConfigExists(cli_args.config_path, "./config/default.ini");
-
     Config config = load_config(cli_args.config_path);
 
     Partition::boundary_absorption_ = config.boundary_absorption;

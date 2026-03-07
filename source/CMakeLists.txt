@@ -64,10 +64,10 @@ if(WIN32)
         # CUDA DLLs
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MY_CUDART_DLL}"   "${DEST_DIR}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MY_CUFFT_DLL}"    "${DEST_DIR}"
-        # Assets
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_ASSETS}" "${DEST_DIR}/assets"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_CONFIG}" "${DEST_DIR}/config"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_FONT}"   "${DEST_DIR}/font"
+        # Assets (Disabled copying per user request - use source originals)
+        # COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_ASSETS}" "${DEST_DIR}/assets"
+        # COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_CONFIG}" "${DEST_DIR}/config"
+        # COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_FONT}"   "${DEST_DIR}/font"
         COMMENT "Deploying Windows DLLs and Assets..."
     )
 else()
