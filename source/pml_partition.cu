@@ -1,4 +1,4 @@
-#include "cu_pml_partition.h"
+#include "pml_partition.h"
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 #include <iostream>
@@ -119,8 +119,8 @@ __global__ void PmlUpdateKernel(
     }
 }
 
-CuPmlPartition::CuPmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d)
-    : CuPartition(xs, ys, zs, w, h, d), type_((CuPmlPartition::PmlType)type)
+PmlPartition::PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d)
+    : Partition(xs, ys, zs, w, h, d), type_((PmlPartition::PmlType)type)
 {
     info_.type = "PML (CUDA)";
     should_render_ = false;
@@ -182,7 +182,7 @@ CuPmlPartition::CuPmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType
     CHECK_CUDA(cudaMemcpy(d_zetaz_, h_zetaz.data(), bytes, cudaMemcpyHostToDevice));
 }
 
-CuPmlPartition::~CuPmlPartition()
+PmlPartition::~PmlPartition()
 {
     cudaFree(d_psi_); cudaFree(d_phi_x_); cudaFree(d_phi_y_); cudaFree(d_phi_z_);
     cudaFree(d_zetax_); cudaFree(d_zetay_); cudaFree(d_zetaz_);
@@ -190,7 +190,7 @@ CuPmlPartition::~CuPmlPartition()
     cudaFree(d_phi_x_new_); cudaFree(d_phi_y_new_); cudaFree(d_phi_z_new_);
 }
 
-void CuPmlPartition::Update()
+void PmlPartition::Update()
 {
     dim3 blockSize(8, 8, 8);
     dim3 gridSize(

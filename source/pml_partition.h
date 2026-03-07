@@ -1,7 +1,7 @@
 #pragma once
-#include "cu_partition.h"
+#include "partition.h"
 
-class CuPmlPartition : public CuPartition
+class PmlPartition : public Partition
 {
 public:
     enum PmlType {
@@ -25,8 +25,8 @@ public:
     double* d_phi_y_new_;
     double* d_phi_z_new_;
 
-    CuPmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d);
-    virtual ~CuPmlPartition();
+    PmlPartition(std::shared_ptr<Partition> neighbor_part, PmlType type, int xs, int ys, int zs, int w, int h, int d);
+    virtual ~PmlPartition();
 
     virtual void Update() override;
     

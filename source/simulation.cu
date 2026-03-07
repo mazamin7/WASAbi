@@ -1,9 +1,9 @@
 #include "simulation.h"
 #include "partition.h"
-#include "cu_pml_partition.h"
+#include "pml_partition.h"
 #include <cuda_runtime.h>
 #include "boundary.h"
-#include "cu_boundary.h"
+
 #include "tools.h"
 #include "sound_source.h"
 #include <fstream>
@@ -78,9 +78,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				else if (start != end)
 				{
 					if (i != partition->height_ - 1) end--;
-					auto pml = std::make_shared<CuPmlPartition>(
+					auto pml = std::make_shared<PmlPartition>(
 						partition,
-						CuPmlPartition::P_LEFT,
+						PmlPartition::P_LEFT,
 						partition->x_start_ - Simulation::n_pml_layers_,
 						partition->y_start_ + start,
 						partition->z_start_,
@@ -116,9 +116,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				else if (start != end)
 				{
 					if (i != partition->height_ - 1) end--;
-					auto pml = std::make_shared<CuPmlPartition>(
+					auto pml = std::make_shared<PmlPartition>(
 						partition,
-						CuPmlPartition::P_RIGHT,
+						PmlPartition::P_RIGHT,
 						partition->x_end_,
 						partition->y_start_ + start,
 						partition->z_start_,
@@ -154,9 +154,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				else if (start != end)
 				{
 					if (i != partition->width_ - 1) end--;
-					auto pml = std::make_shared<CuPmlPartition>(
+					auto pml = std::make_shared<PmlPartition>(
 						partition,
-						CuPmlPartition::P_TOP,
+						PmlPartition::P_TOP,
 						partition->x_start_ + start,
 						partition->y_start_ - Simulation::n_pml_layers_,
 						partition->z_start_,
@@ -192,9 +192,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				else if (start != end)
 				{
 					if (i != partition->width_ - 1) end--;
-					auto pml = std::make_shared<CuPmlPartition>(
+					auto pml = std::make_shared<PmlPartition>(
 						partition,
-						CuPmlPartition::P_BOTTOM,
+						PmlPartition::P_BOTTOM,
 						partition->x_start_ + start,
 						partition->y_end_,
 						partition->z_start_,
@@ -218,9 +218,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 
 		// Add front PML.
 		{
-			auto pml = std::make_shared<CuPmlPartition>(
+			auto pml = std::make_shared<PmlPartition>(
 				partition,
-				CuPmlPartition::P_FRONT,
+				PmlPartition::P_FRONT,
 				partition->x_start_,
 				partition->y_start_,
 				partition->z_start_ - Simulation::n_pml_layers_,
@@ -228,11 +228,11 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				partition->height_,
 				Simulation::n_pml_layers_);
 			partitions_.push_back(pml);
-			std::shared_ptr<CuBoundary> cu_b(new CuBoundary(
+			std::shared_ptr<Boundary> cu_b(new Boundary(
 				Boundary::Z_BOUNDARY,
 				partition->boundary_absorption_,
-				std::static_pointer_cast<CuPartition>(pml),
-				std::static_pointer_cast<CuPartition>(partition),
+				pml,
+				partition,
 				partition->x_start_,
 				partition->x_end_,
 				partition->y_start_,
@@ -246,9 +246,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 
 		// Add back PML.
 		{
-			auto pml = std::make_shared<CuPmlPartition>(
+			auto pml = std::make_shared<PmlPartition>(
 				partition,
-				CuPmlPartition::P_BACK,
+				PmlPartition::P_BACK,
 				partition->x_start_,
 				partition->y_start_,
 				partition->z_end_,
@@ -256,11 +256,11 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				partition->height_,
 				Simulation::n_pml_layers_);
 			partitions_.push_back(pml);
-			std::shared_ptr<CuBoundary> cu_b(new CuBoundary(
+			std::shared_ptr<Boundary> cu_b(new Boundary(
 				Boundary::Z_BOUNDARY,
 				partition->boundary_absorption_,
-				std::static_pointer_cast<CuPartition>(pml),
-				std::static_pointer_cast<CuPartition>(partition),
+				pml,
+				partition,
 				partition->x_start_,
 				partition->x_end_,
 				partition->y_start_,
@@ -394,7 +394,7 @@ int Simulation::Update()
 
 		for (auto partition : partitions_)
 		{
-			auto cu_p = std::dynamic_pointer_cast<CuPartition>(partition);
+			auto cu_p = partition;
 			if (!cu_p) continue;
 			
 			if (!render_pml && !cu_p->should_render_) continue;

@@ -2,11 +2,11 @@
 
 #include <cufft.h>
 
-class CuDctVolume
+class DctVolume
 {
 public:
-	CuDctVolume(int w, int h, int d);
-	~CuDctVolume();
+	DctVolume(int w, int h, int d);
+	~DctVolume();
 
 	void ExecuteDct();
 	void ExecuteIdct();

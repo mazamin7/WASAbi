@@ -1,19 +1,19 @@
 #pragma once
-#include "cu_partition.h"
-#include "cu_dct_volume.h"
+#include "partition.h"
+#include "dct_volume.h"
 
-class CuDctPartition : public CuPartition
+class DctPartition : public Partition
 {
 public:
-	CuDctPartition(int xs, int ys, int zs, int w, int h, int d);
-	~CuDctPartition();
+	DctPartition(int xs, int ys, int zs, int w, int h, int d);
+	~DctPartition();
 
 	void Update() override;
 
 	// Spectral components
-	CuDctVolume* pressure_vol_;
-	CuDctVolume* velocity_vol_;
-	CuDctVolume* force_vol_;
+	DctVolume* pressure_vol_;
+	DctVolume* velocity_vol_;
+	DctVolume* force_vol_;
 
 private:
 	// Precomputed frequency/absorption arrays residing on GPU

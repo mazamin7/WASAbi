@@ -1,6 +1,6 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include "cu_dct_partition.h"
+#include "dct_partition.h"
 #include <iostream>
 
 #ifndef M_PI
@@ -102,18 +102,18 @@ __global__ void InitConstantsKernel(
     }
 }
 
-CuDctPartition::CuDctPartition(int xs, int ys, int zs, int w, int h, int d)
-    : CuPartition(xs, ys, zs, w, h, d)
+DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
+    : Partition(xs, ys, zs, w, h, d)
 {
     // The sizes
     size_t vol_size = w * h * d * sizeof(double);
     cudaMalloc((void**)&d_w0_, vol_size);
     cudaMalloc((void**)&d_alpha_, vol_size);
 
-    // Swap the class members to use the CuDctVolume
-    pressure_vol_ = new CuDctVolume(w, h, d);
-    velocity_vol_ = new CuDctVolume(w, h, d);
-    force_vol_ = new CuDctVolume(w, h, d);
+    // Swap the class members to use the DctVolume
+    pressure_vol_ = new DctVolume(w, h, d);
+    velocity_vol_ = new DctVolume(w, h, d);
+    force_vol_ = new DctVolume(w, h, d);
     
     // Wire the base Partition pointers to point to the Volume device arrays
     d_pressure_ = pressure_vol_->d_values_;
@@ -123,7 +123,7 @@ CuDctPartition::CuDctPartition(int xs, int ys, int zs, int w, int h, int d)
     InitializeConstants();
 }
 
-CuDctPartition::~CuDctPartition()
+DctPartition::~DctPartition()
 {
     cudaFree(d_w0_);
     cudaFree(d_alpha_);
@@ -132,7 +132,7 @@ CuDctPartition::~CuDctPartition()
     delete force_vol_;
 }
 
-void CuDctPartition::InitializeConstants()
+void DctPartition::InitializeConstants()
 {
     double lx2 = width_ * width_ * dh_ * dh_;
     double ly2 = height_ * height_ * dh_ * dh_;
@@ -146,7 +146,7 @@ void CuDctPartition::InitializeConstants()
     InitConstantsKernel<<<gridSize, blockSize>>>(d_w0_, d_alpha_, width_, height_, depth_, lx2, ly2, lz2, c0_, air_absorption_alpha1_, air_absorption_alpha2_);
 }
 
-void CuDctPartition::Update()
+void DctPartition::Update()
 {
     // 1. Transform space to frequency (DCT)
     pressure_vol_->ExecuteDct();

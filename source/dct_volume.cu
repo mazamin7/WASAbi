@@ -1,4 +1,4 @@
-#include "cu_dct_volume.h"
+#include "dct_volume.h"
 #include <cufft.h>
 #include <cuda_runtime.h>
 #include <stdio.h>
@@ -159,15 +159,14 @@ __global__ void PostProcessIdctKernel(
 }
 
 // -----------------------------------------------------------------------
-// CuDctVolume implementation
+// DctVolume implementation
 // -----------------------------------------------------------------------
-CuDctVolume::CuDctVolume(int w, int h, int d)
+DctVolume::DctVolume(int w, int h, int d)
     : width_(w), height_(h), depth_(d)
     , d_values_(nullptr), d_modes_(nullptr), d_complex_modes_(nullptr)
 {
     size_t size_orig = (size_t)width_ * height_ * depth_ * sizeof(double);
     cudaMalloc((void**)&d_values_, size_orig);
-    cudaMalloc((void**)&d_modes_, size_orig);
     cudaMemset(d_values_, 0, size_orig);
     cudaMemset(d_modes_,  0, size_orig);
 
@@ -188,7 +187,7 @@ CuDctVolume::CuDctVolume(int w, int h, int d)
     cufftPlan3d(&c2r_plan_, d2, h2, w2, CUFFT_Z2D);
 }
 
-CuDctVolume::~CuDctVolume()
+DctVolume::~DctVolume()
 {
     cufftDestroy(r2c_plan_);
     cufftDestroy(c2r_plan_);
@@ -198,7 +197,7 @@ CuDctVolume::~CuDctVolume()
     cudaFree(d_extended_);
 }
 
-void CuDctVolume::ExecuteDct()
+void DctVolume::ExecuteDct()
 {
     int w2 = 2 * width_;
     int h2 = 2 * height_;
@@ -222,7 +221,7 @@ void CuDctVolume::ExecuteDct()
     PostProcessDctIIKernel<<<origGridSize, blockSize>>>(d_complex_modes_, d_modes_, width_, height_, depth_);
 }
 
-void CuDctVolume::ExecuteIdct()
+void DctVolume::ExecuteIdct()
 {
     int w2 = 2 * width_;
     int h2 = 2 * height_;
@@ -249,7 +248,7 @@ void CuDctVolume::ExecuteIdct()
     PostProcessIdctKernel<<<origGridSize, blockSize>>>(d_extended_, d_values_, width_, height_, depth_);
 }
 
-void CuDctVolume::reset()
+void DctVolume::reset()
 {
     size_t size = (size_t)width_ * height_ * depth_ * sizeof(double);
     cudaMemset((void*)d_values_, 0, size);

@@ -20,8 +20,6 @@ protected:
 	double boundary_absorption_{ 1.0 };
 
 public:
-
-
 	enum BoundaryType {
 		X_BOUNDARY,
 		Y_BOUNDARY,
@@ -34,9 +32,10 @@ public:
 
 	virtual void ComputeResidues();
 
-	static std::shared_ptr<Boundary> FindBoundary(std::shared_ptr<Partition> a, std::shared_ptr<Partition> b, double sbsorp = 1.0);
+	double* d_coefs_; // Device pointer for coefficients matrix
+
+	static std::shared_ptr<Boundary> FindBoundary(std::shared_ptr<Partition> a, std::shared_ptr<Partition> b, double absorp = 1.0);
 	void Info();
 
 	friend class Partition;
 };
-
