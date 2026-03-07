@@ -1,4 +1,5 @@
 #pragma once
+#include <cuda_runtime.h>
 #include <string>
 #include <vector>
 #include <memory>
@@ -60,6 +61,8 @@ public:
     int num_sources_ = 0;
     int* d_source_indices_ = nullptr; 
     double* d_source_values_ = nullptr;
+
+    cudaStream_t stream_;
 
 	virtual double* get_pressure_field();
 	virtual std::vector<double> get_xy_plane(int z);

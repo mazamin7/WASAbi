@@ -348,7 +348,6 @@ int Simulation::Update()
 		          << " | p(5,5,3)=" << p << std::endl;
 	}
 
-#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < pml_partitions_.size(); i++)
 	{
 		// compute force
@@ -361,6 +360,9 @@ int Simulation::Update()
 		pml_partitions_[i]->reset_residues();
 	}
 
+	// Wait for all partition internal updates to finish before boundary calculations
+	cudaDeviceSynchronize();
+
 	// compute residue
 	for (auto p : partitions_) p->reset_residues();
 
@@ -372,18 +374,18 @@ int Simulation::Update()
 	for (int i = 0; i < boundaries_.size(); i++) {
 		boundaries_[i]->ComputeResidues();
 	}
+	// Post-merge depends on residues
 	cudaDeviceSynchronize();
 
 	// post-merge
-#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < partitions_.size(); i++)
 	{
 		partitions_[i]->PostMerge();
 	}
-	cudaDeviceSynchronize();
-
-	// Clear forces for next step
+	
+	// Clear forces for next step (can be async)
 	for (auto p : partitions_) p->reset_forces();
+
 	cudaDeviceSynchronize();
 	//std::cout << std::endl;
 

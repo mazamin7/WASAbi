@@ -8,8 +8,8 @@ public:
 	DctVolume(int w, int h, int d);
 	~DctVolume();
 
-	void ExecuteDct();
-	void ExecuteIdct();
+	void ExecuteDct(cudaStream_t stream = 0);
+	void ExecuteIdct(cudaStream_t stream = 0);
 	void reset();
 	
 	// Data pointers allocated on GPU VRAM

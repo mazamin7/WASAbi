@@ -44,6 +44,8 @@ Partition::Partition(int xs, int ys, int zs, int w, int h, int d)
     CHECK_CUDA(cudaMemset((void*)d_velocity_, 0, vol_size));
     CHECK_CUDA(cudaMemset((void*)d_force_, 0, vol_size));
     CHECK_CUDA(cudaMemset((void*)d_residue_, 0, vol_size));
+    
+    cudaStreamCreate(&stream_);
 
     // Initialize source buffers (assume max 100 sources per partition for now)
     num_sources_ = 0;
@@ -92,6 +94,7 @@ Partition::~Partition()
     cudaFree(d_residue_);
     cudaFree(d_source_indices_);
     cudaFree(d_source_values_);
+    cudaStreamDestroy(stream_);
 }
 
 // ---- Helper: index into flat device array ----
@@ -178,12 +181,12 @@ void Partition::set_force(int x, int y, int z, double v)
 
 void Partition::reset_forces()
 {
-    cudaMemset((void*)d_force_, 0, width_ * height_ * depth_ * sizeof(double));
+    cudaMemsetAsync((void*)d_force_, 0, width_ * height_ * depth_ * sizeof(double), stream_);
 }
 
 void Partition::reset_residues()
 {
-    cudaMemset((void*)d_residue_, 0, width_ * height_ * depth_ * sizeof(double));
+    cudaMemsetAsync((void*)d_residue_, 0, width_ * height_ * depth_ * sizeof(double), stream_);
 }
 
 void Partition::AddBoundary(Boundary* b)
@@ -414,7 +417,7 @@ void Partition::PostMerge()
         (height_ + blockSize.y - 1) / blockSize.y,
         (depth_ + blockSize.z - 1) / blockSize.z);
 
-    PostMergeKernel<<<gridSize, blockSize>>>(
+    PostMergeKernel<<<gridSize, blockSize, 0, stream_>>>(
         d_velocity_, d_residue_, width_, height_, depth_, dt_, air_absorption_alpha1_);
 }
 
@@ -447,5 +450,5 @@ void Partition::ComputeSourceForcingTerms(double t)
 
     int threads = 64;
     int blocks = (num_sources_ + threads - 1) / threads;
-    ApplySourceKernel<<<blocks, threads>>>(d_force_, d_source_indices_, d_source_values_, num_sources_);
+    ApplySourceKernel<<<blocks, threads, 0, stream_>>>(d_force_, d_source_indices_, d_source_values_, num_sources_);
 }

@@ -198,7 +198,7 @@ DctVolume::~DctVolume()
     cudaFree(d_extended_);
 }
 
-void DctVolume::ExecuteDct()
+void DctVolume::ExecuteDct(cudaStream_t stream)
 {
     int w2 = 2 * width_;
     int h2 = 2 * height_;
@@ -210,19 +210,20 @@ void DctVolume::ExecuteDct()
                      (d2 + blockSize.z - 1) / blockSize.z);
 
     // 1. Even extension
-    EvenExtensionKernel<<<extGridSize, blockSize>>>(d_values_, d_extended_, width_, height_, depth_);
+    EvenExtensionKernel<<<extGridSize, blockSize, 0, stream>>>(d_values_, d_extended_, width_, height_, depth_);
 
     // 2. R2C FFT on the 2N extended signal
+    cufftSetStream(r2c_plan_, stream);
     cufftExecD2Z(r2c_plan_, d_extended_, d_complex_modes_);
 
     // 3. Post-process to extract DCT-II modes
     dim3 origGridSize((width_  + blockSize.x - 1) / blockSize.x,
                       (height_ + blockSize.y - 1) / blockSize.y,
                       (depth_  + blockSize.z - 1) / blockSize.z);
-    PostProcessDctIIKernel<<<origGridSize, blockSize>>>(d_complex_modes_, d_modes_, width_, height_, depth_);
+    PostProcessDctIIKernel<<<origGridSize, blockSize, 0, stream>>>(d_complex_modes_, d_modes_, width_, height_, depth_);
 }
 
-void DctVolume::ExecuteIdct()
+void DctVolume::ExecuteIdct(cudaStream_t stream)
 {
     int w2 = 2 * width_;
     int h2 = 2 * height_;
@@ -230,23 +231,24 @@ void DctVolume::ExecuteIdct()
 
     // 1. Pre-process: fill Hermitian complex input from modes
     size_t size_complex = (size_t)d2 * h2 * (width_ + 1) * sizeof(cufftDoubleComplex);
-    cudaMemset(d_complex_modes_, 0, size_complex);
+    cudaMemsetAsync(d_complex_modes_, 0, size_complex, stream);
 
     dim3 blockSize(8, 8, 8);
     int Nhalf_x = width_ + 1;
     dim3 preGridSize((Nhalf_x   + blockSize.x - 1) / blockSize.x,
                      (h2        + blockSize.y - 1) / blockSize.y,
                      (d2        + blockSize.z - 1) / blockSize.z);
-    PreProcessIdctKernel<<<preGridSize, blockSize>>>(d_modes_, d_complex_modes_, width_, height_, depth_);
+    PreProcessIdctKernel<<<preGridSize, blockSize, 0, stream>>>(d_modes_, d_complex_modes_, width_, height_, depth_);
 
     // 2. C2R FFT
+    cufftSetStream(c2r_plan_, stream);
     cufftExecZ2D(c2r_plan_, d_complex_modes_, d_extended_);
 
     // 3. Extract and normalize
     dim3 origGridSize((width_  + blockSize.x - 1) / blockSize.x,
                       (height_ + blockSize.y - 1) / blockSize.y,
                       (depth_  + blockSize.z - 1) / blockSize.z);
-    PostProcessIdctKernel<<<origGridSize, blockSize>>>(d_extended_, d_values_, width_, height_, depth_);
+    PostProcessIdctKernel<<<origGridSize, blockSize, 0, stream>>>(d_extended_, d_values_, width_, height_, depth_);
 }
 
 void DctVolume::reset()
