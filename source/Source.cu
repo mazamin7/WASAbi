@@ -195,8 +195,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	auto simulation = std::make_shared<Simulation>(partitions, sources);	// Initialize the simulation.
-	simulation->Info();														// Show basic info of the simulation
-	simulation->look_from_ = 0;											// FOR DEBUG: show field from another view direction.
+	simulation->Info();
 
 	/* Initialize SDL window
 	 * simulation_rect: show field.
@@ -205,33 +204,34 @@ int main(int argc, char* argv[]) {
 	SDL_Event event;
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
-	int resolution_x = 800;
-	int resolution_y = resolution_x / simulation->size_x()*simulation->size_y();
-	SDL_Window* window = SDL_CreateWindow("WASAbi 2.5D Simulator",
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution_x, resolution_y + 20, 0);
+	int resolution_x = 900;                          // 3 panels × 300px each
+	int resolution_y = resolution_x / 3;             // panels are square
+	SDL_Window* window = SDL_CreateWindow("WASAbi 2.5D — XY | XZ | YZ",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution_x, resolution_y + 24, 0);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING,
-		simulation->size_x(), simulation->size_y());
+		simulation->render_w(), simulation->render_h());
 
 	SDL_Rect simulation_rect;
 	simulation_rect.x = 0;
-	simulation_rect.y = 0;
+	simulation_rect.y = 24;           // leave 24px at top for labels
 	simulation_rect.w = resolution_x;
 	simulation_rect.h = resolution_y;
 
 	TTF_Init();
-	TTF_Font* Sans = TTF_OpenFont("font/SourceSansPro-Regular.ttf", 64); //this opens a font style and sets a size
-	SDL_Color White = { 255, 255, 255 };  // this is the color in rgb format, maxing out all would give you the color white, and it will be your text's color
-	SDL_Rect Message_rect;
-	Message_rect.x = 0;
-	Message_rect.y = resolution_y;
-	Message_rect.w = 100;
-	Message_rect.h = 20;
-	SDL_Rect Message_rect2;
-	Message_rect2.x = resolution_x - 100;
-	Message_rect2.y = resolution_y;
-	Message_rect2.w = 100;
-	Message_rect2.h = 20;
+	TTF_Font* Sans = TTF_OpenFont("font/SourceSansPro-Regular.ttf", 48);
+	SDL_Color White = { 255, 255, 255 };
+	SDL_Color Gray  = { 180, 180, 180 };
+	// Progress label (bottom-left)
+	SDL_Rect Message_rect;   Message_rect.x = 2;                Message_rect.y = resolution_y + 4; Message_rect.w = 120; Message_rect.h = 18;
+	// Time label (bottom-right)
+	SDL_Rect Message_rect2;  Message_rect2.x = resolution_x-120; Message_rect2.y = resolution_y + 4; Message_rect2.w = 118; Message_rect2.h = 18;
+	// Panel title labels (top)
+	std::string panel_titles[3] = { "XY", "XZ", "YZ" };
+	SDL_Rect label_rects[3];
+	for (int i = 0; i < 3; i++) {
+		label_rects[i] = { i * (resolution_x / 3) + 4, 2, 60, 20 };
+	}
 
 	bool quit = false;
 	int time_step = 0;
@@ -279,15 +279,36 @@ int main(int argc, char* argv[]) {
 			SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, message.c_str(), White);
 			SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
 
+			SDL_RenderClear(renderer);
+
+			// Draw black header bar for labels
+			SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
+			SDL_Rect header = { 0, 0, resolution_x, 24 };
+			SDL_RenderFillRect(renderer, &header);
+
+			// Draw panel dividers
+			SDL_SetRenderDrawColor(renderer, 80, 80, 80, 255);
+			SDL_RenderDrawLine(renderer,   resolution_x / 3, 0,   resolution_x / 3, resolution_y + 24);
+			SDL_RenderDrawLine(renderer, 2*resolution_x / 3, 0, 2*resolution_x / 3, resolution_y + 24);
+
 			if (simulation->ready())
 			{
 				SDL_UpdateTexture(texture, nullptr,
-					simulation->pixels().data(), simulation->size_x() * sizeof(Uint32));
+					simulation->pixels().data(), simulation->render_w() * sizeof(Uint32));
 			}
-			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, nullptr, &simulation_rect);
-			SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
 
+			// Panel title labels
+			for (int i = 0; i < 3; i++) {
+				SDL_Surface* surf = TTF_RenderText_Solid(Sans, panel_titles[i].c_str(), Gray);
+				SDL_Texture* tex  = SDL_CreateTextureFromSurface(renderer, surf);
+				SDL_RenderCopy(renderer, tex, nullptr, &label_rects[i]);
+				SDL_FreeSurface(surf);
+				SDL_DestroyTexture(tex);
+			}
+
+			// Progress / time
+			SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
 			message = std::to_string(static_cast<int>(floor((omp_get_wtime() - time1) / 60))) + " min, " + std::to_string(static_cast<int>(floor((omp_get_wtime() - time1))) % 60) + " sec";
 			SDL_Surface* surfaceMessage2 = TTF_RenderText_Solid(Sans, message.c_str(), White);
 			SDL_Texture* Message2 = SDL_CreateTextureFromSurface(renderer, surfaceMessage2);

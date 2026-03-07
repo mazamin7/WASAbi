@@ -300,8 +300,12 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 	size_y_ = y_end_ - y_start_;
 	size_z_ = z_end_ - z_start_;
 
-	pixels_.assign(size_x_ * size_y_, 0);
-	cudaMalloc((void**)&d_pixels_, size_x_ * size_y_ * sizeof(uint32_t));
+	// Each panel is square so all 3 fit neatly side-by-side
+	panel_w_ = std::max({ size_x_, size_y_, size_z_ });
+	panel_h_ = std::max({ size_x_, size_y_, size_z_ });
+
+	pixels_.assign(panel_w_ * 3 * panel_h_, 0);
+	cudaMalloc((void**)&d_pixels_, panel_w_ * 3 * panel_h_ * sizeof(uint32_t));
 	sdl_fmt_ = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
 	ready_ = true;
 }
@@ -383,43 +387,49 @@ int Simulation::Update()
 	cudaDeviceSynchronize();
 	//std::cout << std::endl;
 
-	// Visualization
+	// Visualization: render XY / XZ / YZ planes side-by-side every 10 steps
 	if (time_step % 10 == 0)
 	{
-		double v_coef = 0.1; // visualization amplification factor
-		bool render_pml = true;
-		
-		// Map all partitions to the GPU pixel buffer
-		cudaMemset(d_pixels_, 0, size_x_ * size_y_ * sizeof(uint32_t));
+		float v_coef = 0.1f;
+
+		// Anchor slices through the first source position
+		int src_x = sources_[0]->x() - x_start_;
+		int src_y = sources_[0]->y() - y_start_;
+		int src_z = sources_[0]->z() - z_start_;
+
+		cudaMemset(d_pixels_, 0, panel_w_ * 3 * panel_h_ * sizeof(uint32_t));
 
 		for (auto partition : partitions_)
 		{
-			auto cu_p = partition;
-			if (!cu_p) continue;
-			
-			if (!render_pml && !cu_p->should_render_) continue;
+			int x_off = partition->x_start_ - x_start_;
+			int y_off = partition->y_start_ - y_start_;
+			int z_off = partition->z_start_ - z_start_;
 
-			int x_offset = cu_p->x_start_ - x_start_;
-			int y_offset = cu_p->y_start_ - y_start_;
-			int z_offset = cu_p->z_start_ - z_start_;
+			// Panel 0: XY plane (constant Z = src_z)
+			// x→screen-x, y→screen-y, offset=(0, 0)
+			partition->RenderToBuffer(d_pixels_,
+				0, src_z + z_start_,       // plane_type=0(XY), global z coord
+				panel_w_ * 3, panel_h_,    // full buffer width, panel height
+				x_off, y_off, v_coef);
 
-			if (look_from_ == 0) // XY
-			{
-				int pixels_z = sources_[0]->z();
-				cu_p->RenderToBuffer(d_pixels_, 0, pixels_z, size_x_, size_y_, x_offset, y_offset, (float)v_coef);
-			}
-			else if (look_from_ == 1) // YZ
-			{
-				int pixels_x = sources_[0]->x();
-				// Note: screen coords for YZ view are (z, y)
-				cu_p->RenderToBuffer(d_pixels_, 1, pixels_x, size_y_, size_z_, y_offset, z_offset, (float)v_coef);
-			}
+			// Panel 1: XZ plane (constant Y = src_y)
+			// x→screen-x, z→screen-y, offset=(panel_w_, 0)
+			partition->RenderToBuffer(d_pixels_,
+				2, src_y + y_start_,       // plane_type=2(XZ), global y coord
+				panel_w_ * 3, panel_h_,
+				panel_w_ + x_off, z_off, v_coef);
+
+			// Panel 2: YZ plane (constant X = src_x)
+			// y→screen-x, z→screen-y, offset=(2*panel_w_, 0)
+			partition->RenderToBuffer(d_pixels_,
+				1, src_x + x_start_,       // plane_type=1(YZ), global x coord
+				panel_w_ * 3, panel_h_,
+				2 * panel_w_ + y_off, z_off, v_coef);
 		}
-		
-		// Single PCIe transfer for the entire frame
-		int screen_w = (look_from_ == 0) ? size_x_ : size_y_;
-		int screen_h = (look_from_ == 0) ? size_y_ : size_z_;
-		cudaMemcpy(pixels_.data(), d_pixels_, screen_w * screen_h * sizeof(uint32_t), cudaMemcpyDeviceToHost);
+
+		// Single PCIe transfer for the entire 3-panel frame
+		cudaMemcpy(pixels_.data(), d_pixels_,
+			panel_w_ * 3 * panel_h_ * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	}
 
 	return time_step;

@@ -49,10 +49,7 @@ public:
 	static int n_pml_layers_;
 
 	int time_step_{ 0 };
-
-	int look_from_{ 0 };	// 0: visualize xy plane
-							// 1: visualize yz plane
-							// 2: 
+	int panel_w_{ 0 }, panel_h_{ 0 }; // size of each individual panel
 
 	Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std::vector<std::shared_ptr<SoundSource>> &sources);
 	~Simulation();
@@ -62,25 +59,13 @@ public:
 	void Info();
 	//FindBoundaries();
 
-	int size_x()
-	{
-		return size_x_;
-	}
-	int size_y()
-	{
-		return size_y_;
-	}
-	int size_z()
-	{
-		return size_z_;
-	}
-	bool ready()
-	{
-		return ready_;
-	}
-	decltype(pixels_) pixels()
-	{
-		return pixels_;
-	}
+	int size_x() { return size_x_; }
+	int size_y() { return size_y_; }
+	int size_z() { return size_z_; }
+	// Full 3-panel render buffer dimensions (3 panels wide)
+	int render_w() { return panel_w_ * 3; }
+	int render_h() { return panel_h_; }
+	bool ready() { return ready_; }
+	decltype(pixels_)& pixels() { return pixels_; }
 };
 
