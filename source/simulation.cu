@@ -322,11 +322,6 @@ int Simulation::Update()
 	//std::cout << "#" << std::setw(5) << time_step << " : ";
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
-	// DEBUG: print pressure before first update
-	if (time_step == 0 && !dct_partitions_.empty()) {
-		double p = dct_partitions_[0]->get_pressure(5, 5, 3);
-		std::cout << "Step 0 (Pre-Update) | p(5,5,3)=" << p << std::endl;
-	}
 
 	for (int i = 0; i < dct_partitions_.size(); i++)
 	{
@@ -340,13 +335,6 @@ int Simulation::Update()
 		dct_partitions_[i]->reset_residues();
 	}
 
-	// DEBUG: print pressure values every 20 steps to diagnose stability
-	if (time_step % 20 == 0 && time_step <= 400 && !dct_partitions_.empty()) {
-		double p = dct_partitions_[0]->get_pressure(5, 5, 3);
-		double src_val = sources_[0]->SampleValue(time_step);
-		std::cout << "Step " << time_step << " | src=" << src_val
-		          << " | p(5,5,3)=" << p << std::endl;
-	}
 
 	for (int i = 0; i < pml_partitions_.size(); i++)
 	{
@@ -392,7 +380,28 @@ int Simulation::Update()
 	// Visualization: render XY / XZ / YZ planes side-by-side every viz_skip_ steps
 	if (time_step % viz_skip_ == 0)
 	{
-		float v_coef = 0.1f;
+		// Dynamic scaling: find global max pressure
+		double global_max_p = 0.0;
+		for (auto partition : partitions_)
+		{
+			global_max_p = fmax(global_max_p, partition->GetMaxAbsolutePressure());
+		}
+		max_p_ = global_max_p;
+		// Wait for all async max-reduction results to arrive
+		cudaDeviceSynchronize();
+
+		// Dynamic scaling logic
+		// We target the current max to be around 70% of the color range to avoid clipping
+		float target_v_coef = 0.7f / (float)(max_p_ + 1e-9);
+
+		// Clamp the gain to avoid zooming into numerical artifacts
+		if (target_v_coef > Simulation::max_viz_gain_) target_v_coef = Simulation::max_viz_gain_;
+
+		// Smooth the coefficient change to avoid flickering
+		v_coef_ = v_coef_ * 0.9f + target_v_coef * 0.1f;
+
+		// Floor/Ceil v_coef to avoid extreme values
+		v_coef_ = fmin(1000.0f, fmax(0.001f, v_coef_));
 
 		// Anchor slices through the first source position
 		int src_x = sources_[0]->x() - x_start_;
@@ -412,21 +421,21 @@ int Simulation::Update()
 			partition->RenderToBuffer(d_pixels_,
 				0, src_z + z_start_,       // plane_type=0(XY), global z coord
 				panel_w_ * 3, panel_h_,    // full buffer width, panel height
-				x_off, y_off, v_coef);
+				x_off, y_off, v_coef_);
 
 			// Panel 1: XZ plane (constant Y = src_y)
 			// x→screen-x, z→screen-y, offset=(panel_w_, 0)
 			partition->RenderToBuffer(d_pixels_,
 				2, src_y + y_start_,       // plane_type=2(XZ), global y coord
 				panel_w_ * 3, panel_h_,
-				panel_w_ + x_off, z_off, v_coef);
+				panel_w_ + x_off, z_off, v_coef_);
 
 			// Panel 2: YZ plane (constant X = src_x)
 			// y→screen-x, z→screen-y, offset=(2*panel_w_, 0)
 			partition->RenderToBuffer(d_pixels_,
 				1, src_x + x_start_,       // plane_type=1(YZ), global x coord
 				panel_w_ * 3, panel_h_,
-				2 * panel_w_ + y_off, z_off, v_coef);
+				2 * panel_w_ + y_off, z_off, v_coef_);
 		}
 
 		// Single PCIe transfer for the entire 3-panel frame

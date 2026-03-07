@@ -39,6 +39,7 @@ Partition::Partition(int xs, int ys, int zs, int w, int h, int d)
     cudaMalloc((void**)&d_velocity_, vol_size);
     cudaMalloc((void**)&d_force_, vol_size);
     cudaMalloc((void**)&d_residue_, vol_size);
+    cudaMalloc((void**)&d_max_p_, sizeof(double));
 
     CHECK_CUDA(cudaMemset((void*)d_pressure_, 0, vol_size));
     CHECK_CUDA(cudaMemset((void*)d_velocity_, 0, vol_size));
@@ -92,6 +93,7 @@ Partition::~Partition()
     cudaFree(d_velocity_);
     cudaFree(d_force_);
     cudaFree(d_residue_);
+    cudaFree(d_max_p_);
     cudaFree(d_source_indices_);
     cudaFree(d_source_values_);
     cudaStreamDestroy(stream_);
@@ -264,13 +266,17 @@ __global__ void ColorMapKernel(
         
         int r, g, b;
         if (norm >= 0.5) {
-            r = (int)(255 - round(255.0 * 2.0 * (norm - 0.5)));
-            g = (int)(255 - round(255.0 * 2.0 * (norm - 0.5)));
-            b = 255;
-        } else {
+            // Positive: White (0.5) to Red (1.0)
+            double pos_val = (norm - 0.5) * 2.0; 
             r = 255;
-            g = (int)(255 - round(255.0 * (1.0 - 2.0 * norm)));
-            b = (int)(255 - round(255.0 * (1.0 - 2.0 * norm)));
+            g = (int)(255.0 * (1.0 - pos_val));
+            b = (int)(255.0 * (1.0 - pos_val));
+        } else {
+            // Negative: Blue (0.0) to White (0.5)
+            double neg_val = norm * 2.0;
+            r = (int)(255.0 * neg_val);
+            g = (int)(255.0 * neg_val);
+            b = 255;
         }
 
         if (!should_render) {
@@ -390,6 +396,58 @@ void Partition::Info()
 		<< x_end_ << "," << y_end_ << "," << z_end_ << std::endl;
 	std::cout << "    -> " << std::to_string(info_.num_sources) << " sources; "
 		<< std::to_string(info_.num_boundaries) << " boundaries; " << std::endl;
+}
+
+// Simple max-reduction kernel for absolute pressure
+__global__ void MaxAbsPressureKernel(const double* d_pressure, double* d_max_p, int size)
+{
+    extern __shared__ double shared_max[];
+    int tid = threadIdx.x;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    double local_max = 0.0;
+    while (i < size) {
+        local_max = fmax(local_max, fabs(d_pressure[i]));
+        i += gridDim.x * blockDim.x;
+    }
+    shared_max[tid] = local_max;
+    __syncthreads();
+
+    for (int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) {
+            shared_max[tid] = fmax(shared_max[tid], shared_max[tid + s]);
+        }
+        __syncthreads();
+    }
+
+    if (tid == 0) {
+        // Use atomicAdd-like pattern for max if needed, but since we are doing 
+        // a small number of blocks, we can just use atomicMax with bits or similar.
+        // For simplicity, we'll use a second pass or atomicMax if available.
+        // On sm_60+, we can use atomicMax for double with a CAS loop.
+        unsigned long long int* address_as_ull = (unsigned long long int*)d_max_p;
+        unsigned long long int old = *address_as_ull, assumed;
+        do {
+            assumed = old;
+            double old_val = __longlong_as_double(assumed);
+            if (old_val >= shared_max[0]) break;
+            old = atomicCAS(address_as_ull, assumed, __double_as_longlong(shared_max[0]));
+        } while (assumed != old);
+    }
+}
+
+double Partition::GetMaxAbsolutePressure()
+{
+    int size = width_ * height_ * depth_;
+    cudaMemsetAsync(d_max_p_, 0, sizeof(double), stream_);
+    
+    int threads = 256;
+    int blocks = 256; // Fixed number of blocks for efficiency
+    MaxAbsPressureKernel<<<blocks, threads, threads * sizeof(double), stream_>>>(d_pressure_, d_max_p_, size);
+    
+    double h_max = 0.0;
+    cudaMemcpyAsync(&h_max, d_max_p_, sizeof(double), cudaMemcpyDeviceToHost, stream_);
+    return h_max; // Note: caller should sync before using this if it's on a stream
 }
 
 __global__ void PostMergeKernel(

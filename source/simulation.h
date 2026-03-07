@@ -26,6 +26,7 @@ class Simulation
 	std::vector<Uint32> pixels_;
 	uint32_t* d_pixels_ = nullptr;
 	SDL_PixelFormat* sdl_fmt_;
+	double max_p_{ 0.0 };
 
 	struct Info
 	{
@@ -48,14 +49,17 @@ public:
 	static double air_absorption_alpha2_;
 	static int n_pml_layers_;
 	static int viz_skip_;
+	static float max_viz_gain_;
 
 	int time_step_{ 0 };
 	int panel_w_{ 0 }, panel_h_{ 0 }; // size of each individual panel
+	float v_coef_{ 0.1f };           // dynamic scaling factor
 
 	Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std::vector<std::shared_ptr<SoundSource>> &sources);
 	~Simulation();
 
 	int Update();
+	double GetLastMaxPressure() { return max_p_; }
 
 	void Info();
 	//FindBoundaries();

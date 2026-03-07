@@ -13,6 +13,7 @@
 #undef main			// https://stackoverflow.com/questions/6847360
 #include "ini.h"
 #include <fstream>
+#include <sstream>
 
 #include "simulation.h"
 #include "partition.h"
@@ -39,6 +40,7 @@ double Simulation::dh_ = 0.2;		        // Space sampling rate.
 double Simulation::dt_ = 2e-4;		        // Time sampling rate.
 int Simulation::n_pml_layers_ = 5;          // Number of pml layers.
 int Simulation::viz_skip_ = 10;             // Visualization skip interval.
+float Simulation::max_viz_gain_ = 100.0f;   // Maximum visualization gain.
 
 struct Config {
 	string asset_name;
@@ -52,6 +54,8 @@ struct Config {
 	bool is_record_response;  // Flag to record response
 	bool is_record_field;     // Flag to record field
 	int viz_skip;             // Visualization skip interval
+	int fixed_panel_size;     // Fixed panel size in pixels
+	float max_viz_gain;       // Maximum visualization gain
 };
 
 // Callback function for inih
@@ -92,6 +96,12 @@ int parse_ini_handler(void* user, const char* section, const char* name, const c
 		else if (strcmp(name, "viz_skip") == 0) {
 			config->viz_skip = atoi(value);
 		}
+		else if (strcmp(name, "fixed_panel_size") == 0) {
+			config->fixed_panel_size = atoi(value);
+		}
+		else if (strcmp(name, "max_viz_gain") == 0) {
+			config->max_viz_gain = atof(value);
+		}
 	}
 	return 1;  // Return success
 }
@@ -101,6 +111,8 @@ int parse_ini_handler(void* user, const char* section, const char* name, const c
 Config load_config(const string& filename) {
 	Config config;
 	config.viz_skip = 10; // Default value
+	config.fixed_panel_size = 400; // Default fixed panel size
+	config.max_viz_gain = 100.0f;  // Default max gain
 	if (ini_parse(filename.c_str(), parse_ini_handler, &config) < 0) {
 		cerr << "Can't load " << filename << endl;
 	}
@@ -176,6 +188,7 @@ int main(int argc, char* argv[]) {
 
 	// Update simulation visualization skip
 	Simulation::viz_skip_ = config.viz_skip;
+	Simulation::max_viz_gain_ = config.max_viz_gain;
 
 	// Display recording flags
 	cout << "Recording response: " << (is_record_response ? "Yes" : "No") << endl;
@@ -212,34 +225,50 @@ int main(int argc, char* argv[]) {
 	SDL_Event event;
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
-	int resolution_x = 900;                          // 3 panels × 300px each
-	int resolution_y = resolution_x / 3;             // panels are square
+	int panel_sz = config.fixed_panel_size;
+	int resolution_x = simulation->render_w();       // raw total simulation width (3 panels)
+	int resolution_y = simulation->render_h();       // raw simulation height (1 panel)
+	
+	// Dynamic zoom factor to fit simulation into fixed-size panels
+	float viz_scale = (float)panel_sz / (float)simulation->panel_w_;
+	
+	int window_w = panel_sz * 3 + 80;                // Fixed width: 3 panels + colorbar area
+	int window_h = panel_sz + 48;                    // Fixed height: panel + header + footer
+	
 	SDL_Window* window = SDL_CreateWindow("WASAbi 2.5D — XY | XZ | YZ",
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, resolution_x, resolution_y + 24, 0);
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, 0);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
 	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING,
-		simulation->render_w(), simulation->render_h());
+		resolution_x, resolution_y);
 
 	SDL_Rect simulation_rect;
 	simulation_rect.x = 0;
-	simulation_rect.y = 24;           // leave 24px at top for labels
-	simulation_rect.w = resolution_x;
-	simulation_rect.h = resolution_y;
+	simulation_rect.y = 24;
+	simulation_rect.w = panel_sz * 3;
+	simulation_rect.h = panel_sz;
 
 	TTF_Init();
 	TTF_Font* Sans = TTF_OpenFont("font/SourceSansPro-Regular.ttf", 48);
 	SDL_Color White = { 255, 255, 255 };
 	SDL_Color Gray  = { 180, 180, 180 };
+	SDL_Color Red   = { 255,   0,   0 };
+	SDL_Color Blue  = {   0,   0, 255 };
 	// Progress label (bottom-left)
-	SDL_Rect Message_rect;   Message_rect.x = 2;                Message_rect.y = resolution_y + 4; Message_rect.w = 120; Message_rect.h = 18;
+	SDL_Rect Message_rect;   Message_rect.x = 4;                Message_rect.y = window_h - 20; Message_rect.w = 120; Message_rect.h = 18;
 	// Time label (bottom-right)
-	SDL_Rect Message_rect2;  Message_rect2.x = resolution_x-120; Message_rect2.y = resolution_y + 4; Message_rect2.w = 118; Message_rect2.h = 18;
+	SDL_Rect Message_rect2;  Message_rect2.x = window_w - 124; Message_rect2.y = window_h - 20; Message_rect2.w = 118; Message_rect2.h = 18;
 	// Panel title labels (top)
 	std::string panel_titles[3] = { "XY", "XZ", "YZ" };
 	SDL_Rect label_rects[3];
+	int panel_w = simulation->panel_w_;
 	for (int i = 0; i < 3; i++) {
-		label_rects[i] = { i * (resolution_x / 3) + 4, 2, 60, 20 };
+		label_rects[i] = { i * panel_sz + 4, 2, 60, 20 };
 	}
+	// Colorbar rects
+	SDL_Rect bar_rect = { panel_sz * 3 + 10, 24, 20, panel_sz };
+	SDL_Rect bar_max_label = { panel_sz * 3 + 35, 24, 40, 18 };
+	SDL_Rect bar_min_label = { panel_sz * 3 + 35, panel_sz + 24 - 18, 40, 18 };
+	SDL_Rect bar_zero_label = { panel_sz * 3 + 35, panel_sz / 2 + 24 - 9, 40, 18 };
 
 	bool quit = false;
 	int time_step = 0;
@@ -291,13 +320,17 @@ int main(int argc, char* argv[]) {
 
 			// Draw black header bar for labels
 			SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
-			SDL_Rect header = { 0, 0, resolution_x, 24 };
+			SDL_Rect header = { 0, 0, window_w, 24 };
 			SDL_RenderFillRect(renderer, &header);
+
+			// Draw black footer bar for progress
+			SDL_Rect footer = { 0, window_h - 24, window_w, 24 };
+			SDL_RenderFillRect(renderer, &footer);
 
 			// Draw panel dividers
 			SDL_SetRenderDrawColor(renderer, 80, 80, 80, 255);
-			SDL_RenderDrawLine(renderer,   resolution_x / 3, 0,   resolution_x / 3, resolution_y + 24);
-			SDL_RenderDrawLine(renderer, 2*resolution_x / 3, 0, 2*resolution_x / 3, resolution_y + 24);
+			SDL_RenderDrawLine(renderer,   panel_sz, 0,   panel_sz, panel_sz + 24);
+			SDL_RenderDrawLine(renderer, 2*panel_sz, 0, 2*panel_sz, panel_sz + 24);
 
 			if (simulation->ready())
 			{
@@ -326,6 +359,45 @@ int main(int argc, char* argv[]) {
 			SDL_DestroyTexture(Message);
 			SDL_FreeSurface(surfaceMessage2);
 			SDL_DestroyTexture(Message2);
+
+			// --- Colorbar & Dynamic Values ---
+			// Draw gradient
+			for (int y = 0; y < panel_sz; y++) {
+				float norm = 1.0f - (float)y / (float)panel_sz; // 1.0 at top, 0.0 at bottom
+				int r, g, b;
+				if (norm >= 0.5f) {
+					float pos = (norm - 0.5f) * 2.0f;
+					r = 255; g = (int)(255 * (1.0f - pos)); b = (int)(255 * (1.0f - pos));
+				} else {
+					float neg = norm * 2.0f;
+					r = (int)(255 * neg); g = (int)(255 * neg); b = 255;
+				}
+				SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+				SDL_RenderDrawLine(renderer, panel_sz * 3 + 10, 24 + y, panel_sz * 3 + 30, 24 + y);
+			}
+
+			// Render max/min values
+			double cur_max_p = simulation->GetLastMaxPressure();
+			std::stringstream ss;
+			ss << std::fixed << std::setprecision(2) << cur_max_p;
+			std::string max_str = "+" + ss.str();
+			std::string min_str = "-" + ss.str();
+
+			SDL_Surface* surf_max = TTF_RenderText_Solid(Sans, max_str.c_str(), Red); // Need Red color
+			SDL_Texture* tex_max = SDL_CreateTextureFromSurface(renderer, surf_max);
+			SDL_RenderCopy(renderer, tex_max, NULL, &bar_max_label);
+			SDL_FreeSurface(surf_max); SDL_DestroyTexture(tex_max);
+
+			SDL_Surface* surf_min = TTF_RenderText_Solid(Sans, min_str.c_str(), Blue); // Need Blue color
+			SDL_Texture* tex_min = SDL_CreateTextureFromSurface(renderer, surf_min);
+			SDL_RenderCopy(renderer, tex_min, NULL, &bar_min_label);
+			SDL_FreeSurface(surf_min); SDL_DestroyTexture(tex_min);
+
+			SDL_Surface* surf_zero = TTF_RenderText_Solid(Sans, "0.0", White);
+			SDL_Texture* tex_zero = SDL_CreateTextureFromSurface(renderer, surf_zero);
+			SDL_RenderCopy(renderer, tex_zero, NULL, &bar_zero_label);
+			SDL_FreeSurface(surf_zero); SDL_DestroyTexture(tex_zero);
+
 			SDL_RenderPresent(renderer);
 		}
 	}

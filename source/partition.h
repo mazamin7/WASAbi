@@ -56,6 +56,7 @@ public:
     double* d_velocity_;
     double* d_force_;
     double* d_residue_;
+    double* d_max_p_; // for dynamic scaling reduction
 
     // Array of source metadata
     int num_sources_ = 0;
@@ -97,6 +98,7 @@ public:
 	void Info();
 
 	virtual void ComputeSourceForcingTerms(double t);
+	virtual double GetMaxAbsolutePressure();
 
     void RenderToBuffer(uint32_t* d_pixels, int plane_type, int coord, int screen_width, int screen_height, int x_offset, int y_offset, float v_coef);
 
