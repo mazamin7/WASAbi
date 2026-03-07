@@ -245,15 +245,15 @@ __global__ void ColorMapKernel(
     int j = blockIdx.y * blockDim.y + threadIdx.y;
 
     int p_w = 0, p_h = 0;
-    if (plane_type == 0) { p_w = width; p_h = height; } // XY
-    else if (plane_type == 1) { p_w = depth; p_h = height; } // YZ (looking from X)
-    else if (plane_type == 2) { p_w = width; p_h = depth; } // XZ
+    if (plane_type == 0)      { p_w = width;  p_h = height; } // XY
+    else if (plane_type == 1) { p_w = height; p_h = depth;  } // YZ (looking from X)
+    else if (plane_type == 2) { p_w = width;  p_h = depth;  } // XZ
 
     if (i < p_w && j < p_h) {
         int px = 0, py = 0, pz = 0;
-        if (plane_type == 0) { px = i; py = j; pz = coord; }
-        else if (plane_type == 1) { px = coord; py = j; pz = i; }
-        else if (plane_type == 2) { px = i; py = coord; pz = j; }
+        if (plane_type == 0)      { px = i;     py = j;     pz = coord; }
+        else if (plane_type == 1) { px = coord; py = i;     pz = j;     }
+        else if (plane_type == 2) { px = i;     py = coord; pz = j;     }
 
         int idx = (pz * height * width) + (py * width) + px;
         double pressure = d_pressure[idx];
@@ -285,9 +285,9 @@ __global__ void ColorMapKernel(
 void Partition::RenderToBuffer(uint32_t* d_pixels, int plane_type, int coord, int screen_width, int screen_height, int x_offset, int y_offset, float v_coef)
 {
     int p_w = 0, p_h = 0, local_coord = 0;
-    if (plane_type == 0) { p_w = width_; p_h = height_; local_coord = coord - z_start_; if (local_coord < 0 || local_coord >= depth_) return; }
-    else if (plane_type == 1) { p_w = depth_; p_h = height_; local_coord = coord - x_start_; if (local_coord < 0 || local_coord >= width_) return; }
-    else if (plane_type == 2) { p_w = width_; p_h = depth_; local_coord = coord - y_start_; if (local_coord < 0 || local_coord >= height_) return; }
+    if (plane_type == 0)      { p_w = width_;  p_h = height_; local_coord = coord - z_start_; if (local_coord < 0 || local_coord >= depth_) return; }
+    else if (plane_type == 1) { p_w = height_; p_h = depth_;  local_coord = coord - x_start_; if (local_coord < 0 || local_coord >= width_) return; }
+    else if (plane_type == 2) { p_w = width_;  p_h = depth_;  local_coord = coord - y_start_; if (local_coord < 0 || local_coord >= height_) return; }
 
     dim3 blockSize(16, 16);
     dim3 gridSize((p_w + blockSize.x - 1) / blockSize.x, (p_h + blockSize.y - 1) / blockSize.y);
