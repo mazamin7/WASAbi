@@ -24,6 +24,8 @@ class Simulation
 
 	bool ready_;
 	std::vector<Uint32> pixels_;
+	uint32_t* d_pixels_ = nullptr;
+	SDL_PixelFormat* sdl_fmt_;
 
 	struct Info
 	{

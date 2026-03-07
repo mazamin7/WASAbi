@@ -1,7 +1,9 @@
 #include "simulation.h"
 #include "partition.h"
-#include "pml_partition.h"
+#include "cu_pml_partition.h"
+#include <cuda_runtime.h>
 #include "boundary.h"
+#include "cu_boundary.h"
 #include "tools.h"
 #include "sound_source.h"
 #include <fstream>
@@ -76,9 +78,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				else if (start != end)
 				{
 					if (i != partition->height_ - 1) end--;
-					auto pml = std::make_shared<PmlPartition>(
+					auto pml = std::make_shared<CuPmlPartition>(
 						partition,
-						PmlPartition::P_LEFT,
+						CuPmlPartition::P_LEFT,
 						partition->x_start_ - Simulation::n_pml_layers_,
 						partition->y_start_ + start,
 						partition->z_start_,
@@ -114,9 +116,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				else if (start != end)
 				{
 					if (i != partition->height_ - 1) end--;
-					auto pml = std::make_shared<PmlPartition>(
+					auto pml = std::make_shared<CuPmlPartition>(
 						partition,
-						PmlPartition::P_RIGHT,
+						CuPmlPartition::P_RIGHT,
 						partition->x_end_,
 						partition->y_start_ + start,
 						partition->z_start_,
@@ -152,9 +154,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				else if (start != end)
 				{
 					if (i != partition->width_ - 1) end--;
-					auto pml = std::make_shared<PmlPartition>(
+					auto pml = std::make_shared<CuPmlPartition>(
 						partition,
-						PmlPartition::P_TOP,
+						CuPmlPartition::P_TOP,
 						partition->x_start_ + start,
 						partition->y_start_ - Simulation::n_pml_layers_,
 						partition->z_start_,
@@ -190,9 +192,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				else if (start != end)
 				{
 					if (i != partition->width_ - 1) end--;
-					auto pml = std::make_shared<PmlPartition>(
+					auto pml = std::make_shared<CuPmlPartition>(
 						partition,
-						PmlPartition::P_BOTTOM,
+						CuPmlPartition::P_BOTTOM,
 						partition->x_start_ + start,
 						partition->y_end_,
 						partition->z_start_,
@@ -216,9 +218,9 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 
 		// Add front PML.
 		{
-			auto pml = std::make_shared<PmlPartition>(
+			auto pml = std::make_shared<CuPmlPartition>(
 				partition,
-				PmlPartition::P_FRONT,
+				CuPmlPartition::P_FRONT,
 				partition->x_start_,
 				partition->y_start_,
 				partition->z_start_ - Simulation::n_pml_layers_,
@@ -226,26 +228,27 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				partition->height_,
 				Simulation::n_pml_layers_);
 			partitions_.push_back(pml);
-			boundaries_.push_back(std::make_shared<Boundary>(
+			std::shared_ptr<CuBoundary> cu_b(new CuBoundary(
 				Boundary::Z_BOUNDARY,
 				partition->boundary_absorption_,
-				pml,
-				partition,
+				std::static_pointer_cast<CuPartition>(pml),
+				std::static_pointer_cast<CuPartition>(partition),
 				partition->x_start_,
 				partition->x_end_,
 				partition->y_start_,
 				partition->y_end_,
 				partition->z_start_ - 3,
 				partition->z_start_ + 3));
+			boundaries_.push_back(cu_b);
 			info_.num_pml_partitions++;
 		}
 
 
 		// Add back PML.
 		{
-			auto pml = std::make_shared<PmlPartition>(
+			auto pml = std::make_shared<CuPmlPartition>(
 				partition,
-				PmlPartition::P_BACK,
+				CuPmlPartition::P_BACK,
 				partition->x_start_,
 				partition->y_start_,
 				partition->z_end_,
@@ -253,17 +256,18 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 				partition->height_,
 				Simulation::n_pml_layers_);
 			partitions_.push_back(pml);
-			boundaries_.push_back(std::make_shared<Boundary>(
+			std::shared_ptr<CuBoundary> cu_b(new CuBoundary(
 				Boundary::Z_BOUNDARY,
 				partition->boundary_absorption_,
-				pml,
-				partition,
+				std::static_pointer_cast<CuPartition>(pml),
+				std::static_pointer_cast<CuPartition>(partition),
 				partition->x_start_,
 				partition->x_end_,
 				partition->y_start_,
 				partition->y_end_,
 				partition->z_end_ - 3,
 				partition->z_end_ + 3));
+			boundaries_.push_back(cu_b);
 			info_.num_pml_partitions++;
 		}
 	}
@@ -296,14 +300,16 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 	size_y_ = y_end_ - y_start_;
 	size_z_ = z_end_ - z_start_;
 
-
-
-	pixels_.assign(size_x_*size_y_, 0);
+	pixels_.assign(size_x_ * size_y_, 0);
+	cudaMalloc((void**)&d_pixels_, size_x_ * size_y_ * sizeof(uint32_t));
+	sdl_fmt_ = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
 	ready_ = true;
 }
 
 Simulation::~Simulation()
 {
+	if (sdl_fmt_) SDL_FreeFormat(sdl_fmt_);
+	if (d_pixels_) cudaFree(d_pixels_);
 }
 
 int Simulation::Update()
@@ -312,49 +318,57 @@ int Simulation::Update()
 	//std::cout << "#" << std::setw(5) << time_step << " : ";
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
-#pragma omp parallel for schedule(dynamic)
+	// DEBUG: print pressure before first update
+	if (time_step == 0 && !dct_partitions_.empty()) {
+		double p = dct_partitions_[0]->get_pressure(5, 5, 3);
+		std::cout << "Step 0 (Pre-Update) | p(5,5,3)=" << p << std::endl;
+	}
+
 	for (int i = 0; i < dct_partitions_.size(); i++)
 	{
-		// reset force
-		//dct_partitions_[i]->reset_forces();
-
 		// compute force
-		dct_partitions_[i]->ComputeSourceForcingTerms(time_step);
-		//std::cout << "impose force partition " << partition->info_.id << " ";
+		dct_partitions_[i]->ComputeSourceForcingTerms((double)time_step);
 
 		// update pressure and velocity
 		dct_partitions_[i]->Update();
-		//std::cout << "update pressure partition " << partition->info_.id << " ";
 
 		// reset residue
 		dct_partitions_[i]->reset_residues();
 	}
 
+	// DEBUG: print pressure values every 20 steps to diagnose stability
+	if (time_step % 20 == 0 && time_step <= 400 && !dct_partitions_.empty()) {
+		double p = dct_partitions_[0]->get_pressure(5, 5, 3);
+		double src_val = sources_[0]->SampleValue(time_step);
+		std::cout << "Step " << time_step << " | src=" << src_val
+		          << " | p(5,5,3)=" << p << std::endl;
+	}
+
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < pml_partitions_.size(); i++)
 	{
-		// reset force
-		//pml_partitions_[i]->reset_forces();
-
 		// compute force
-		pml_partitions_[i]->ComputeSourceForcingTerms(time_step);
-		//std::cout << "impose force partition " << partition->info_.id << " ";
+		pml_partitions_[i]->ComputeSourceForcingTerms((double)time_step);
 
 		// update pressure and velocity
 		pml_partitions_[i]->Update();
-		//std::cout << "update pressure partition " << partition->info_.id << " ";
 
 		// reset residue
 		pml_partitions_[i]->reset_residues();
 	}
 
 	// compute residue
+	for (auto p : partitions_) p->reset_residues();
+
+	if (time_step == 0) {
+		std::cout << "Runtime: updating " << boundaries_.size() << " boundaries." << std::endl;
+	}
+
 #pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < boundaries_.size(); i++) {
 		boundaries_[i]->ComputeResidues();
 	}
-
-	//std::cout << std::endl;
+	cudaDeviceSynchronize();
 
 	// post-merge
 #pragma omp parallel for schedule(dynamic)
@@ -362,126 +376,50 @@ int Simulation::Update()
 	{
 		partitions_[i]->PostMerge();
 	}
+	cudaDeviceSynchronize();
+
+	// Clear forces for next step
+	for (auto p : partitions_) p->reset_forces();
+	cudaDeviceSynchronize();
 	//std::cout << std::endl;
 
 	// Visualization
-	if (time_step % 1 == 0)
+	if (time_step % 10 == 0)
 	{
-		SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
 		double v_coef = 0.1; // visualization amplification factor
 		bool render_pml = true;
-		if (look_from_ == 0)	//xy
+		
+		// Map all partitions to the GPU pixel buffer
+		cudaMemset(d_pixels_, 0, size_x_ * size_y_ * sizeof(uint32_t));
+
+		for (auto partition : partitions_)
 		{
-			int pixels_z = sources_[0]->z();
-			for (auto partition : partitions_)
+			auto cu_p = std::dynamic_pointer_cast<CuPartition>(partition);
+			if (!cu_p) continue;
+			
+			if (!render_pml && !cu_p->should_render_) continue;
+
+			int x_offset = cu_p->x_start_ - x_start_;
+			int y_offset = cu_p->y_start_ - y_start_;
+			int z_offset = cu_p->z_start_ - z_start_;
+
+			if (look_from_ == 0) // XY
 			{
-				if (!render_pml)
-				{
-					if (!partition->should_render_) continue;
-				}
-				//if (partition->is_z_pml_) continue;
-				if (partition->z_start_ > pixels_z || partition->z_end_ < pixels_z)
-				{
-					continue;
-				}
-				int x_offset = partition->x_start_ - x_start_;
-				int y_offset = partition->y_start_ - y_start_;
-				std::vector<double> partition_xy;
-				partition_xy = partition->get_xy_plane(pixels_z);
-
-				int height = partition->height_;
-				int width = partition->width_;
-
-#pragma omp parallel for schedule(dynamic)
-				for (int idx = 0; idx < height * width; idx++) {
-					// Compute the indices i and j from the flattened index idx
-					int i = idx / width;
-					int j = idx % width;
-
-					double pressure = partition_xy[i * width + j];
-					double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
-					int r, g, b;
-
-					if (norm >= 0.5)
-					{
-						r = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
-						g = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
-						b = 255;
-					}
-					else {
-						r = 255;
-						g = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
-						b = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
-					}
-
-					if (partition->should_render_)
-					{
-						pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
-					}
-					else
-					{
-						pixels_[(y_offset + i) * size_x_ + (x_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
-					}
-				}
+				int pixels_z = sources_[0]->z();
+				cu_p->RenderToBuffer(d_pixels_, 0, pixels_z, size_x_, size_y_, x_offset, y_offset, (float)v_coef);
+			}
+			else if (look_from_ == 1) // YZ
+			{
+				int pixels_x = sources_[0]->x();
+				// Note: screen coords for YZ view are (z, y)
+				cu_p->RenderToBuffer(d_pixels_, 1, pixels_x, size_y_, size_z_, y_offset, z_offset, (float)v_coef);
 			}
 		}
-		else if (look_from_ == 1)	//yz
-		{
-			int pixels_x = sources_[0]->x();
-			for (auto partition : partitions_)
-			{
-				if (!render_pml)
-				{
-					if (!partition->should_render_) continue;
-				}
-				//if (partition->is_x_pml_) continue;
-				if (partition->x_start_ > pixels_x || partition->x_end_ < pixels_x)
-				{
-					continue;
-				}
-				int y_offset = partition->y_start_ - y_start_;
-				int z_offset = partition->z_start_ - z_start_;
-				std::vector<double> partition_yz;
-				partition_yz = partition->get_yz_plane(pixels_x);
-
-				int depth = partition->depth_;
-				int height = partition->height_;
-
-#pragma omp parallel for
-				for (int idx = 0; idx < depth * height; idx++)
-				{
-					// Compute the original indices i and j from the flattened index
-					int i = idx / height;
-					int j = idx % height;
-
-					double pressure = partition_yz[idx];
-					double norm = 0.5 * std::max(-1.0, std::min(1.0, pressure * v_coef)) + 0.5;
-					int r, g, b;
-
-					if (norm >= 0.5)
-					{
-						r = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
-						g = static_cast<int>(255 - round(255.0 * 2.0 * (norm - 0.5)));
-						b = 255;
-					}
-					else
-					{
-						r = 255;
-						g = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
-						b = static_cast<int>(255 - round(255.0 * (1.0 - 2.0 * norm)));
-					}
-
-					if (partition->should_render_)
-					{
-						pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, r, g, b);
-					}
-					else
-					{
-						pixels_[(z_offset + i) * size_y_ + (y_offset + j)] = SDL_MapRGBA(fmt, 255, 0.5 * r, 0.5 * g, 0.5 * b);
-					}
-				}
-			}
-		}
+		
+		// Single PCIe transfer for the entire frame
+		int screen_w = (look_from_ == 0) ? size_x_ : size_y_;
+		int screen_h = (look_from_ == 0) ? size_y_ : size_z_;
+		cudaMemcpy(pixels_.data(), d_pixels_, screen_w * screen_h * sizeof(uint32_t), cudaMemcpyDeviceToHost);
 	}
 
 	return time_step;

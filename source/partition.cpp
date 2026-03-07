@@ -1,7 +1,7 @@
 #include "partition.h"
 #include "boundary.h"
 #include "sound_source.h"
-#include "dct_partition.h"
+#include "cu_dct_partition.h"
 #include "simulation.h"
 #include "tools.h"
 #include <fstream>
@@ -168,7 +168,7 @@ std::vector<std::shared_ptr<Partition>> Partition::ImportPartitions(std::string 
 
 		if (file.eof()) break;
 
-		partitions.push_back(std::make_shared<DctPartition>((int) (x_start / Simulation::dh_), (int)(y_start / Simulation::dh_), (int)(z_start / Simulation::dh_), (int)(width / Simulation::dh_), (int)(height / Simulation::dh_), (int)(depth / Simulation::dh_)));
+		partitions.push_back(std::make_shared<CuDctPartition>((int) (x_start / Simulation::dh_), (int)(y_start / Simulation::dh_), (int)(z_start / Simulation::dh_), (int)(width / Simulation::dh_), (int)(height / Simulation::dh_), (int)(depth / Simulation::dh_)));
 	}
 	file.close();
 	return partitions;

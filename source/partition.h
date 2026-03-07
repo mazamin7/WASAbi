@@ -9,17 +9,17 @@ class SoundSource;
 
 class Partition
 {
-protected:
-	double dh_;
-	double dt_;
-	double c0_;
-	double air_absorption_alpha1_;
-	double air_absorption_alpha2_;
+public:
+    double dh_;
+    double dt_;
+    double c0_;
+    double air_absorption_alpha1_;
+    double air_absorption_alpha2_;
 
-	int x_start_, x_end_;
-	int y_start_, y_end_;
-	int z_start_, z_end_;
-	int width_, height_, depth_;
+    int x_start_, x_end_;
+    int y_start_, y_end_;
+    int z_start_, z_end_;
+    int width_, height_, depth_;
 
 	struct Info
 	{
@@ -53,9 +53,9 @@ public:
 
 	virtual double* get_pressure_field() = 0;
 
-	std::vector<double> get_xy_plane(int z);
-	std::vector<double> get_yz_plane(int x);
-	std::vector<double> get_xz_plane(int y);
+	virtual std::vector<double> get_xy_plane(int z);
+	virtual std::vector<double> get_yz_plane(int x);
+	virtual std::vector<double> get_xz_plane(int y);
 
 	virtual double get_pressure(int x, int y, int z) = 0;
 	virtual void set_pressure(int x, int y, int z, double v) = 0;
@@ -75,7 +75,7 @@ public:
 	virtual void reset_forces() = 0;
 	virtual void reset_residues() = 0;
 
-	void PostMerge();
+	virtual void PostMerge();
 
 	virtual std::vector<double> get_xy_forcing_plane(int z);
 
@@ -84,7 +84,7 @@ public:
 	static std::vector<std::shared_ptr<Partition>> ImportPartitions(std::string path);
 	void Info();
 
-	void ComputeSourceForcingTerms(double t);
+	virtual void ComputeSourceForcingTerms(double t);
 
 	friend class Boundary;
 	//friend class SoundSource;

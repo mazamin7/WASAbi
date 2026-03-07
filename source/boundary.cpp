@@ -253,6 +253,9 @@ void Boundary::ComputeResidues()
 //	}
 //}
 
+#include "cu_boundary.h"
+#include "cu_partition.h"
+
 std::shared_ptr<Boundary> Boundary::FindBoundary(std::shared_ptr<Partition> a, std::shared_ptr<Partition> b, double absorp)
 {
 	int xa_min = a->x_start_;
@@ -260,9 +263,6 @@ std::shared_ptr<Boundary> Boundary::FindBoundary(std::shared_ptr<Partition> a, s
 	int xb_min = b->x_start_;
 	int xb_max = xb_min + b->width_;
 	int x_overlapped = std::min(xa_max, xb_max) - std::max(xa_min, xb_min);
-	// > 0 ==> partitions overlapping
-	// = 0 ==> partitions share exact boundary
-	// < 0 ==> partitions not touching
 
 	int ya_min = a->y_start_;
 	int ya_max = ya_min + a->height_;
@@ -270,32 +270,58 @@ std::shared_ptr<Boundary> Boundary::FindBoundary(std::shared_ptr<Partition> a, s
 	int yb_max = yb_min + b->height_;
 	int y_overlapped = std::min(ya_max, yb_max) - std::max(ya_min, yb_min);
 
-	int z_start = a->z_start_;
-	int z_end = z_start + a->depth_;
+	int za_min = a->z_start_;
+	int za_max = za_min + a->depth_;
+	int zb_min = b->z_start_;
+	int zb_max = zb_min + b->depth_;
+	int z_overlapped = std::min(za_max, zb_max) - std::max(za_min, zb_min);
 
-	if (x_overlapped == 0 && y_overlapped > 0)
+	bool both_cuda = (std::dynamic_pointer_cast<CuPartition>(a) && std::dynamic_pointer_cast<CuPartition>(b));
+
+	if (x_overlapped == 0 && y_overlapped > 0 && z_overlapped > 0)
 	{
 		bool is_right_boundary = (xa_max == xb_min);
-
 		int x_start = (is_right_boundary ? xa_max - 3 : xb_max - 3);
 		int x_end = x_start + 6;
-
-		int y_start = ya_min + std::max(0, yb_min - ya_min);
+		int y_start = std::max(ya_min, yb_min);
 		int y_end = y_start + y_overlapped;
+		int z_start = std::max(za_min, zb_min);
+		int z_end = z_start + z_overlapped;
 
-		return std::make_shared<Boundary>(X_BOUNDARY, absorp, a, b, x_start, x_end, y_start, y_end, z_start, z_end);
+		if (both_cuda)
+			return std::make_shared<CuBoundary>(X_BOUNDARY, absorp, std::static_pointer_cast<CuPartition>(a), std::static_pointer_cast<CuPartition>(b), x_start, x_end, y_start, y_end, z_start, z_end);
+		else
+			return std::make_shared<Boundary>(X_BOUNDARY, absorp, a, b, x_start, x_end, y_start, y_end, z_start, z_end);
 	}
-	else if (y_overlapped == 0 && x_overlapped > 0)
+	else if (y_overlapped == 0 && x_overlapped > 0 && z_overlapped > 0)
 	{
 		bool is_bottom_boundary = (ya_max == yb_min);
-
-		int x_start = xa_min + std::max(0, xb_min - xa_min);
+		int x_start = std::max(xa_min, xb_min);
 		int x_end = x_start + x_overlapped;
-
 		int y_start = (is_bottom_boundary ? ya_max - 3 : yb_max - 3);
 		int y_end = y_start + 6;
+		int z_start = std::max(za_min, zb_min);
+		int z_end = z_start + z_overlapped;
 
-		return std::make_shared<Boundary>(Y_BOUNDARY, absorp, a, b, x_start, x_end, y_start, y_end, z_start, z_end);
+		if (both_cuda)
+			return std::make_shared<CuBoundary>(Y_BOUNDARY, absorp, std::static_pointer_cast<CuPartition>(a), std::static_pointer_cast<CuPartition>(b), x_start, x_end, y_start, y_end, z_start, z_end);
+		else
+			return std::make_shared<Boundary>(Y_BOUNDARY, absorp, a, b, x_start, x_end, y_start, y_end, z_start, z_end);
+	}
+	else if (z_overlapped == 0 && x_overlapped > 0 && y_overlapped > 0)
+	{
+		bool is_back_boundary = (za_max == zb_min);
+		int x_start = std::max(xa_min, xb_min);
+		int x_end = x_start + x_overlapped;
+		int y_start = std::max(ya_min, yb_min);
+		int y_end = y_start + y_overlapped;
+		int z_start = (is_back_boundary ? za_max - 3 : zb_max - 3);
+		int z_end = z_start + 6;
+
+		if (both_cuda)
+			return std::make_shared<CuBoundary>(Z_BOUNDARY, absorp, std::static_pointer_cast<CuPartition>(a), std::static_pointer_cast<CuPartition>(b), x_start, x_end, y_start, y_end, z_start, z_end);
+		else
+			return std::make_shared<Boundary>(Z_BOUNDARY, absorp, a, b, x_start, x_end, y_start, y_end, z_start, z_end);
 	}
 	return nullptr;
 }

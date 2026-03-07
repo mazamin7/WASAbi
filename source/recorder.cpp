@@ -158,7 +158,7 @@ std::vector<std::shared_ptr<Recorder>> Recorder::ImportRecorders(std::string pat
         }
         
         // If all checks pass, create the Recorder object
-        recorders.push_back(std::make_shared<Recorder>(x / Simulation::dh_, y / Simulation::dh_, z / Simulation::dh_, Simulation::duration_ / Simulation::dt_));
+        recorders.push_back(std::make_shared<Recorder>((int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), (int)(Simulation::duration_ / Simulation::dt_)));
     }
     
     file.close();

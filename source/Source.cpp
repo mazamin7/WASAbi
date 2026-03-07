@@ -10,8 +10,6 @@
 #include <omp.h>
 //#include <Windows.h>
 #include <filesystem>       // <--- NEW: For creating directories
-#include <SDL2/SDL.h>       // <--- FIXED: Linux path
-#include <SDL2/SDL_ttf.h>   // <--- FIXED: Linux path
 //#undef main		// https://stackoverflow.com/questions/6847360
 #include "ini.h"
 #include <fstream>
@@ -275,27 +273,32 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		message = std::to_string(time_step) + '/' + std::to_string(total_time_steps);
-		SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, message.c_str(), White);
-		SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
-
-		if (simulation->ready())
+		if (time_step % 10 == 0)
 		{
-			SDL_UpdateTexture(texture, nullptr,
-				simulation->pixels().data(), simulation->size_x() * sizeof(Uint32));
+			message = std::to_string(time_step) + '/' + std::to_string(total_time_steps);
+			SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, message.c_str(), White);
+			SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+
+			if (simulation->ready())
+			{
+				SDL_UpdateTexture(texture, nullptr,
+					simulation->pixels().data(), simulation->size_x() * sizeof(Uint32));
+			}
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, texture, nullptr, &simulation_rect);
+			SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
+
+			message = std::to_string(static_cast<int>(floor((omp_get_wtime() - time1) / 60))) + " min, " + std::to_string(static_cast<int>(floor((omp_get_wtime() - time1))) % 60) + " sec";
+			SDL_Surface* surfaceMessage2 = TTF_RenderText_Solid(Sans, message.c_str(), White);
+			SDL_Texture* Message2 = SDL_CreateTextureFromSurface(renderer, surfaceMessage2);
+			SDL_RenderCopy(renderer, Message2, NULL, &Message_rect2);
+
+			SDL_FreeSurface(surfaceMessage);
+			SDL_DestroyTexture(Message);
+			SDL_FreeSurface(surfaceMessage2);
+			SDL_DestroyTexture(Message2);
+			SDL_RenderPresent(renderer);
 		}
-		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, nullptr, &simulation_rect);
-		SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
-
-		message = std::to_string(static_cast<int>(floor((omp_get_wtime() - time1) / 60))) + " min, " + std::to_string(static_cast<int>(floor((omp_get_wtime() - time1))) % 60) + " sec";
-		surfaceMessage = TTF_RenderText_Solid(Sans, message.c_str(), White);
-		Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
-		SDL_RenderCopy(renderer, Message, NULL, &Message_rect2);
-
-		SDL_FreeSurface(surfaceMessage);
-		SDL_DestroyTexture(Message);
-		SDL_RenderPresent(renderer);
 	}
 
 	SDL_DestroyTexture(texture);
