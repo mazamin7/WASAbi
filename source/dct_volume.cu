@@ -167,6 +167,7 @@ DctVolume::DctVolume(int w, int h, int d)
 {
     size_t size_orig = (size_t)width_ * height_ * depth_ * sizeof(double);
     cudaMalloc((void**)&d_values_, size_orig);
+    cudaMalloc((void**)&d_modes_,  size_orig);
     cudaMemset(d_values_, 0, size_orig);
     cudaMemset(d_modes_,  0, size_orig);
 
