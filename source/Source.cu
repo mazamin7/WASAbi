@@ -10,7 +10,7 @@
 #include <omp.h>
 //#include <Windows.h>
 #include <filesystem>       // <--- NEW: For creating directories
-//#undef main		// https://stackoverflow.com/questions/6847360
+#undef main			// https://stackoverflow.com/questions/6847360
 #include "ini.h"
 #include <fstream>
 

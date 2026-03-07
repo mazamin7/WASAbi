@@ -39,13 +39,13 @@ if(WIN32)
 
     # 1. Link Libraries Manually using included .lib files
     target_link_libraries(WASAbiApp
-        ${PROJ_ROOT}/SDL2-2.28.4/lib/x64/SDL2main.lib
         ${PROJ_ROOT}/SDL2-2.28.4/lib/x64/SDL2.lib
         ${PROJ_ROOT}/SDL2_ttf-2.20.2/lib/x64/SDL2_ttf.lib
         OpenMP::OpenMP_CXX
         CUDA::cufft
         CUDA::cudart
     )
+    target_link_options(WASAbiApp PRIVATE "/SUBSYSTEM:CONSOLE")
 
     # 2. Define DLL Paths for Copying
     set(MY_SDL2_DLL     "${PROJ_ROOT}/SDL2-2.28.4/lib/x64/SDL2.dll")
