@@ -142,3 +142,4 @@ source/Intel® VTune™ Profiler Results/
 *.cudafe1.gpu
 *.nv/
 *.nvb/
+build_log.txt
