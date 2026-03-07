@@ -47,6 +47,7 @@ public:
 	static double air_absorption_alpha1_;
 	static double air_absorption_alpha2_;
 	static int n_pml_layers_;
+	static int viz_skip_;
 
 	int time_step_{ 0 };
 	int panel_w_{ 0 }, panel_h_{ 0 }; // size of each individual panel

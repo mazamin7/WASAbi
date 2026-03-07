@@ -38,6 +38,7 @@ double Simulation::c0_ = 343.5;		        // Speed of sound
 double Simulation::dh_ = 0.2;		        // Space sampling rate.
 double Simulation::dt_ = 2e-4;		        // Time sampling rate.
 int Simulation::n_pml_layers_ = 5;          // Number of pml layers.
+int Simulation::viz_skip_ = 10;             // Visualization skip interval.
 
 struct Config {
 	string asset_name;
@@ -50,6 +51,7 @@ struct Config {
 	string precision;  // User-chosen precision level
 	bool is_record_response;  // Flag to record response
 	bool is_record_field;     // Flag to record field
+	int viz_skip;             // Visualization skip interval
 };
 
 // Callback function for inih
@@ -87,6 +89,9 @@ int parse_ini_handler(void* user, const char* section, const char* name, const c
 		else if (strcmp(name, "is_record_field") == 0) {
 			config->is_record_field = (strcmp(value, "true") == 0);
 		}
+		else if (strcmp(name, "viz_skip") == 0) {
+			config->viz_skip = atoi(value);
+		}
 	}
 	return 1;  // Return success
 }
@@ -95,6 +100,7 @@ int parse_ini_handler(void* user, const char* section, const char* name, const c
 // Function to load parameters from INI file using inih
 Config load_config(const string& filename) {
 	Config config;
+	config.viz_skip = 10; // Default value
 	if (ini_parse(filename.c_str(), parse_ini_handler, &config) < 0) {
 		cerr << "Can't load " << filename << endl;
 	}
@@ -165,9 +171,11 @@ int main(int argc, char* argv[]) {
 	// Set dh and dt based on the precision level
 	set_precision_params(config.precision, Simulation::dh_, Simulation::dt_);
 
-	// Apply the recording settings
 	is_record_response = config.is_record_response;
 	is_record_field = config.is_record_field;
+
+	// Update simulation visualization skip
+	Simulation::viz_skip_ = config.viz_skip;
 
 	// Display recording flags
 	cout << "Recording response: " << (is_record_response ? "Yes" : "No") << endl;
@@ -273,7 +281,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
-		if (time_step % 10 == 0)
+		if (time_step % Simulation::viz_skip_ == 0)
 		{
 			message = std::to_string(time_step) + '/' + std::to_string(total_time_steps);
 			SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, message.c_str(), White);

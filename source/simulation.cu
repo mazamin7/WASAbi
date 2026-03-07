@@ -389,8 +389,8 @@ int Simulation::Update()
 	cudaDeviceSynchronize();
 	//std::cout << std::endl;
 
-	// Visualization: render XY / XZ / YZ planes side-by-side every 10 steps
-	if (time_step % 10 == 0)
+	// Visualization: render XY / XZ / YZ planes side-by-side every viz_skip_ steps
+	if (time_step % viz_skip_ == 0)
 	{
 		float v_coef = 0.1f;
 
