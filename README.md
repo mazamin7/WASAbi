@@ -48,64 +48,36 @@ All the values above are in real world scale (meter).
 
 This project uses **CMake** and provides automated build scripts for Linux and Windows (MinGW), as well as native support for Visual Studio.
 
-### 🐧 Linux (Recommended for Dev)
+### 🟢 Prerequisites
+Since this simulator is fully executed on the GPU, you will need:
+- An NVIDIA GPU with CUDA compute capability 6.1 or higher (GTX 10-series or newer).
+- [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads) (Tested with v12.4).
+- Microsoft Visual Studio 2022 (with MSVC Build Tools).
+- CMake (bundled with Visual Studio or standalone).
 
-**1. Install Prerequisites**
-```bash
-sudo apt update
-sudo apt install build-essential cmake libsdl2-dev libsdl2-ttf-dev libfftw3-dev
-```
+### 🪟 Windows Build
+The project uses `build_cuda.bat` to automate the configuration and compilation via `nvcc` and `cl.exe`.
 
-**2. Build & Run**
-Run the provided script to configure, build, and launch:
-```bash
-chmod +x build_linux.sh
-./build_linux.sh
+**1. Install Dependencies**
+You will need SDL2, SDL2_ttf, and FreeType. Extract them into the project root as expected by `CMakeLists.txt` or configure your library paths manually.
 
-# Or run manually later:
-cd source/build
-./WASAbiApp
-```
-
-### 🪟 Windows (Option A: MSYS2 / MinGW)
-*Best for command-line users who want a Linux-like experience on Windows.*
-
-**1. Install Prerequisites**
-1. Download and install [MSYS2](https://www.msys2.org/).
-2. Open the **MSYS2 MinGW x64** terminal (Blue Icon).
-3. Install dependencies:
-```bash
-pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-make mingw-w64-x86_64-SDL2 mingw-w64-x86_64-SDL2_ttf mingw-w64-x86_64-fftw
-```
-
-**2. Build & Run**
-Run this script from the **MSYS2 MinGW x64** terminal:
-```bash
-./build_windows.sh
-
-# Or run manually later:
-cd source/build
-./WASAbiApp.exe
-```
-
-### 💜 Windows (Option B: Visual Studio 2022)
-*Best for users who prefer a full GUI IDE.*
-
-**1. Install Prerequisites (vcpkg)**
-Visual Studio needs **vcpkg** to manage the C++ libraries automatically.
-1. Install [vcpkg](https://github.com/microsoft/vcpkg).
-2. Install the libraries:
+**2. Compile from Source**
+Run the automated build script from a standard shell:
 ```cmd
-vcpkg install sdl2 sdl2-ttf fftw3 --triplet=x64-windows
-vcpkg integrate install
+.\build_cuda.bat
 ```
+This script will:
+- Clean any previous `source/build/` directory.
+- Initialize the MSVC 64-bit developer environment.
+- Call `cmake` pointing to the NVIDIA CUDA compiler (`nvcc`).
+- Build the project using `Ninja` with `-arch=sm_61` flags.
 
-**2. Build & Run**
-1. Open Visual Studio 2022.
-2. Select **File > Open > Folder...** and select the project folder.
-3. Visual Studio will detect `CMakeLists.txt` and configure automatically.
-4. Select **WASAbiApp.exe** from the startup item dropdown (green arrow).
-5. Press **F5** to build and run.
+**3. Run the Simulator**
+Upon a successful build, the executable and all required DLLs/assets will be deployed in the build directory. Run it directly:
+```cmd
+cd source/build
+.\WASAbiApp.exe
+```
 
 ## Examples
 

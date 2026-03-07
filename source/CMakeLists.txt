@@ -20,11 +20,6 @@ include_directories(
 )
 
 file(GLOB ALL_SOURCES "*.cpp" "*.cu")
-# Exclude the old CPU FFTW-based sources that are replaced by CUDA equivalents
-list(REMOVE_ITEM ALL_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/dct_partition.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/dct_volume.cpp"
-)
 set(SOURCES ${ALL_SOURCES})
 
 # --- 3. Create Executable ---
