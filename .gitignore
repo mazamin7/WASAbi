@@ -125,3 +125,20 @@ source/Intel® VTune™ Profiler Results/
 *.rar
 *.tar.gz
 .vscode/tasks.json
+
+# ---------------------------------
+# CUDA
+# ---------------------------------
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+*.fatbin.c
+*.module_id
+*.cudafe1.c
+*.cudafe1.cpp
+*.cudafe1.gpu
+*.nv/
+*.nvb/
