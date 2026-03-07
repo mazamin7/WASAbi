@@ -6,6 +6,7 @@
 #include "tools.h"
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <cuda_runtime.h>
 #include <stdexcept>
 
@@ -370,20 +371,45 @@ void Partition::AddSource(std::shared_ptr<SoundSource> source)
 std::vector<std::shared_ptr<Partition>> Partition::ImportPartitions(std::string path)
 {
 	std::vector<std::shared_ptr<Partition>> partitions;
-
-	std::ifstream file;
-	file.open(path, std::ifstream::in);
-	while (file.good())
+	std::ifstream file(path);
+	if (!file.is_open())
 	{
-		double x_start, y_start, z_start;
-		double width, height, depth;
+		std::cerr << "WARNING: Could not open unified asset file: " << path << std::endl;
+		return partitions;
+	}
 
-		file >> x_start >> y_start >> z_start;
-		file >> width >> height >> depth;
+	std::string line;
+	while (std::getline(file, line))
+	{
+		if (line.empty()) continue;
 
-		if (file.eof()) break;
+		std::stringstream ss(line);
+		std::string first_token;
+		ss >> first_token;
 
-		partitions.push_back(std::make_shared<DctPartition>((int) (x_start / Simulation::dh_), (int)(y_start / Simulation::dh_), (int)(z_start / Simulation::dh_), (int)(width / Simulation::dh_), (int)(height / Simulation::dh_), (int)(depth / Simulation::dh_)));
+		if (first_token == "P" || first_token == "p") {
+			// It's explicitly a partition
+			double x_start, y_start, z_start, width, height, depth, dummy;
+			if ((ss >> x_start >> y_start >> z_start >> width >> height >> depth) && !(ss >> dummy)) {
+				partitions.push_back(std::make_shared<DctPartition>(
+					(int)(x_start / Simulation::dh_), (int)(y_start / Simulation::dh_), (int)(z_start / Simulation::dh_),
+					(int)(width / Simulation::dh_), (int)(height / Simulation::dh_), (int)(depth / Simulation::dh_)));
+			}
+		}
+		else {
+			// Backward compatibility: If it's a number, it might be an old format hall.txt
+			try {
+				double x_start = std::stod(first_token);
+				double y_start, z_start, width, height, depth, dummy;
+				if ((ss >> y_start >> z_start >> width >> height >> depth) && !(ss >> dummy)) {
+					partitions.push_back(std::make_shared<DctPartition>(
+						(int)(x_start / Simulation::dh_), (int)(y_start / Simulation::dh_), (int)(z_start / Simulation::dh_),
+						(int)(width / Simulation::dh_), (int)(height / Simulation::dh_), (int)(depth / Simulation::dh_)));
+				}
+			} catch (...) {
+				// Not a number, not a 'P', ignore line
+			}
+		}
 	}
 	file.close();
 	return partitions;

@@ -8,409 +8,380 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <omp.h>
-//#include <Windows.h>
-#include <filesystem>       // <--- NEW: For creating directories
-#undef main			// https://stackoverflow.com/questions/6847360
-#include "ini.h"
+#include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <limits>
+#include <iomanip>
 
+#undef main
+#include "ini.h"
 #include "simulation.h"
 #include "partition.h"
 #include "boundary.h"
 #include "sound_source.h"
 #include "gaussian_source.h"
 #include "recorder.h"
-#include <cstring>
-
 
 using namespace std;
 
-// Simulation and Partition classes
 bool is_record_response = false;
 bool is_record_field = false;
 
-/* Set constant parameters. */
-double Partition::boundary_absorption_ = 0.5;	// Absorption coefficients of the boundaries.
-double Simulation::air_absorption_alpha1_ = 0.0; // Coefficient of constant part of air absorption.
-double Simulation::air_absorption_alpha2_ = 1e-6; // Coefficient of frequency dependent part of air absorption.
-double Simulation::duration_ = 2e-2;		// Duration of the whole simulation (seconds).
-double Simulation::c0_ = 343.5;		        // Speed of sound
-double Simulation::dh_ = 0.2;		        // Space sampling rate.
-double Simulation::dt_ = 2e-4;		        // Time sampling rate.
-int Simulation::n_pml_layers_ = 5;          // Number of pml layers.
-int Simulation::viz_skip_ = 10;             // Visualization skip interval.
-float Simulation::max_viz_gain_ = 100.0f;   // Maximum visualization gain.
+double Partition::boundary_absorption_ = 0.5;
+double Simulation::air_absorption_alpha1_ = 0.0;
+double Simulation::air_absorption_alpha2_ = 1e-6;
+double Simulation::duration_ = 2e-2;
+double Simulation::c0_ = 343.5;
+double Simulation::dh_ = 0.2;
+double Simulation::dt_ = 2e-4;
+int Simulation::n_pml_layers_ = 5;
+int Simulation::viz_skip_ = 10;
+float Simulation::max_viz_gain_ = 100.0f;
 
 struct Config {
-	string asset_name;
-	double boundary_absorption;
-	double air_absorption_alpha1;
-	double air_absorption_alpha2;
-	double duration;
-	double c0;
-	int n_pml_layers;
-	string precision;  // User-chosen precision level
-	bool is_record_response;  // Flag to record response
-	bool is_record_field;     // Flag to record field
-	int viz_skip;             // Visualization skip interval
-	int fixed_panel_size;     // Fixed panel size in pixels
-	float max_viz_gain;       // Maximum visualization gain
+    string asset_name;
+    double boundary_absorption;
+    double air_absorption_alpha1;
+    double air_absorption_alpha2;
+    double duration;
+    double c0;
+    int n_pml_layers;
+    string precision;
+    int viz_skip;
+    int fixed_panel_size;
+    float max_viz_gain;
 };
 
-// Callback function for inih
 int parse_ini_handler(void* user, const char* section, const char* name, const char* value) {
-	Config* config = (Config*)user;
-
-	if (strcmp(section, "simulation") == 0) {
-		if (strcmp(name, "asset_name") == 0) {
-			config->asset_name = value;
-		}
-		else if (strcmp(name, "boundary_absorption") == 0) {
-			config->boundary_absorption = atof(value);
-		}
-		else if (strcmp(name, "air_absorption_alpha1") == 0) {
-			config->air_absorption_alpha1 = atof(value);
-		}
-		else if (strcmp(name, "air_absorption_alpha2") == 0) {
-			config->air_absorption_alpha2 = atof(value);
-		}
-		else if (strcmp(name, "duration") == 0) {
-			config->duration = atof(value);
-		}
-		else if (strcmp(name, "c0") == 0) {
-			config->c0 = atof(value);
-		}
-		else if (strcmp(name, "n_pml_layers") == 0) {
-			config->n_pml_layers = atoi(value);
-		}
-		else if (strcmp(name, "precision") == 0) {
-			config->precision = value;
-		}
-		else if (strcmp(name, "is_record_response") == 0) {
-			config->is_record_response = (strcmp(value, "true") == 0);
-		}
-		else if (strcmp(name, "is_record_field") == 0) {
-			config->is_record_field = (strcmp(value, "true") == 0);
-		}
-		else if (strcmp(name, "viz_skip") == 0) {
-			config->viz_skip = atoi(value);
-		}
-		else if (strcmp(name, "fixed_panel_size") == 0) {
-			config->fixed_panel_size = atoi(value);
-		}
-		else if (strcmp(name, "max_viz_gain") == 0) {
-			config->max_viz_gain = atof(value);
-		}
-	}
-	return 1;  // Return success
+    Config* config = (Config*)user;
+    if (strcmp(section, "simulation") == 0) {
+        if (strcmp(name, "asset_name") == 0) config->asset_name = value;
+        else if (strcmp(name, "boundary_absorption") == 0) config->boundary_absorption = atof(value);
+        else if (strcmp(name, "air_absorption_alpha1") == 0) config->air_absorption_alpha1 = atof(value);
+        else if (strcmp(name, "air_absorption_alpha2") == 0) config->air_absorption_alpha2 = atof(value);
+        else if (strcmp(name, "duration") == 0) config->duration = atof(value);
+        else if (strcmp(name, "c0") == 0) config->c0 = atof(value);
+        else if (strcmp(name, "n_pml_layers") == 0) config->n_pml_layers = atoi(value);
+        else if (strcmp(name, "precision") == 0) config->precision = value;
+        else if (strcmp(name, "viz_skip") == 0) config->viz_skip = atoi(value);
+        else if (strcmp(name, "fixed_panel_size") == 0) config->fixed_panel_size = atoi(value);
+        else if (strcmp(name, "max_viz_gain") == 0) config->max_viz_gain = atof(value);
+    }
+    return 1;
 }
 
-
-// Function to load parameters from INI file using inih
 Config load_config(const string& filename) {
-	Config config;
-	config.viz_skip = 10; // Default value
-	config.fixed_panel_size = 400; // Default fixed panel size
-	config.max_viz_gain = 100.0f;  // Default max gain
-	if (ini_parse(filename.c_str(), parse_ini_handler, &config) < 0) {
-		cerr << "Can't load " << filename << endl;
-	}
-	return config;
+    Config config;
+    config.viz_skip = 10;
+    config.fixed_panel_size = 400;
+    config.max_viz_gain = 100.0f;
+    if (ini_parse(filename.c_str(), parse_ini_handler, &config) < 0) {
+        cerr << "Can't load " << filename << endl;
+    }
+    return config;
 }
 
-// Function to determine dh and dt based on user-chosen precision level
 void set_precision_params(const string& precision, double& dh, double& dt) {
-	if (precision == "coarse") {
-		dh = 0.5;
-		dt = 6.25e-4;
-	}
-	else if (precision == "fine") {
-		dh = 0.2;
-		dt = 2e-4;
-	}
-	else if (precision == "finer") {
-		dh = 0.1;
-		dt = 1.25e-4;
-	}
-	else if (precision == "finest") {
-		dh = 0.05;
-		dt = 0.625e-4;
-	}
-	else {
-		cerr << "Invalid precision level. Defaulting to 'fine'." << endl;
-		dh = 0.2;
-		dt = 2e-4;
-	}
+    if (precision == "coarse") { dh = 0.5; dt = 6.25e-4; }
+    else if (precision == "fine") { dh = 0.2; dt = 2e-4; }
+    else if (precision == "finer") { dh = 0.1; dt = 1.25e-4; }
+    else if (precision == "finest") { dh = 0.05; dt = 0.625e-4; }
+    else { dh = 0.2; dt = 2e-4; }
 }
 
 void ensureConfigExists(const std::string& config_path, const std::string& default_path) {
-	std::ifstream config_file(config_path);
-	if (!config_file) {
-		std::cout << "Config file does not exist. Copying default configuration...\n";
-		std::ifstream default_file(default_path, std::ios::binary);
-		std::ofstream new_file(config_path, std::ios::binary);
+    if (!std::filesystem::exists(config_path)) {
+        std::filesystem::copy(default_path, config_path);
+    }
+}
 
-		if (default_file && new_file) {
-			new_file << default_file.rdbuf();
-			std::cout << "Copied default configuration to '" << config_path << "'\n";
-		}
-		else {
-			std::cerr << "Error reading default file or creating config file.\n";
-			exit(1); // Exit if there's an error
-		}
-	}
+enum class RunMode { UNKNOWN, SIM_RECORD_FIELD, SIM_RECORD_RESPONSE, SIM_VIZ, VIZ_RECORD };
+
+struct CliArgs {
+    RunMode mode = RunMode::UNKNOWN;
+    string config_path = "./config/config.ini";
+    string playback_file = "";
+    int playback_delay = 33;
+};
+
+CliArgs parse_cli_args(int argc, char* argv[]) {
+    CliArgs args;
+    for (int i = 1; i < argc; ++i) {
+        string arg = argv[i];
+        if (arg == "--mode" && i + 1 < argc) {
+            string m = argv[++i];
+            if (m == "sim-record-field") args.mode = RunMode::SIM_RECORD_FIELD;
+            else if (m == "sim-record-response") args.mode = RunMode::SIM_RECORD_RESPONSE;
+            else if (m == "sim-viz") args.mode = RunMode::SIM_VIZ;
+            else if (m == "viz-record") args.mode = RunMode::VIZ_RECORD;
+        }
+        else if (arg == "--config" && i + 1 < argc) args.config_path = argv[++i];
+        else if (arg == "--playback-file" && i + 1 < argc) args.playback_file = argv[++i];
+        else if (arg == "--playback-delay" && i + 1 < argc) args.playback_delay = atoi(argv[++i]);
+    }
+    return args;
+}
+
+Uint32 calculate_color_playback(double p, float v_coef) {
+    double norm = 0.5 * fmax(-1.0, fmin(1.0, p * v_coef)) + 0.5;
+    int r, g, b;
+    if (norm >= 0.5) {
+        double pos = (norm - 0.5) * 2.0;
+        r = 255; g = (int)(255 * (1.0 - pos)); b = (int)(255 * (1.0 - pos));
+    } else {
+        double neg = norm * 2.0;
+        r = (int)(255 * neg); g = (int)(255 * neg); b = 255;
+    }
+    // Color normalization and shift to match SDL_PIXELFORMAT_RGB888 (original)
+    // RGB888 expects 24 bits: R:16-23, G:8-15, B:0-7
+    return (r << 16) | (g << 8) | b;
 }
 
 int main(int argc, char* argv[]) {
-	std::string config_path = "./config/config.ini";
-	std::string default_path = "./config/default.ini";
+    CliArgs cli_args = parse_cli_args(argc, argv);
+    if (cli_args.mode == RunMode::UNKNOWN) {
+        cout << "Usage: WASAbiApp --mode [sim-record-field|sim-record-response|sim-viz|viz-record] ...\n";
+        return 0;
+    }
 
-	// Ensure the config file exists
-	ensureConfigExists(config_path, default_path);
+    // Directory check and config path normalization
+    try {
+        std::filesystem::path config_path(cli_args.config_path);
+        if (config_path.is_relative()) {
+            config_path = std::filesystem::absolute(config_path);
+        }
+        cli_args.config_path = config_path.string();
 
-	// Load configuration from the INI file
-	Config config = load_config("./config/config.ini");
+        std::filesystem::path cp = std::filesystem::current_path();
+        cout << "Starting in: " << cp << endl;
+        if (cp.filename() == "build") {
+            std::filesystem::current_path("..");
+            cout << "Moved to: " << std::filesystem::current_path() << endl;
+        }
+    } catch (const std::exception& e) {
+        cerr << "Directory/Path error: " << e.what() << endl;
+    }
 
-	// Apply configuration values to simulation parameters
-	Partition::boundary_absorption_ = config.boundary_absorption;
-	Simulation::air_absorption_alpha1_ = config.air_absorption_alpha1;
-	Simulation::air_absorption_alpha2_ = config.air_absorption_alpha2;
-	Simulation::duration_ = config.duration;
-	Simulation::c0_ = config.c0;
-	Simulation::n_pml_layers_ = config.n_pml_layers;
+    ensureConfigExists(cli_args.config_path, "./config/default.ini");
 
-	// Set dh and dt based on the precision level
-	set_precision_params(config.precision, Simulation::dh_, Simulation::dt_);
+    Config config = load_config(cli_args.config_path);
 
-	is_record_response = config.is_record_response;
-	is_record_field = config.is_record_field;
+    Partition::boundary_absorption_ = config.boundary_absorption;
+    Simulation::air_absorption_alpha1_ = config.air_absorption_alpha1;
+    Simulation::air_absorption_alpha2_ = config.air_absorption_alpha2;
+    Simulation::duration_ = config.duration;
+    Simulation::c0_ = config.c0;
+    Simulation::n_pml_layers_ = config.n_pml_layers;
+    set_precision_params(config.precision, Simulation::dh_, Simulation::dt_);
+    Simulation::viz_skip_ = config.viz_skip;
+    Simulation::max_viz_gain_ = config.max_viz_gain;
 
-	// Update simulation visualization skip
-	Simulation::viz_skip_ = config.viz_skip;
-	Simulation::max_viz_gain_ = config.max_viz_gain;
+    if (cli_args.mode == RunMode::SIM_RECORD_FIELD) { is_record_field = true; is_record_response = false; }
+    else if (cli_args.mode == RunMode::SIM_RECORD_RESPONSE) { is_record_field = false; is_record_response = true; }
+    else { is_record_field = false; is_record_response = false; }
 
-	// Display recording flags
-	cout << "Recording response: " << (is_record_response ? "Yes" : "No") << endl;
-	cout << "Recording field: " << (is_record_field ? "Yes" : "No") << endl;
+    double time1 = omp_get_wtime();
+    cout << "Current Working Directory: " << std::filesystem::current_path() << endl;
 
-	double time1 = omp_get_wtime();		// Record the begining time. Used for showing the consuming time.
+    string dir_name = "./output/" + to_string(Simulation::dh_) + "_" + to_string(Partition::boundary_absorption_) + "_" + to_string(Simulation::air_absorption_alpha1_) + "_" + to_string(Simulation::air_absorption_alpha2_);
+    std::filesystem::create_directories(dir_name);
 
-	std::string dir_name = "./output/" + std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_alpha1_) + "_" + std::to_string(Simulation::air_absorption_alpha2_);
-	//CreateDirectory(dir_name.c_str(), NULL);	// Prepare for the output folder.
-	std::filesystem::create_directories(dir_name);
+    vector<shared_ptr<Partition>> partitions;
+    vector<shared_ptr<SoundSource>> sources;
+    vector<shared_ptr<Recorder>> recorders;
 
-	std::vector<std::shared_ptr<Partition>> partitions;
-	std::vector<std::shared_ptr<SoundSource>> sources;
-	std::vector<std::shared_ptr<Recorder>> recorders;
+    string asset_path = "./assets/" + config.asset_name + ".txt";
+    cout << "Loading assets from: " << asset_path << endl;
+    partitions = Partition::ImportPartitions(asset_path);
+    if (partitions.empty()) {
+        cerr << "FATAL ERROR: No partitions loaded from " << asset_path << "! Check file path and content." << endl;
+        return 1;
+    }
+    sources = SoundSource::ImportSources(asset_path);
+    cout << "Loaded " << partitions.size() << " partitions and " << sources.size() << " sources." << endl;
 
-	// Using the asset name from the INI file for sources, recorders, and partitions
-	std::string asset_name = config.asset_name;
-	partitions = Partition::ImportPartitions("./assets/" + asset_name + ".txt");			// Read partition properties from file.
-	sources = SoundSource::ImportSources("./assets/" + asset_name + "-sources.txt");		// Read source properties from file.
-	recorders = Recorder::ImportRecorders("./assets/" + asset_name + "-recorders.txt");	// Read recorder properties from file. Recorder is not mandatory.
+    
+    if (cli_args.mode == RunMode::SIM_RECORD_FIELD || cli_args.mode == RunMode::SIM_RECORD_RESPONSE) {
+        recorders = Recorder::ImportRecorders(asset_path);
+        for (auto r : recorders) r->FindPartition(partitions);
+    }
 
-	for (auto record : recorders)
-	{
-		record->FindPartition(partitions);		// Assign recorders to the corresponding partition.
-	}
+    shared_ptr<Simulation> simulation = nullptr;
+    if (cli_args.mode != RunMode::VIZ_RECORD) {
+        simulation = make_shared<Simulation>(partitions, sources);
+        simulation->Info();
+    }
 
-	auto simulation = std::make_shared<Simulation>(partitions, sources);	// Initialize the simulation.
-	simulation->Info();
+    // Determine dimensions
+    int rxs = 1e9, rys = 1e9, rzs = 1e9, rxe = -1e9, rye = -1e9, rze = -1e9;
+    for (auto p : partitions) {
+        rxs = min(rxs, p->x_start_); rys = min(rys, p->y_start_); rzs = min(rzs, p->z_start_);
+        rxe = max(rxe, p->x_end_);   rye = max(rye, p->y_end_);   rze = max(rze, p->z_end_);
+    }
+    int dim_x = rxe - rxs, dim_y = rye - rys, dim_z = rze - rzs;
+    int pml = Simulation::n_pml_layers_;
+    int panel_w_sim = max({ dim_x, dim_y, dim_z }) + 2 * pml;
+    int panel_h_sim = panel_w_sim;
+    int resolution_x = panel_w_sim * 3;
+    int resolution_y = panel_h_sim;
+    int panel_sz = config.fixed_panel_size;
 
-	/* Initialize SDL window
-	 * simulation_rect: show field.
-	 * message_rect: show instant progress during the simulation
-	 */
-	SDL_Event event;
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_PixelFormat* fmt = SDL_AllocFormat(SDL_PIXELFORMAT_RGBA8888);
-	int panel_sz = config.fixed_panel_size;
-	int resolution_x = simulation->render_w();       // raw total simulation width (3 panels)
-	int resolution_y = simulation->render_h();       // raw simulation height (1 panel)
-	
-	// Dynamic zoom factor to fit simulation into fixed-size panels
-	float viz_scale = (float)panel_sz / (float)simulation->panel_w_;
-	
-	int window_w = panel_sz * 3 + 80;                // Fixed width: 3 panels + colorbar area
-	int window_h = panel_sz + 48;                    // Fixed height: panel + header + footer
-	
-	SDL_Window* window = SDL_CreateWindow("WASAbi 2.5D — XY | XZ | YZ",
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, 0);
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-	SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING,
-		resolution_x, resolution_y);
+    SDL_Window* window = nullptr; SDL_Renderer* renderer = nullptr; SDL_Texture* texture = nullptr;
+    TTF_Font* Sans = nullptr; SDL_Rect simulation_rect, Message_rect, Message_rect2, label_rects[3], bar_max_label, bar_min_label, bar_zero_label;
+    SDL_Color White = { 255, 255, 255 }, Gray = { 180, 180, 180 }, Red = { 255, 0, 0 }, Blue = { 0, 0, 255 };
+    string panel_titles[3] = { "XY", "XZ", "YZ" };
 
-	SDL_Rect simulation_rect;
-	simulation_rect.x = 0;
-	simulation_rect.y = 24;
-	simulation_rect.w = panel_sz * 3;
-	simulation_rect.h = panel_sz;
+    if (cli_args.mode == RunMode::SIM_VIZ || cli_args.mode == RunMode::VIZ_RECORD) {
+        const int GAP = 12; // Spacing between panels
+        SDL_Init(SDL_INIT_VIDEO); TTF_Init();
+        int win_w = (panel_sz + GAP) * 2 + panel_sz + 80; int win_h = panel_sz + 48;
+        window = SDL_CreateWindow("WASAbi 2.5D", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, win_w, win_h, 0);
+        renderer = SDL_CreateRenderer(window, -1, 0);
+        // CRITICAL: MUST BE RGB888 TO MATCH ORIGINAL COLORBAR AND REPO BEHAVIOR
+        texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, resolution_x, resolution_y);
+        Sans = TTF_OpenFont("font/SourceSansPro-Regular.ttf", 48);
+        Message_rect = { 4, win_h - 20, 120, 18 }; Message_rect2 = { win_w - 124, win_h - 20, 118, 18 };
+        for (int i = 0; i < 3; i++) label_rects[i] = { i * (panel_sz + GAP) + 4, 2, 60, 20 };
+        bar_max_label = { (panel_sz + GAP) * 2 + panel_sz + 35, 24, 40, 18 };
+        bar_min_label = { (panel_sz + GAP) * 2 + panel_sz + 35, panel_sz + 24 - 18, 40, 18 };
+        bar_zero_label = { (panel_sz + GAP) * 2 + panel_sz + 35, panel_sz / 2 + 24 - 9, 40, 18 };
+    }
 
-	TTF_Init();
-	TTF_Font* Sans = TTF_OpenFont("font/SourceSansPro-Regular.ttf", 48);
-	SDL_Color White = { 255, 255, 255 };
-	SDL_Color Gray  = { 180, 180, 180 };
-	SDL_Color Red   = { 255,   0,   0 };
-	SDL_Color Blue  = {   0,   0, 255 };
-	// Progress label (bottom-left)
-	SDL_Rect Message_rect;   Message_rect.x = 4;                Message_rect.y = window_h - 20; Message_rect.w = 120; Message_rect.h = 18;
-	// Time label (bottom-right)
-	SDL_Rect Message_rect2;  Message_rect2.x = window_w - 124; Message_rect2.y = window_h - 20; Message_rect2.w = 118; Message_rect2.h = 18;
-	// Panel title labels (top)
-	std::string panel_titles[3] = { "XY", "XZ", "YZ" };
-	SDL_Rect label_rects[3];
-	int panel_w = simulation->panel_w_;
-	for (int i = 0; i < 3; i++) {
-		label_rects[i] = { i * panel_sz + 4, 2, 60, 20 };
-	}
-	// Colorbar rects
-	SDL_Rect bar_rect = { panel_sz * 3 + 10, 24, 20, panel_sz };
-	SDL_Rect bar_max_label = { panel_sz * 3 + 35, 24, 40, 18 };
-	SDL_Rect bar_min_label = { panel_sz * 3 + 35, panel_sz + 24 - 18, 40, 18 };
-	SDL_Rect bar_zero_label = { panel_sz * 3 + 35, panel_sz / 2 + 24 - 9, 40, 18 };
+    bool quit = false; int time_step = 0; int total_steps = Simulation::duration_ / Simulation::dt_;
+    SDL_Event event;
 
-	bool quit = false;
-	int time_step = 0;
-	int total_time_steps = Simulation::duration_ / Simulation::dt_;
-	std::string message;
+    if (cli_args.mode != RunMode::VIZ_RECORD) {
+        while (!quit && time_step < total_steps) {
+            while (SDL_PollEvent(&event)) if (event.type == SDL_QUIT) quit = true;
+            time_step = simulation->Update();
+            for (auto r : recorders) {
+                if (is_record_response) r->RecordResponse(time_step);
+                if (is_record_field) r->RecordField(time_step);
+            }
+            if (cli_args.mode == RunMode::SIM_VIZ && time_step % Simulation::viz_skip_ == 0) {
+                const int GAP = 12;
+                SDL_RenderClear(renderer);
+                SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
+                SDL_Rect bg = { 0, 0, (panel_sz + GAP) * 2 + panel_sz + 80, panel_sz + 48 }; SDL_RenderFillRect(renderer, &bg);
+                
+                SDL_UpdateTexture(texture, nullptr, simulation->pixels().data(), simulation->render_w() * sizeof(Uint32));
+                for (int i = 0; i < 3; i++) {
+                    SDL_Rect src = { i * panel_w_sim, 0, panel_w_sim, panel_h_sim };
+                    SDL_Rect dst = { i * (panel_sz + GAP), 24, panel_sz, panel_sz };
+                    SDL_RenderCopy(renderer, texture, &src, &dst);
+                }
+                for (int i = 0; i < 3; i++) {
+                    SDL_Surface* s = TTF_RenderText_Solid(Sans, panel_titles[i].c_str(), Gray);
+                    SDL_Texture* t = SDL_CreateTextureFromSurface(renderer, s);
+                    SDL_RenderCopy(renderer, t, nullptr, &label_rects[i]);
+                    SDL_FreeSurface(s); SDL_DestroyTexture(t);
+                }
+                string m = to_string(time_step) + "/" + to_string(total_steps);
+                SDL_Surface* sm = TTF_RenderText_Solid(Sans, m.c_str(), White);
+                SDL_Texture* tm = SDL_CreateTextureFromSurface(renderer, sm);
+                SDL_RenderCopy(renderer, tm, nullptr, &Message_rect);
+                SDL_FreeSurface(sm); SDL_DestroyTexture(tm);
+                for (int y = 0; y < panel_sz; y++) {
+                    float n = 1.0f - (float)y / panel_sz; int r,g,b;
+                    if (n >= 0.5f) { float p = (n-0.5f)*2.0f; r=255; g=255*(1-p); b=255*(1-p); }
+                    else { float n2 = n*2.0f; r=255*n2; g=255*n2; b=255; }
+                    SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+                    SDL_RenderDrawLine(renderer, (panel_sz + GAP) * 2 + panel_sz + 10, 24 + y, (panel_sz + GAP) * 2 + panel_sz + 30, 24 + y);
+                }
+                double cp = simulation->GetLastMaxPressure();
+                stringstream ss; ss << fixed << setprecision(2) << cp;
+                SDL_Surface *smax = TTF_RenderText_Solid(Sans, ("+"+ss.str()).c_str(), Red);
+                SDL_Texture *tmax = SDL_CreateTextureFromSurface(renderer, smax);
+                SDL_RenderCopy(renderer, tmax, nullptr, &bar_max_label);
+                SDL_FreeSurface(smax); SDL_DestroyTexture(tmax);
+                SDL_Surface *smin = TTF_RenderText_Solid(Sans, ("-"+ss.str()).c_str(), Blue);
+                SDL_Texture *tmin = SDL_CreateTextureFromSurface(renderer, smin);
+                SDL_RenderCopy(renderer, tmin, nullptr, &bar_min_label);
+                SDL_FreeSurface(smin); SDL_DestroyTexture(tmin);
+                SDL_Surface *szero = TTF_RenderText_Solid(Sans, "0.0", White);
+                SDL_Texture *tzero = SDL_CreateTextureFromSurface(renderer, szero);
+                SDL_RenderCopy(renderer, tzero, nullptr, &bar_zero_label);
+                SDL_FreeSurface(szero); SDL_DestroyTexture(tzero);
+                SDL_RenderPresent(renderer);
+            } else if (cli_args.mode != RunMode::SIM_VIZ && time_step % (Simulation::viz_skip_*5) == 0) {
+                cout << "Progress: " << time_step << "/" << total_steps << "\r"; cout.flush();
+            }
+        }
+    } else {
+        // VIZ_RECORD (simplified match to original look, black background)
+        ifstream ifs(cli_args.playback_file); string line; 
+        int pml_lay = Simulation::n_pml_layers_;
+        int sx_p = sources.empty() ? dim_x/2 : (sources[0]->x() - rxs);
+        int sy_p = sources.empty() ? dim_y/2 : (sources[0]->y() - rys);
+        int sz_p = sources.empty() ? dim_z/2 : (sources[0]->z() - rzs);
+        vector<double> fd(dim_x*dim_y*dim_z); vector<Uint32> pixels(resolution_x*resolution_y, 0x000000);
+        float smooth_v = 0.0f; int fi = 0;
+        while (getline(ifs, line) && !quit) {
+            while (SDL_PollEvent(&event)) if (event.type == SDL_QUIT) quit = true;
+            stringstream ss(line); double max_p = 0;
+            for (int i=0; i<dim_x*dim_y*dim_z; i++) { ss >> fd[i]; max_p = max(max_p, abs(fd[i])); }
+            float tv = 0.7f / (max_p + 1e-9); if (tv > Simulation::max_viz_gain_) tv = Simulation::max_viz_gain_;
+            if (fi==0) smooth_v = tv; else smooth_v = smooth_v*0.9f + tv*0.1f;
+            float v_c = max(0.001f, min(1000.0f, smooth_v));
+            fill(pixels.begin(), pixels.end(), 0x000000);
+            for (auto p : partitions) {
+                int px1 = p->x_start_-rxs+pml_lay, px2 = p->x_end_-rxs+pml_lay, py1 = p->y_start_-rys+pml_lay, py2 = p->y_end_-rys+pml_lay, pz1 = p->z_start_-rzs+pml_lay, pz2 = p->z_end_-rzs+pml_lay;
+                Uint32 c = p->should_render_ ? 0xFFFFFF : 0x808080;
+                if (sz_p+pml_lay >= pz1 && sz_p+pml_lay < pz2) for (int j=py1; j<py2; j++) for (int i=px1; i<px2; i++) pixels[j*resolution_x+i] = c;
+                if (sy_p+pml_lay >= py1 && sy_p+pml_lay < py2) for (int j=pz1; j<pz2; j++) for (int i=px1; i<px2; i++) pixels[j*resolution_x+i+panel_w_sim] = c;
+                if (sx_p+pml_lay >= px1 && sx_p+pml_lay < px2) for (int j=pz1; j<pz2; j++) for (int i=py1; i<py2; i++) pixels[j*resolution_x+i+2*panel_w_sim] = c;
+            }
+            for (int j=0; j<dim_y; j++) for (int i=0; i<dim_x; i++) {
+                double v = fd[sz_p*dim_y*dim_x + j*dim_x + i]; if (abs(v)>1e-12) pixels[(j+pml_lay)*resolution_x+(i+pml_lay)] = calculate_color_playback(v, v_c);
+            }
+            for (int k=0; k<dim_z; k++) for (int i=0; i<dim_x; i++) {
+                double v = fd[k*dim_y*dim_x + sy_p*dim_x + i]; if (abs(v)>1e-12) pixels[(k+pml_lay)*resolution_x+(i+pml_lay+panel_w_sim)] = calculate_color_playback(v, v_c);
+            }
+            for (int k=0; k<dim_z; k++) for (int j=0; j<dim_y; j++) {
+                double v = fd[k*dim_y*dim_x + j*dim_x + sx_p]; if (abs(v)>1e-12) pixels[(k+pml_lay)*resolution_x+(j+pml_lay+2*panel_w_sim)] = calculate_color_playback(v, v_c);
+            }
+            const int GAP = 12;
+            SDL_RenderClear(renderer);
+            SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
+            SDL_Rect bg = { 0, 0, (panel_sz + GAP) * 2 + panel_sz + 80, panel_sz + 48 }; SDL_RenderFillRect(renderer, &bg);
 
-	double time2 = omp_get_wtime();
-	/*std::cout << omp_get_num_procs() << std::endl;
-	omp_set_num_threads(omp_get_num_procs())*/;
-	std::cout << "Initialization finished. (" << time2 - time1 << " s)" << std::endl;
-	std::cout << "############################################################" << std::endl;
+            SDL_UpdateTexture(texture, nullptr, pixels.data(), resolution_x*4);
+            for (int i = 0; i < 3; i++) {
+                SDL_Rect src = { i * panel_w_sim, 0, panel_w_sim, panel_h_sim };
+                SDL_Rect dst = { i * (panel_sz + GAP), 24, panel_sz, panel_sz };
+                SDL_RenderCopy(renderer, texture, &src, &dst);
+            }
+            for (int i = 0; i < 3; i++) {
+                SDL_Surface* s = TTF_RenderText_Solid(Sans, panel_titles[i].c_str(), Gray);
+                SDL_Texture* t = SDL_CreateTextureFromSurface(renderer, s); SDL_RenderCopy(renderer, t, nullptr, &label_rects[i]);
+                SDL_FreeSurface(s); SDL_DestroyTexture(t);
+            }
+            for (int y = 0; y < panel_sz; y++) {
+                float n = 1.0f - (float)y / panel_sz; int r,g,b;
+                if (n >= 0.5f) { float p = (n-0.5f)*2.0f; r=255; g=255*(1-p); b=255*(1-p); }
+                else { float n2 = n*2.0f; r=255*n2; g=255*n2; b=255; }
+                SDL_SetRenderDrawColor(renderer, r, g, b, 255);
+                SDL_RenderDrawLine(renderer, (panel_sz + GAP) * 2 + panel_sz + 10, 24 + y, (panel_sz + GAP) * 2 + panel_sz + 30, 24 + y);
+            }
+            stringstream ss_m; ss_m << fixed << setprecision(2) << max_p;
+            SDL_Surface *smax = TTF_RenderText_Solid(Sans, ("+"+ss_m.str()).c_str(), Red);
+            SDL_Texture *tmax = SDL_CreateTextureFromSurface(renderer, smax); SDL_RenderCopy(renderer, tmax, nullptr, &bar_max_label);
+            SDL_FreeSurface(smax); SDL_DestroyTexture(tmax);
+            SDL_Surface *smin = TTF_RenderText_Solid(Sans, ("-"+ss_m.str()).c_str(), Blue);
+            SDL_Texture *tmin = SDL_CreateTextureFromSurface(renderer, smin); SDL_RenderCopy(renderer, tmin, nullptr, &bar_min_label);
+            SDL_FreeSurface(smin); SDL_DestroyTexture(tmin);
+            SDL_Surface *szero = TTF_RenderText_Solid(Sans, "0.0", White);
+            SDL_Texture *tzero = SDL_CreateTextureFromSurface(renderer, szero); SDL_RenderCopy(renderer, tzero, nullptr, &bar_zero_label);
+            SDL_FreeSurface(szero); SDL_DestroyTexture(tzero);
+            SDL_RenderPresent(renderer); fi++; SDL_Delay(cli_args.playback_delay);
+        }
+    }
 
-	while (!quit && time_step < total_time_steps)
-	{
-		while (SDL_PollEvent(&event)) {
-			switch (event.type)
-			{
-			case SDL_QUIT:
-				quit = true;
-				break;
-			}
-		}
-
-		time_step = simulation->Update();		// ! Updating sound field.
-
-		if (is_record_response)
-		{
-			for (auto record : recorders)
-			{
-				record->RecordResponse(time_step);	// Record room's response.
-			}
-		}
-
-		if (is_record_field)
-		{
-			for (auto record : recorders)
-			{
-				record->RecordField(time_step);	// Record sound field.
-			}
-		}
-
-		if (time_step % Simulation::viz_skip_ == 0)
-		{
-			message = std::to_string(time_step) + '/' + std::to_string(total_time_steps);
-			SDL_Surface* surfaceMessage = TTF_RenderText_Solid(Sans, message.c_str(), White);
-			SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
-
-			SDL_RenderClear(renderer);
-
-			// Draw black header bar for labels
-			SDL_SetRenderDrawColor(renderer, 20, 20, 20, 255);
-			SDL_Rect header = { 0, 0, window_w, 24 };
-			SDL_RenderFillRect(renderer, &header);
-
-			// Draw black footer bar for progress
-			SDL_Rect footer = { 0, window_h - 24, window_w, 24 };
-			SDL_RenderFillRect(renderer, &footer);
-
-			// Draw panel dividers
-			SDL_SetRenderDrawColor(renderer, 80, 80, 80, 255);
-			SDL_RenderDrawLine(renderer,   panel_sz, 0,   panel_sz, panel_sz + 24);
-			SDL_RenderDrawLine(renderer, 2*panel_sz, 0, 2*panel_sz, panel_sz + 24);
-
-			if (simulation->ready())
-			{
-				SDL_UpdateTexture(texture, nullptr,
-					simulation->pixels().data(), simulation->render_w() * sizeof(Uint32));
-			}
-			SDL_RenderCopy(renderer, texture, nullptr, &simulation_rect);
-
-			// Panel title labels
-			for (int i = 0; i < 3; i++) {
-				SDL_Surface* surf = TTF_RenderText_Solid(Sans, panel_titles[i].c_str(), Gray);
-				SDL_Texture* tex  = SDL_CreateTextureFromSurface(renderer, surf);
-				SDL_RenderCopy(renderer, tex, nullptr, &label_rects[i]);
-				SDL_FreeSurface(surf);
-				SDL_DestroyTexture(tex);
-			}
-
-			// Progress / time
-			SDL_RenderCopy(renderer, Message, NULL, &Message_rect);
-			message = std::to_string(static_cast<int>(floor((omp_get_wtime() - time1) / 60))) + " min, " + std::to_string(static_cast<int>(floor((omp_get_wtime() - time1))) % 60) + " sec";
-			SDL_Surface* surfaceMessage2 = TTF_RenderText_Solid(Sans, message.c_str(), White);
-			SDL_Texture* Message2 = SDL_CreateTextureFromSurface(renderer, surfaceMessage2);
-			SDL_RenderCopy(renderer, Message2, NULL, &Message_rect2);
-
-			SDL_FreeSurface(surfaceMessage);
-			SDL_DestroyTexture(Message);
-			SDL_FreeSurface(surfaceMessage2);
-			SDL_DestroyTexture(Message2);
-
-			// --- Colorbar & Dynamic Values ---
-			// Draw gradient
-			for (int y = 0; y < panel_sz; y++) {
-				float norm = 1.0f - (float)y / (float)panel_sz; // 1.0 at top, 0.0 at bottom
-				int r, g, b;
-				if (norm >= 0.5f) {
-					float pos = (norm - 0.5f) * 2.0f;
-					r = 255; g = (int)(255 * (1.0f - pos)); b = (int)(255 * (1.0f - pos));
-				} else {
-					float neg = norm * 2.0f;
-					r = (int)(255 * neg); g = (int)(255 * neg); b = 255;
-				}
-				SDL_SetRenderDrawColor(renderer, r, g, b, 255);
-				SDL_RenderDrawLine(renderer, panel_sz * 3 + 10, 24 + y, panel_sz * 3 + 30, 24 + y);
-			}
-
-			// Render max/min values
-			double cur_max_p = simulation->GetLastMaxPressure();
-			std::stringstream ss;
-			ss << std::fixed << std::setprecision(2) << cur_max_p;
-			std::string max_str = "+" + ss.str();
-			std::string min_str = "-" + ss.str();
-
-			SDL_Surface* surf_max = TTF_RenderText_Solid(Sans, max_str.c_str(), Red); // Need Red color
-			SDL_Texture* tex_max = SDL_CreateTextureFromSurface(renderer, surf_max);
-			SDL_RenderCopy(renderer, tex_max, NULL, &bar_max_label);
-			SDL_FreeSurface(surf_max); SDL_DestroyTexture(tex_max);
-
-			SDL_Surface* surf_min = TTF_RenderText_Solid(Sans, min_str.c_str(), Blue); // Need Blue color
-			SDL_Texture* tex_min = SDL_CreateTextureFromSurface(renderer, surf_min);
-			SDL_RenderCopy(renderer, tex_min, NULL, &bar_min_label);
-			SDL_FreeSurface(surf_min); SDL_DestroyTexture(tex_min);
-
-			SDL_Surface* surf_zero = TTF_RenderText_Solid(Sans, "0.0", White);
-			SDL_Texture* tex_zero = SDL_CreateTextureFromSurface(renderer, surf_zero);
-			SDL_RenderCopy(renderer, tex_zero, NULL, &bar_zero_label);
-			SDL_FreeSurface(surf_zero); SDL_DestroyTexture(tex_zero);
-
-			SDL_RenderPresent(renderer);
-		}
-	}
-
-	SDL_DestroyTexture(texture);
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window);
-	SDL_Quit();
-
-	double time3 = omp_get_wtime();
-	std::cout << std::endl << "Simulation finished. (" << time3 - time1 << " s)" << std::endl;
-	std::cout << "############################################################" << std::endl;
-
-	return 0;
+    if (window) { SDL_DestroyTexture(texture); SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); SDL_Quit(); TTF_Quit(); }
+    cout << "\nSimulation finished. (" << omp_get_wtime() - time1 << " s)" << endl;
+    return 0;
 }
-

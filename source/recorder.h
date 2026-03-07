@@ -16,6 +16,8 @@ class Recorder
 	
 	std::fstream output_;
 	std::fstream response_;
+	std::string output_path_;
+	std::string response_path_;
 
 public:
 	Recorder(int x, int y, int z, int total_steps = 1000);
