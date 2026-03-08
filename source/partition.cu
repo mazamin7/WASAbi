@@ -288,7 +288,7 @@ __global__ void ColorMapKernel(
         int out_x = x_offset + i;
         int out_y = y_offset + j;
         if (out_x >= 0 && out_x < screen_width && out_y >= 0 && out_y < screen_height) {
-            d_pixels[out_y * screen_width + out_x] = RGBAToUint32(r, g, b, 255);
+            d_pixels[out_y * screen_width + out_x] = RGBAToUint32(r, g, b, should_render ? 255 : 128);
         }
     }
 }

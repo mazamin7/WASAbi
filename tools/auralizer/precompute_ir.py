@@ -82,22 +82,26 @@ def main():
 
     # Load source
     source_signal = np.fromfile(source_path, dtype=np.float64)
-    n_steps = len(source_signal)
+    n_source = len(source_signal)
     
     # record_data_0.bin is time-major: [time_step][z][y][x]
     # We want to extract a slice [time_step][z_idx][y][x]
     
     points_per_frame = gs_x * gs_y * gs_z
-    slice_size = gs_x * gs_y
+    file_size = os.path.getsize(record_path)
+    n_frames = file_size // (points_per_frame * 8) # 8 bytes per float64
     
-    # We'll read frame by frame to extract the specific Z slice
-    # To be memory efficient we use memmap
-    field_data = np.memmap(record_path, dtype=np.float64, mode='r', shape=(n_steps, gs_z, gs_y, gs_x))
+    print(f"Recorded frames: {n_frames} (Source steps: {n_source})")
     
-    slice_data = field_data[:, z_idx, :, :] # shape: (n_steps, gs_y, gs_x)
+    # To be memory efficient we use memmap, but on Windows it can fail with WinError 8.
+    # Since the file is only ~650MB and we have 20GB free, we'll use np.fromfile instead.
+    field_data_raw = np.fromfile(record_path, dtype=np.float64)
+    field_data = field_data_raw.reshape((n_frames, gs_z, gs_y, gs_x))
+    
+    slice_data = field_data[:, z_idx, :, :] # shape: (n_frames, gs_y, gs_x)
     
     ir_len = int(0.5 / dt) # 0.5 seconds
-    ir_len = min(ir_len, n_steps)
+    ir_len = min(ir_len, n_source)
     
     print(f"Generating IRs for {gs_x}x{gs_y} points...")
     print(f"Low-pass filter cutoff: {150/dh:.2f} Hz (based on dh={dh})")

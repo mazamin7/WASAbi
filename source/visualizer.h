@@ -21,7 +21,7 @@ public:
     
     struct Marker { int x, y, z; };
     void SetMarkers(const std::vector<Marker>& sources, const std::vector<Marker>& receivers, 
-                    int rxs, int rys, int rzs, int pml);
+                    int rxs, int rys, int rzs, int pml, int padding);
 
     static Uint32 CalculateColorPlayback(double p, float v_coef);
 
@@ -33,7 +33,7 @@ private:
 
     std::vector<Marker> source_markers_;
     std::vector<Marker> receiver_markers_;
-    int rxs_, rys_, rzs_, pml_;
+    int rxs_, rys_, rzs_, pml_, padding_;
 
     SDL_Window* window_;
     SDL_Renderer* renderer_;

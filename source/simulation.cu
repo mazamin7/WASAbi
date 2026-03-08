@@ -317,8 +317,8 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 	size_z_ = z_end_ - z_start_;
 
 	// Each panel is square so all 3 fit neatly side-by-side
-	panel_w_ = std::max({ size_x_, size_y_, size_z_ });
-	panel_h_ = std::max({ size_x_, size_y_, size_z_ });
+	panel_w_ = std::max({ size_x_, size_y_, size_z_ }) + 24; // + 2 * VIS_PADDING (12)
+	panel_h_ = std::max({ size_x_, size_y_, size_z_ }) + 24;
 
 	pixels_.assign(panel_w_ * 3 * panel_h_, 0);
 	cudaMalloc((void**)&d_pixels_, panel_w_ * 3 * panel_h_ * sizeof(uint32_t));
@@ -437,21 +437,21 @@ int Simulation::Update()
 			partition->RenderToBuffer(d_pixels_,
 				0, src_z + z_start_,       // plane_type=0(XY), global z coord
 				panel_w_ * 3, panel_h_,    // full buffer width, panel height
-				x_off, y_off, v_coef_);
+				x_off + 12, y_off + 12, v_coef_); // + VIS_PADDING
 
 			// Panel 1: XZ plane (constant Y = src_y)
 			// x→screen-x, z→screen-y, offset=(panel_w_, 0)
 			partition->RenderToBuffer(d_pixels_,
 				2, src_y + y_start_,       // plane_type=2(XZ), global y coord
 				panel_w_ * 3, panel_h_,
-				panel_w_ + x_off, z_off, v_coef_);
+				panel_w_ + x_off + 12, z_off + 12, v_coef_);
 
 			// Panel 2: YZ plane (constant X = src_x)
 			// y→screen-x, z→screen-y, offset=(2*panel_w_, 0)
 			partition->RenderToBuffer(d_pixels_,
 				1, src_x + x_start_,       // plane_type=1(YZ), global x coord
 				panel_w_ * 3, panel_h_,
-				2 * panel_w_ + y_off, z_off, v_coef_);
+				panel_w_ * 2 + y_off + 12, z_off + 12, v_coef_);
 		}
 
 		// Single PCIe transfer for the entire 3-panel frame

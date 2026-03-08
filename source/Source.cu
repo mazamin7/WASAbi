@@ -25,6 +25,7 @@
 
 // New modular architecture
 #include "config_loader.h"
+#define VIS_PADDING 12
 #include "cli_parser.h"
 #include "visualizer.h"
 
@@ -158,7 +159,8 @@ int main(int argc, char* argv[]) {
     int pml = Simulation::n_pml_layers_;
     // If we are in simulation mode, the partitions vector already includes PML layers.
     // In playback mode, we need to manually 'inflate' the DCT dimensions to match the simulated window size.
-    int panel_w_sim = (cli_args.mode == RunMode::VIZ_RECORD) ? (max({ dim_x, dim_y, dim_z }) + 2 * pml) : max({ dim_x, dim_y, dim_z });
+    int pml_sim = (cli_args.mode == RunMode::SIM_VIZ) ? pml : 0;
+    int panel_w_sim = max({ dim_x, dim_y, dim_z }) + 2 * pml_sim + 2 * VIS_PADDING;
     int panel_h_sim = panel_w_sim;
     int resolution_x = panel_w_sim * 3;
     int resolution_y = panel_h_sim;
@@ -173,7 +175,7 @@ int main(int argc, char* argv[]) {
     vector<Visualizer::Marker> rec_markers;
     for (auto r : recorders) rec_markers.push_back({ r->x(), r->y(), r->z() });
     
-    visualizer.SetMarkers(src_markers, rec_markers, rxs, rys, rzs, pml);
+    visualizer.SetMarkers(src_markers, rec_markers, rxs, rys, rzs, pml_sim, VIS_PADDING);
 
     bool quit = false; 
     int time_step = 0; 
@@ -240,31 +242,41 @@ int main(int argc, char* argv[]) {
             fill(pixels.begin(), pixels.end(), 0xFF141414); // Opaque dark-grey background
             
             for (auto p : partitions) {
-                int px1 = p->x_start_ - rxs + pml_lay, px2 = p->x_end_ - rxs + pml_lay;
-                int py1 = p->y_start_ - rys + pml_lay, py2 = p->y_end_ - rys + pml_lay;
-                int pz1 = p->z_start_ - rzs + pml_lay, pz2 = p->z_end_ - rzs + pml_lay;
-                Uint32 c = p->should_render_ ? 0xFFFFFFFF : 0xFF808080;
+                int px1 = p->x_start_ - rxs + VIS_PADDING, px2 = p->x_end_ - rxs + VIS_PADDING;
+                int py1 = p->y_start_ - rys + VIS_PADDING, py2 = p->y_end_ - rys + VIS_PADDING;
+                int pz1 = p->z_start_ - rzs + VIS_PADDING, pz2 = p->z_end_ - rzs + VIS_PADDING;
+                Uint32 c = p->should_render_ ? 0xFFFFFFFF : 0x80808080;
                 
-                if (sz_p + pml_lay >= pz1 && sz_p + pml_lay < pz2) 
+                int z_rel = sz_p + VIS_PADDING;
+                if (z_rel >= pz1 && z_rel < pz2) 
                     for (int j = py1; j < py2; j++) for (int i = px1; i < px2; i++) pixels[j * resolution_x + i] = c;
-                if (sy_p + pml_lay >= py1 && sy_p + pml_lay < py2) 
+                
+                int y_rel = sy_p + VIS_PADDING;
+                if (y_rel >= py1 && y_rel < py2) 
                     for (int j = pz1; j < pz2; j++) for (int i = px1; i < px2; i++) pixels[j * resolution_x + i + panel_w_sim] = c;
-                if (sx_p + pml_lay >= px1 && sx_p + pml_lay < px2) 
+                
+                int x_rel = sx_p + VIS_PADDING;
+                if (x_rel >= px1 && x_rel < px2) 
                     for (int j = pz1; j < pz2; j++) for (int i = py1; i < py2; i++) pixels[j * resolution_x + i + 2 * panel_w_sim] = c;
             }
             
+            // Render acoustic field (3 planes)
+            // Panel 0: XY
             for (int j = 0; j < dim_y; j++) for (int i = 0; i < dim_x; i++) {
                 double v = fd[sz_p * dim_y * dim_x + j * dim_x + i]; 
-                if (abs(v)>1e-12) pixels[(j + pml_lay) * resolution_x + (i + pml_lay)] = Visualizer::CalculateColorPlayback(v, v_c);
+                if (abs(v) > 1e-12) pixels[(j + VIS_PADDING) * resolution_x + (i + VIS_PADDING)] = Visualizer::CalculateColorPlayback(v, v_c);
             }
+            // Panel 1: XZ
             for (int k = 0; k < dim_z; k++) for (int i = 0; i < dim_x; i++) {
                 double v = fd[k * dim_y * dim_x + sy_p * dim_x + i]; 
-                if (abs(v)>1e-12) pixels[(k + pml_lay) * resolution_x + (i + pml_lay + panel_w_sim)] = Visualizer::CalculateColorPlayback(v, v_c);
+                if (abs(v) > 1e-12) pixels[(k + VIS_PADDING) * resolution_x + (i + VIS_PADDING + panel_w_sim)] = Visualizer::CalculateColorPlayback(v, v_c);
             }
+            // Panel 2: YZ
             for (int k = 0; k < dim_z; k++) for (int j = 0; j < dim_y; j++) {
                 double v = fd[k * dim_y * dim_x + j * dim_x + sx_p]; 
-                if (abs(v)>1e-12) pixels[(k + pml_lay) * resolution_x + (j + pml_lay + 2 * panel_w_sim)] = Visualizer::CalculateColorPlayback(v, v_c);
+                if (abs(v) > 1e-12) pixels[(k + VIS_PADDING) * resolution_x + (j + VIS_PADDING + 2 * panel_w_sim)] = Visualizer::CalculateColorPlayback(v, v_c);
             }
+            
             
             visualizer.RenderPlaybackFrame(fi, total_steps, max_p, pixels);
             if (fi % 50 == 0) { cout << "Playback Progress: " << fi << "/" << total_steps << "\r"; cout.flush(); }

@@ -20,6 +20,7 @@ Visualizer::Visualizer(RunMode mode, int panel_sz, int panel_w_sim, int panel_h_
         window_ = SDL_CreateWindow("WASAbi 2.5D", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, win_w, win_h, 0);
         renderer_ = SDL_CreateRenderer(window_, -1, 0);
         texture_ = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, resolution_x_, resolution_y_);
+        SDL_SetTextureBlendMode(texture_, SDL_BLENDMODE_BLEND);
         font_ = TTF_OpenFont("source/font/SourceSansPro-Regular.ttf", 48);
         
         message_rect_ = { 4, win_h - 20, 120, 18 }; 
@@ -155,10 +156,10 @@ Uint32 Visualizer::CalculateColorPlayback(double p, float v_coef) {
 }
 
 void Visualizer::SetMarkers(const std::vector<Marker>& sources, const std::vector<Marker>& receivers, 
-                            int rxs, int rys, int rzs, int pml) {
+                            int rxs, int rys, int rzs, int pml, int padding) {
     source_markers_ = sources;
     receiver_markers_ = receivers;
-    rxs_ = rxs; rys_ = rys; rzs_ = rzs; pml_ = pml;
+    rxs_ = rxs; rys_ = rys; rzs_ = rzs; pml_ = pml; padding_ = padding;
 }
 
 void Visualizer::DrawCross(int x, int y, int size, SDL_Color color) {
@@ -213,9 +214,9 @@ void Visualizer::DrawMarkers() {
     auto draw_markers_for_list = [&](const std::vector<Marker>& markers, SDL_Color color, bool is_source) {
         for (const auto& marker : markers) {
             // Map global coords to simulation field coords
-            int sim_x = marker.x - rxs_ + pml_;
-            int sim_y = marker.y - rys_ + pml_;
-            int sim_z = marker.z - rzs_ + pml_;
+            int sim_x = marker.x - rxs_ + pml_ + padding_;
+            int sim_y = marker.y - rys_ + pml_ + padding_;
+            int sim_z = marker.z - rzs_ + pml_ + padding_;
 
             // XY Panel (sub-panel 0): Panel logic renders x-axis along panel_width, y-axis along panel_height
             int screen_xy_x = (0 * (panel_sz_ + GAP)) + (sim_x * scale);
