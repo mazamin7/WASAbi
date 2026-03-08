@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASAbi Auralizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0c;
+            --panel: #16161a;
+            --border: #2a2a30;
+            --text: #e1e1e6;
+            --text2: #9494a5;
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --green: #22c55e;
+            --orange: #f97316;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        #sidebar {
+            width: 320px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .desc {
+            font-size: 12px;
+            color: var(--text2);
+            line-height: 1.4;
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .section-title {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text2);
+            letter-spacing: 0.05em;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+        }
+
+        button:disabled {
+            background: var(--border);
+            cursor: not-allowed;
+        }
+
+        .file-input-btn {
+            background: #2a2a30;
+            color: var(--text);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+            cursor: pointer;
+            border: 1px dashed var(--border);
+        }
+
+        .status-pill {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.05);
+            display: inline-block;
+        }
+
+        .status-pill.ready {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--green);
+        }
+
+        /* CANVAS AREA */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #canvas-wrap {
+            flex: 1;
+            background: #000;
+            cursor: crosshair;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #controls {
+            height: 80px;
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            gap: 40px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .slider-group label {
+            font-size: 11px;
+            color: var(--text2);
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+        #visual-hint {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            pointer-events: none;
+            color: var(--text2);
+            border: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebar">
+        <h1>WASAbi Auralizer</h1>
+        <p class="desc">Interactive real-time auralization. Precompute your IR grid first, then load the files here to
+            "hear" the room at any point.</p>
+
+        <div class="section">
+            <div class="section-title">Step 1: Data Files</div>
+            <label class="file-input-btn">
+                📁 Load ir_metadata.json
+                <input type="file" id="meta-input" accept=".json" style="display:none">
+            </label>
+            <label class="file-input-btn">
+                📁 Load ir_grid_2d.bin
+                <input type="file" id="grid-input" accept=".bin" style="display:none">
+            </label>
+            <div id="data-status" class="status-pill">Waiting for data...</div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Step 2: Source Audio</div>
+            <label class="file-input-btn">
+                📁 Load Dry Audio (.wav)
+                <input type="file" id="audio-input" accept="audio/*" style="display:none">
+            </label>
+            <div id="audio-status" class="status-pill">No audio loaded</div>
+        </div>
+
+        <div class="section" style="margin-top: auto;">
+            <button id="play-btn" disabled>▶ Start Audio Engine</button>
+            <div class="desc" style="text-align: center;">Must interact to start Web Audio</div>
+        </div>
+    </div>
+
+    <div id="main">
+        <div id="canvas-wrap">
+            <canvas id="canvas"></canvas>
+            <div id="visual-hint">Drag the <b>orange marker</b> to move the listener</div>
+        </div>
+
+        <div id="controls">
+            <button id="toggle-audio" style="width: 50px; height: 50px; border-radius: 25px;">⏯</button>
+
+            <div class="slider-group" style="max-width: 200px;">
+                <label>Main Volume</label>
+                <input type="range" id="vol-slider" min="0" max="1" step="0.01" value="0.5">
+            </div>
+
+            <div class="slider-group" style="max-width: 200px;">
+                <label>IR Gain (Wet)</label>
+                <input type="range" id="wet-slider" min="0" max="10" step="0.1" value="1.0">
+            </div>
+
+            <div id="pos-info" style="font-family: monospace; font-size: 11px; color: var(--text2);">
+                Listener: -- m, -- m
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio Context
+        let audioCtx = null;
+        let mainGain = null;
+        let wetGain = null;
+        let drySource = null;
+        let dryBuffer = null;
+
+        // Auralization Nodes (4-point interpolation)
+        let convolvers = [];
+        let interpGains = [];
+
+        // App State
+        let meta = null;
+        let irGrid = null; // Float32Array
+        let listenerPos = { x: 0, y: 0 }; // World units
+        let dragging = false;
+
+        // View State
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        let zoom = 40;
+        let viewX = 0;
+        let viewY = 0;
+
+        // --- INIT & FILE LOADING ---
+
+        document.getElementById('meta-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            meta = JSON.parse(await file.text());
+            updateStatus();
+            initListener();
+            render();
+        });
+
+        document.getElementById('grid-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const buffer = await file.arrayBuffer();
+            irGrid = new Float32Array(buffer);
+            updateStatus();
+        });
+
+        document.getElementById('audio-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const buffer = await file.arrayBuffer();
+            if (audioCtx) {
+                dryBuffer = await audioCtx.decodeAudioData(buffer);
+            } else {
+                // Store temporarily if ctx not started
+                pendingAudioBuffer = buffer;
+            }
+            document.getElementById('audio-status').textContent = "Ready: " + file.name;
+            document.getElementById('audio-status').classList.add('ready');
+        });
+
+        let pendingAudioBuffer = null;
+
+        document.getElementById('play-btn').addEventListener('click', async () => {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                setupGraph();
+                if (pendingAudioBuffer) {
+                    dryBuffer = await audioCtx.decodeAudioData(pendingAudioBuffer);
+                    pendingAudioBuffer = null;
+                }
+            }
+            if (audioCtx.state === 'suspended') await audioCtx.resume();
+            document.getElementById('play-btn').textContent = "Engine Active";
+            document.getElementById('play-btn').disabled = true;
+            document.getElementById('toggle-audio').disabled = false;
+        });
+
+        function updateStatus() {
+            const status = document.getElementById('data-status');
+            if (meta && irGrid) {
+                status.textContent = "Data Ready: " + meta.nx + "x" + meta.ny;
+                status.classList.add('ready');
+                document.getElementById('play-btn').disabled = false;
+            }
+        }
+
+        // --- AUDIO ENGINE ---
+
+        function setupGraph() {
+            mainGain = audioCtx.createGain();
+            mainGain.gain.value = 0.5;
+            mainGain.connect(audioCtx.destination);
+
+            wetGain = audioCtx.createGain();
+            wetGain.gain.value = 1.0;
+            wetGain.connect(mainGain);
+
+            // Create 4 parallel paths for bilinear interpolation
+            for (let i = 0; i < 4; i++) {
+                const conv = audioCtx.createConvolver();
+                const g = audioCtx.createGain();
+                g.gain.value = 0;
+                conv.connect(g);
+                g.connect(wetGain);
+                convolvers.push(conv);
+                interpGains.push(g);
+            }
+        }
+
+        async function updateConvolvers() {
+            if (!audioCtx || !meta || !irGrid) return;
+
+            // Find 4 nearest points in the grid
+            const gx = (listenerPos.x - meta.rxs) / meta.dh;
+            const gy = (listenerPos.y - meta.rys) / meta.dh;
+
+            const ix = Math.floor(gx);
+            const iy = Math.floor(gy);
+            const fx = gx - ix;
+            const fy = gy - iy;
+
+            // Weights for bilinear interpolation
+            const weights = [
+                (1 - fx) * (1 - fy), // Top-left
+                fx * (1 - fy),       // Top-right
+                (1 - fx) * fy,       // Bottom-left
+                fx * fy              // Bottom-right
+            ];
+
+            const coords = [
+                [ix, iy], [ix + 1, iy], [ix, iy + 1], [ix + 1, iy + 1]
+            ];
+
+            for (let i = 0; i < 4; i++) {
+                const [cx, cy] = coords[i];
+                if (cx >= 0 && cx < meta.nx && cy >= 0 && cy < meta.ny) {
+                    const idx = (cy * meta.nx + cx) * meta.ir_len;
+                    const irSlice = irGrid.slice(idx, idx + meta.ir_len);
+
+                    const irBuffer = audioCtx.createBuffer(1, meta.ir_len, 1 / meta.dt);
+                    irBuffer.copyToChannel(irSlice, 0);
+
+                    convolvers[i].buffer = irBuffer;
+                    interpGains[i].gain.setTargetAtTime(weights[i], audioCtx.currentTime, 0.05);
+                } else {
+                    interpGains[i].gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                }
+            }
+        }
+
+        document.getElementById('toggle-audio').addEventListener('click', () => {
+            if (!audioCtx || !dryBuffer) return;
+
+            if (drySource) {
+                drySource.stop();
+                drySource = null;
+            } else {
+                drySource = audioCtx.createBufferSource();
+                drySource.buffer = dryBuffer;
+                drySource.loop = true;
+                drySource.connect(wetGain); // Connect to the convolver path
+                // For direct sound, we could add a dry path too
+                drySource.start();
+                updateConvolvers();
+            }
+        });
+
+        // sliders omitted for brevity in first draft, will add basic ones
+        document.getElementById('vol-slider').oninput = e => mainGain && (mainGain.gain.value = e.target.value);
+        document.getElementById('wet-slider').oninput = e => wetGain && (wetGain.gain.value = e.target.value);
+
+        // --- VISUALIZATION ---
+
+        function initListener() {
+            if (meta) {
+                listenerPos.x = meta.rxs + (meta.nx * meta.dh) / 2;
+                listenerPos.y = meta.rys + (meta.ny * meta.dh) / 2;
+                viewX = canvas.width / 2 / zoom - listenerPos.x;
+                viewY = canvas.height / 2 / zoom - listenerPos.y;
+            }
+        }
+
+        function toScreen(x, y) {
+            return { x: (x + viewX) * zoom, y: (y + viewY) * zoom };
+        }
+        function toWorld(px, py) {
+            return { x: px / zoom - viewX, y: py / zoom - viewY };
+        }
+
+        function render() {
+            if (!canvas.width) return;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!meta) return;
+
+            // Draw grid area
+            const tl = toScreen(meta.rxs, meta.rys);
+            ctx.strokeStyle = '#333';
+            ctx.strokeRect(tl.x, tl.y, meta.nx * meta.dh * zoom, meta.ny * meta.dh * zoom);
+
+            // Draw Listener
+            const l = toScreen(listenerPos.x, listenerPos.y);
+            ctx.beginPath();
+            ctx.arc(l.x, l.y, 10, 0, Math.PI * 2);
+            ctx.fillStyle = varColor('--orange');
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Coordinate info
+            document.getElementById('pos-info').textContent =
+                `Listener: ${listenerPos.x.toFixed(2)}m, ${listenerPos.y.toFixed(2)}m (Z: ${meta.z}m)`;
+        }
+
+        function varColor(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+        window.addEventListener('resize', () => {
+            canvas.width = document.getElementById('canvas-wrap').clientWidth;
+            canvas.height = document.getElementById('canvas-wrap').clientHeight;
+            render();
+        });
+        window.dispatchEvent(new Event('resize'));
+
+        // Mouse Interaction
+        canvas.addEventListener('mousedown', e => {
+            const rect = canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            const w = toWorld(px, py);
+
+            const d = Math.sqrt((w.x - listenerPos.x) ** 2 + (w.y - listenerPos.y) ** 2);
+            if (d < 15 / zoom) {
+                dragging = true;
+            }
+        });
+
+        window.addEventListener('mousemove', e => {
+            if (!dragging) return;
+            const rect = canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+            const w = toWorld(px, py);
+
+            listenerPos.x = w.x;
+            listenerPos.y = w.y;
+            render();
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (dragging) {
+                dragging = false;
+                updateConvolvers(); // Update IRs on drop
+            }
+        });
+
+    </script>
+</body>
+
+</html>
