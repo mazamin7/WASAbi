@@ -13,7 +13,6 @@ Config load_config(const std::string& filename, const std::string& experiment_na
     
     // Explicit Default Fallbacks
     config.asset_name = "hall";
-    config.c0 = 343.5;
     config.n_pml_layers = 5;
     config.dh = 0.5;
     config.dt = 0.000625;
@@ -41,7 +40,6 @@ Config load_config(const std::string& filename, const std::string& experiment_na
             auto& s = j["simulation"];
             if (s.contains("asset_name")) config.asset_name = s["asset_name"];
             if (s.contains("duration")) config.duration = s["duration"];
-            if (s.contains("c0")) config.c0 = s["c0"];
             if (s.contains("n_pml_layers")) config.n_pml_layers = s["n_pml_layers"];
             
             // Override with explicit dh/dt if provided

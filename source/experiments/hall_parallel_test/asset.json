@@ -1,8 +1,4 @@
 {
-    "air_absorption": {
-        "alpha1": 0.0,
-        "alpha2": 0.0
-    },
     "partitions": [
         {
             "x": 0,
@@ -147,5 +143,10 @@
             "y": 15,
             "z": 3
         }
-    ]
+    ],
+    "medium_properties": {
+        "alpha1": 0.0,
+        "alpha2": 0.0,
+        "c0": 343.5
+    }
 }

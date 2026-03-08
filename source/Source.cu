@@ -73,7 +73,6 @@ int main(int argc, char* argv[]) {
     Config config = load_config(active_config, cli_args.experiment_name);
 
     Simulation::duration_ = config.duration;
-    Simulation::c0_ = config.c0;
     Simulation::n_pml_layers_ = config.n_pml_layers;
     Simulation::dh_ = config.dh;
     Simulation::dt_ = config.dt;
@@ -164,9 +163,11 @@ int main(int argc, char* argv[]) {
                 if (is_record_field) r->RecordField(time_step);
             }
             
-            if (cli_args.mode == RunMode::SIM_VIZ && time_step % Simulation::viz_skip_ == 0) {
+            if (cli_args.mode == RunMode::SIM_VIZ && Simulation::viz_skip_ > 0 && time_step % Simulation::viz_skip_ == 0) {
                 visualizer.RenderSimulationFrame(time_step, total_steps, simulation);
-            } else if (cli_args.mode != RunMode::SIM_VIZ && time_step % (Simulation::viz_skip_ * 5) == 0) {
+            } else if (cli_args.mode != RunMode::SIM_VIZ && Simulation::viz_skip_ > 0 && time_step % (Simulation::viz_skip_ * 5) == 0) {
+                cout << "Progress: " << time_step << "/" << total_steps << "\r"; cout.flush();
+            } else if (Simulation::viz_skip_ == 0 && time_step % 50 == 0) {
                 cout << "Progress: " << time_step << "/" << total_steps << "\r"; cout.flush();
             }
         }

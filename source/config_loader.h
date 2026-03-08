@@ -7,7 +7,6 @@ struct Config {
     std::string experiment_name;
     std::string asset_name;
     double duration;
-    double c0;
     int n_pml_layers;
     double dh;
 

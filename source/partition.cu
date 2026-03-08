@@ -386,14 +386,18 @@ std::vector<std::shared_ptr<Partition>> Partition::ImportPartitions(std::string 
             json j;
             file >> j;
             
-            if (j.contains("air_absorption")) {
-                if (j["air_absorption"].contains("alpha1")) Simulation::air_absorption_alpha1_ = j["air_absorption"]["alpha1"];
-                else throw std::runtime_error("air_absorption.alpha1 is missing from asset.json");
-                
-                if (j["air_absorption"].contains("alpha2")) Simulation::air_absorption_alpha2_ = j["air_absorption"]["alpha2"];
-                else throw std::runtime_error("air_absorption.alpha2 is missing from asset.json");
+            if (j.contains("medium_properties")) {
+                auto& mp = j["medium_properties"];
+                if (mp.contains("c0")) Simulation::c0_ = mp["c0"];
+                else throw std::runtime_error("medium_properties.c0 is missing from asset.json");
+
+                if (mp.contains("alpha1")) Simulation::air_absorption_alpha1_ = mp["alpha1"];
+                else throw std::runtime_error("medium_properties.alpha1 is missing from asset.json");
+
+                if (mp.contains("alpha2")) Simulation::air_absorption_alpha2_ = mp["alpha2"];
+                else throw std::runtime_error("medium_properties.alpha2 is missing from asset.json");
             } else {
-                throw std::runtime_error("Global air_absorption configuration is missing from asset.json");
+                throw std::runtime_error("Global medium_properties configuration is missing from asset.json");
             }
 
             if (j.contains("partitions")) {

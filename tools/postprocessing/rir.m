@@ -17,9 +17,9 @@ asset = jsondecode(asset_str);
 config_str = fileread([experiment_path, '/config.json']);
 config = jsondecode(config_str);
 
-alpha1 = asset.air_absorption.alpha1;
-alpha2 = asset.air_absorption.alpha2;
-c = config.simulation.c0;
+alpha1 = asset.medium_properties.alpha1;
+alpha2 = asset.medium_properties.alpha2;
+c = asset.medium_properties.c0;
 sim_dur = config.simulation.duration;
 dh = config.simulation.dh;
 dt = config.simulation.dt;

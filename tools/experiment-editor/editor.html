@@ -166,10 +166,6 @@
             position: relative;
             overflow: hidden;
             background: #0c101a;
-            background-image:
-                linear-gradient(var(--border) 1px, transparent 1px),
-                linear-gradient(90deg, var(--border) 1px, transparent 1px);
-            background-size: 40px 40px;
         }
 
         canvas {
@@ -417,24 +413,24 @@
                     <span class="prop-label">Name</span>
                     <input type="text" id="exp-name" value="my_experiment" placeholder="experiment name">
                 </div>
-            </div>
-
-            <div class="panel-section">
-                <div class="section-title">Simulation</div>
                 <div class="prop-row"><span class="prop-label">dh (m)</span><input type="number" id="p-dh" value="0.2"
                         step="0.05" min="0.01"></div>
                 <div class="prop-row"><span class="prop-label">dt (s)</span><input type="number" id="p-dt"
                         value="0.0002" step="0.00005" min="0.00001"></div>
-                <div class="prop-row"><span class="prop-label">c₀ (m/s)</span><input type="number" id="p-c0"
-                        value="343.5" step="1"></div>
                 <div class="prop-row"><span class="prop-label">Duration (s)</span><input type="number" id="p-dur"
                         value="0.5" step="0.1" min="0.01"></div>
                 <div class="prop-row"><span class="prop-label">PML layers</span><input type="number" id="p-pml"
                         value="5" step="1" min="1"></div>
+                <div id="cfl-warning"
+                    style="font-size:10px; color:var(--red); margin-top:8px; display:none; padding:6px; background:rgba(239, 68, 68, 0.1); border-radius:4px; border:1px solid rgba(239, 68, 68, 0.2)">
+                    ⚠️ <b>CFL Limit Exceeded</b><br>c·dt/dh > 0.6. Stability at risk.
+                </div>
             </div>
 
             <div class="panel-section">
-                <div class="section-title">Air Absorption</div>
+                <div class="section-title">Medium Properties</div>
+                <div class="prop-row"><span class="prop-label">c₀ (m/s)</span><input type="number" id="p-c0"
+                        value="343.5" step="1"></div>
                 <div class="prop-row"><span class="prop-label">α₁ (1/s)</span><input type="number" id="p-a1" value="0.0"
                         step="0.00001"></div>
                 <div class="prop-row"><span class="prop-label">α₂ (1/s)</span><input type="number" id="p-a2" value="0.0"
@@ -636,8 +632,11 @@
             // Active draw preview
             if (drawing && drawStart && drawCurrent) {
                 const s = toScreen(Math.min(drawStart.x, drawCurrent.x), Math.min(drawStart.y, drawCurrent.y));
-                const ew = Math.abs(drawCurrent.x - drawStart.x) * zoom;
-                const eh = Math.abs(drawCurrent.y - drawStart.y) * zoom;
+                const rw = Math.abs(drawCurrent.x - drawStart.x);
+                const rh = Math.abs(drawCurrent.y - drawStart.y);
+                const ew = rw * zoom;
+                const eh = rh * zoom;
+
                 ctx.strokeStyle = '#4f8ef7';
                 ctx.lineWidth = 2;
                 ctx.setLineDash([6, 4]);
@@ -645,6 +644,21 @@
                 ctx.setLineDash([]);
                 ctx.fillStyle = 'rgba(79,142,247,0.12)';
                 ctx.fillRect(s.x, s.y, ew, eh);
+
+                // Draw dimensions text label
+                if (rw > 0.1 || rh > 0.1) {
+                    ctx.font = 'bold 11px Inter, sans-serif';
+                    const txt = `${rw.toFixed(1)}m × ${rh.toFixed(1)}m`;
+                    const tw = ctx.measureText(txt).width;
+
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+                    ctx.fillRect(s.x + 4, s.y + 4, tw + 8, 18);
+
+                    ctx.fillStyle = '#fff';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(txt, s.x + 8, s.y + 7);
+                }
             }
 
             // Source
@@ -915,8 +929,13 @@
         // ============================================================
         // EXPORT
         // ============================================================
-        // Snap value to nearest multiple of dh (ensures integer grid indices in C++)
-        function snapDh(v, dh) { return Math.round(v / dh) * dh; }
+        // Snap value to nearest multiple of dh (ensures integer grid indices in C++).
+        // Uses a precision epsilon to avoid floating point drift like 20.60000000001.
+        function snapDh(v, dh) {
+            const snapped = Math.round(v / dh) * dh;
+            // Round to 5 decimal places to kill off machine epsilon junk
+            return Math.round(snapped * 100000) / 100000;
+        }
 
         function exportAsset() {
             const dh = parseFloat(document.getElementById('p-dh').value) || 0.2;
@@ -945,7 +964,11 @@
             }));
 
             const obj = {
-                air_absorption: { alpha1: a1, alpha2: a2 },
+                medium_properties: {
+                    c0: parseFloat(document.getElementById('p-c0').value) || 343.5,
+                    alpha1: a1,
+                    alpha2: a2
+                },
                 partitions,
                 sources: [{
                     type: 'gaussian',
@@ -969,11 +992,10 @@
                     duration: parseFloat(document.getElementById('p-dur').value) || 0.5,
                     dh: parseFloat(document.getElementById('p-dh').value) || 0.2,
                     dt: parseFloat(document.getElementById('p-dt').value) || 0.0002,
-                    c0: parseFloat(document.getElementById('p-c0').value) || 343.5,
                     n_pml_layers: parseInt(document.getElementById('p-pml').value) || 5
                 },
                 visualization: {
-                    viz_skip: 0,
+                    viz_skip: 10,
                     max_viz_gain: 0.000002
                 }
             };
@@ -994,8 +1016,21 @@
         // ============================================================
         // INIT
         // ============================================================
+        function checkCFL() {
+            const dh = parseFloat(document.getElementById('p-dh').value) || 0.2;
+            const dt = parseFloat(document.getElementById('p-dt').value) || 0.0002;
+            const c0 = parseFloat(document.getElementById('p-c0').value) || 343.5;
+            const cfl = (c0 * dt) / dh;
+            document.getElementById('cfl-warning').style.display = cfl > 0.6 ? 'block' : 'none';
+        }
+
+        ['p-dh', 'p-dt', 'p-c0'].forEach(id => {
+            document.getElementById(id).addEventListener('input', checkCFL);
+        });
+
+        checkCFL();
         setMode('draw');
-        render();
+        resize();
     </script>
 </body>
 

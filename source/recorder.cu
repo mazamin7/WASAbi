@@ -34,14 +34,18 @@ void Recorder::FindPartition(std::vector<std::shared_ptr<Partition>> partitions)
 {
 	for (auto partition : partitions)
 	{
-		if (partition->x_start_<x_ - 5 && partition->x_end_>x_ + 4 &&
-			partition->y_start_<y_ - 5 && partition->y_end_>y_ + 4 &&
-			partition->z_start_<z_ - 5 && partition->z_end_>z_ + 4)
+		if (x_ >= partition->x_start_ && x_ < partition->x_end_ &&
+			y_ >= partition->y_start_ && y_ < partition->y_end_ &&
+			z_ >= partition->z_start_ && z_ < partition->z_end_)
 		{
 			part_ = partition;
 			break;
 		}
 	}
+
+    if (!part_) {
+        std::cerr << "WARNING: Recorder " << id_ << " is outside any DCT partition at (" << x_ << "," << y_ << "," << z_ << "). Response recording will be disabled." << std::endl;
+    }
 
 	partitions_ = partitions;
 
@@ -124,7 +128,7 @@ __global__ void RecordResponseKernel(const double* d_pressure, double* d_buffer,
 
 void Recorder::RecordResponse(int time_step)
 {
-	if (time_step < total_steps_)
+	if (time_step < total_steps_ && part_)
 	{
 		// FIX: Launch a tiny kernel to record value asynchronously on the GPU
         RecordResponseKernel<<<1, 1, 0, part_->stream_>>>(

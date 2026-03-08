@@ -89,7 +89,11 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 						partition->depth_);
 					partitions_.push_back(pml);
 					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_[0]);
-					boundaries_.push_back(boundary);
+					if (boundary) {
+						boundaries_.push_back(boundary);
+					} else {
+						std::cerr << "WARNING: Could not find boundary for Left PML of Partition " << partition->info_.id << std::endl;
+					}
 					info_.num_pml_partitions++;
 					started = false;
 				}
@@ -127,7 +131,11 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 						partition->depth_);
 					partitions_.push_back(pml);
 					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_[1]);
-					boundaries_.push_back(boundary);
+					if (boundary) {
+						boundaries_.push_back(boundary);
+					} else {
+						std::cerr << "WARNING: Could not find boundary for Right PML of Partition " << partition->info_.id << std::endl;
+					}
 					info_.num_pml_partitions++;
 					started = false;
 				}
@@ -165,7 +173,11 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 						partition->depth_);
 					partitions_.push_back(pml);
 					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_[2]);
-					boundaries_.push_back(boundary);
+					if (boundary) {
+						boundaries_.push_back(boundary);
+					} else {
+						std::cerr << "WARNING: Could not find boundary for Top PML of Partition " << partition->info_.id << std::endl;
+					}
 					info_.num_pml_partitions++;
 					started = false;
 				}
@@ -203,7 +215,11 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 						partition->depth_);
 					partitions_.push_back(pml);
 					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_[3]);
-					boundaries_.push_back(boundary);
+					if (boundary) {
+						boundaries_.push_back(boundary);
+					} else {
+						std::cerr << "WARNING: Could not find boundary for Bottom PML of Partition " << partition->info_.id << std::endl;
+					}
 					info_.num_pml_partitions++;
 					started = false;
 				}
@@ -354,16 +370,16 @@ int Simulation::Update()
 	// compute residue
 	for (auto p : partitions_) p->reset_residues();
 
-	if (time_step == 0) {
-		std::cout << "Runtime: updating " << boundaries_.size() << " boundaries." << std::endl;
+	for (int i = 0; i < (int)boundaries_.size(); i++) {
+		if (boundaries_[i]) {
+			boundaries_[i]->ComputeResidues();
+		}
 	}
-
-#pragma omp parallel for schedule(dynamic)
-	for (int i = 0; i < boundaries_.size(); i++) {
-		boundaries_[i]->ComputeResidues();
+	cudaError_t err = cudaDeviceSynchronize();
+	if (err != cudaSuccess) {
+		std::cerr << "CUDA ERROR after boundary computation: " << cudaGetErrorString(err) << std::endl;
+		exit(1);
 	}
-	// Post-merge depends on residues
-	cudaDeviceSynchronize();
 
 	// post-merge
 	for (int i = 0; i < partitions_.size(); i++)
@@ -378,7 +394,7 @@ int Simulation::Update()
 	//std::cout << std::endl;
 
 	// Visualization: render XY / XZ / YZ planes side-by-side every viz_skip_ steps
-	if (time_step % viz_skip_ == 0)
+	if (viz_skip_ > 0 && time_step % viz_skip_ == 0)
 	{
 		// Dynamic scaling: find global max pressure
 		double global_max_p = 0.0;
