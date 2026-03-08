@@ -203,9 +203,9 @@ void Visualizer::DrawMarkers() {
     // Convert simulation pixel coordinate space to actual screen space
     float scale = (float)panel_sz_ / (float)panel_w_sim_;
     
-    // Common colors: Sources = Green Crosses, Receivers = White Circles
+    // Common colors: Sources = Green Crosses, Receivers = Cyan Circles
     SDL_Color src_color = { 50, 255, 50 };
-    SDL_Color rec_color = { 255, 255, 255 };
+    SDL_Color rec_color = { 0, 255, 255 };
 
     int marker_size = max(2, (int)(3.0f * scale)); // Scale marker size based on panel resolution
     
