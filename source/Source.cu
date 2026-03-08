@@ -99,11 +99,10 @@ int main(int argc, char* argv[]) {
     }
     sources = SoundSource::ImportSources(asset_path);
     cout << "Loaded " << partitions.size() << " partitions and " << sources.size() << " sources." << endl;
-    
-    if (cli_args.mode == RunMode::SIM_RECORD_FIELD || cli_args.mode == RunMode::SIM_RECORD_RESPONSE) {
-        recorders = Recorder::ImportRecorders(asset_path);
-        for (auto r : recorders) r->FindPartition(partitions);
-    }
+
+    // Unconditionally load recorders to know their positions for the visualizer
+    recorders = Recorder::ImportRecorders(asset_path);
+    for (auto r : recorders) r->FindPartition(partitions);
 
     shared_ptr<Simulation> simulation = nullptr;
     if (cli_args.mode != RunMode::VIZ_RECORD) {
@@ -126,6 +125,15 @@ int main(int argc, char* argv[]) {
     int panel_sz = config.fixed_panel_size;
 
     Visualizer visualizer(cli_args.mode, panel_sz, panel_w_sim, panel_h_sim, resolution_x, resolution_y);
+    
+    // Pass Marker locations to Visualizer
+    vector<Visualizer::Marker> src_markers;
+    for (auto s : sources) src_markers.push_back({ s->x(), s->y(), s->z() });
+    
+    vector<Visualizer::Marker> rec_markers;
+    for (auto r : recorders) rec_markers.push_back({ r->x(), r->y(), r->z() });
+    
+    visualizer.SetMarkers(src_markers, rec_markers, rxs, rys, rzs, pml);
 
     bool quit = false; 
     int time_step = 0; 

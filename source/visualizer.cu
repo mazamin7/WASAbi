@@ -116,6 +116,7 @@ void Visualizer::RenderSimulationFrame(int time_step, int total_steps, std::shar
     SDL_UpdateTexture(texture_, nullptr, simulation->pixels().data(), simulation->render_w() * sizeof(Uint32));
     
     RenderUI(time_step, total_steps, simulation->GetLastMaxPressure());
+    DrawMarkers();
     
     SDL_RenderPresent(renderer_);
 }
@@ -132,6 +133,7 @@ void Visualizer::RenderPlaybackFrame(int time_step, int total_steps, double max_
     SDL_UpdateTexture(texture_, nullptr, pixels.data(), resolution_x_ * 4);
     
     RenderUI(time_step, total_steps, max_p);
+    DrawMarkers();
     
     SDL_RenderPresent(renderer_);
 }
@@ -149,4 +151,97 @@ Uint32 Visualizer::CalculateColorPlayback(double p, float v_coef) {
     // Color normalization and shift to match SDL_PIXELFORMAT_RGB888 (original)
     // RGB888 expects 24 bits: R:16-23, G:8-15, B:0-7
     return (r << 16) | (g << 8) | b;
+}
+
+void Visualizer::SetMarkers(const std::vector<Marker>& sources, const std::vector<Marker>& receivers, 
+                            int rxs, int rys, int rzs, int pml) {
+    source_markers_ = sources;
+    receiver_markers_ = receivers;
+    rxs_ = rxs; rys_ = rys; rzs_ = rzs; pml_ = pml;
+}
+
+void Visualizer::DrawCross(int x, int y, int size, SDL_Color color) {
+    SDL_SetRenderDrawColor(renderer_, color.r, color.g, color.b, 255);
+    SDL_RenderDrawLine(renderer_, x - size, y - size, x + size, y + size);
+    SDL_RenderDrawLine(renderer_, x - size, y + size, x + size, y - size);
+}
+
+void Visualizer::DrawCircle(int x, int y, int radius, SDL_Color color) {
+    SDL_SetRenderDrawColor(renderer_, color.r, color.g, color.b, 255);
+    int offsetx, offsety, d;
+    offsetx = 0;
+    offsety = radius;
+    d = radius - 1;
+
+    while (offsety >= offsetx) {
+        SDL_RenderDrawPoint(renderer_, x + offsetx, y + offsety);
+        SDL_RenderDrawPoint(renderer_, x + offsety, y + offsetx);
+        SDL_RenderDrawPoint(renderer_, x - offsetx, y + offsety);
+        SDL_RenderDrawPoint(renderer_, x - offsety, y + offsetx);
+        SDL_RenderDrawPoint(renderer_, x + offsetx, y - offsety);
+        SDL_RenderDrawPoint(renderer_, x + offsety, y - offsetx);
+        SDL_RenderDrawPoint(renderer_, x - offsetx, y - offsety);
+        SDL_RenderDrawPoint(renderer_, x - offsety, y - offsetx);
+
+        if (d >= 2 * offsetx) {
+            d -= 2 * offsetx + 1;
+            offsetx += 1;
+        } else if (d < 2 * (radius - offsety)) {
+            d += 2 * offsety - 1;
+            offsety -= 1;
+        } else {
+            d += 2 * (offsety - offsetx - 1);
+            offsety -= 1;
+            offsetx += 1;
+        }
+    }
+}
+
+void Visualizer::DrawMarkers() {
+    if (!IsValid()) return;
+    
+    // Convert simulation pixel coordinate space to actual screen space
+    float scale = (float)panel_sz_ / (float)panel_w_sim_;
+    
+    // Common colors: Sources = Green Crosses, Receivers = White Circles
+    SDL_Color src_color = { 50, 255, 50 };
+    SDL_Color rec_color = { 255, 255, 255 };
+
+    int marker_size = max(2, (int)(3.0f * scale)); // Scale marker size based on panel resolution
+    
+    auto draw_markers_for_list = [&](const std::vector<Marker>& markers, SDL_Color color, bool is_source) {
+        for (const auto& marker : markers) {
+            // Map global coords to simulation field coords
+            int sim_x = marker.x - rxs_ + pml_;
+            int sim_y = marker.y - rys_ + pml_;
+            int sim_z = marker.z - rzs_ + pml_;
+
+            // XY Panel (sub-panel 0): Panel logic renders x-axis along panel_width, y-axis along panel_height
+            int screen_xy_x = (0 * (panel_sz_ + GAP)) + (sim_x * scale);
+            int screen_xy_y = 24 + (sim_y * scale);
+            
+            // XZ Panel (sub-panel 1): Panel logic renders x-axis along panel_width, z-axis along panel_height
+            int screen_xz_x = (1 * (panel_sz_ + GAP)) + (sim_x * scale);
+            int screen_xz_y = 24 + (sim_z * scale);
+            
+            // YZ Panel (sub-panel 2): Panel logic renders y-axis along panel_width, z-axis along panel_height
+            int screen_yz_x = (2 * (panel_sz_ + GAP)) + (sim_y * scale);
+            int screen_yz_y = 24 + (sim_z * scale);
+            
+            // Draw marker shapes based on type
+            if (is_source) {
+                DrawCross(screen_xy_x, screen_xy_y, marker_size, color);
+                DrawCross(screen_xz_x, screen_xz_y, marker_size, color);
+                DrawCross(screen_yz_x, screen_yz_y, marker_size, color);
+            } else {
+                DrawCircle(screen_xy_x, screen_xy_y, marker_size, color);
+                DrawCircle(screen_xz_x, screen_xz_y, marker_size, color);
+                DrawCircle(screen_yz_x, screen_yz_y, marker_size, color);
+            }
+        }
+    };
+    
+    // Draw all collected markers
+    draw_markers_for_list(source_markers_, src_color, true);
+    draw_markers_for_list(receiver_markers_, rec_color, false);
 }

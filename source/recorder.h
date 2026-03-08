@@ -11,6 +11,12 @@ class Recorder
 	int x_, y_, z_;
 	int total_steps_;
 
+public:
+	int x() const { return x_; }
+	int y() const { return y_; }
+	int z() const { return z_; }
+
+private:
 	std::shared_ptr<Partition> part_;
 	std::vector<std::shared_ptr<Partition>> partitions_;
 	

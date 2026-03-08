@@ -19,10 +19,21 @@ public:
     void RenderSimulationFrame(int time_step, int total_steps, std::shared_ptr<Simulation> simulation);
     void RenderPlaybackFrame(int time_step, int total_steps, double max_p, const std::vector<Uint32>& pixels);
     
+    struct Marker { int x, y, z; };
+    void SetMarkers(const std::vector<Marker>& sources, const std::vector<Marker>& receivers, 
+                    int rxs, int rys, int rzs, int pml);
+
     static Uint32 CalculateColorPlayback(double p, float v_coef);
 
 private:
     void RenderUI(int time_step, int total_steps, double max_p);
+    void DrawMarkers();
+    void DrawCross(int x, int y, int size, SDL_Color color);
+    void DrawCircle(int x, int y, int radius, SDL_Color color);
+
+    std::vector<Marker> source_markers_;
+    std::vector<Marker> receiver_markers_;
+    int rxs_, rys_, rzs_, pml_;
 
     SDL_Window* window_;
     SDL_Renderer* renderer_;
