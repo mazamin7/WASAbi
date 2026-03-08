@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASAbi Experiment Designer</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --panel: #181d28;
+            --panel2: #1e2534;
+            --border: #2a3348;
+            --accent: #4f8ef7;
+            --accent2: #7c3aed;
+            --green: #22c55e;
+            --red: #ef4444;
+            --orange: #f97316;
+            --text: #e2e8f0;
+            --text2: #94a3b8;
+            --text3: #64748b;
+            --radius: 8px;
+            --input-h: 28px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            padding: 0 20px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        header h1 {
+            font-size: 15px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.3px;
+        }
+
+        .header-sep {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 6px;
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--panel2);
+            color: var(--text2);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+        }
+
+        .tool-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        .tool-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+
+        .tool-btn.src {}
+
+        .tool-btn.src.active {
+            background: var(--green);
+            border-color: var(--green);
+        }
+
+        .tool-btn.rec.active {
+            background: var(--orange);
+            border-color: var(--orange);
+        }
+
+        .tool-btn.del.active,
+        .tool-btn.del:hover {
+            background: var(--red);
+            border-color: var(--red);
+            color: #fff;
+        }
+
+        .header-right {
+            margin-left: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .export-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: none;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .export-btn.asset {
+            background: linear-gradient(135deg, #4f8ef7, #7c3aed);
+            color: #fff;
+        }
+
+        .export-btn.asset:hover {
+            opacity: 0.85;
+        }
+
+        .export-btn.config {
+            background: var(--panel2);
+            border: 1px solid var(--border);
+            color: var(--text2);
+        }
+
+        .export-btn.config:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
+        /* MAIN LAYOUT */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* CANVAS AREA */
+        .canvas-wrap {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #0c101a;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        .canvas-info {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            font-size: 11px;
+            color: var(--text3);
+            pointer-events: none;
+            background: rgba(15, 17, 23, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .canvas-hint {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-size: 11px;
+            color: var(--text3);
+            background: rgba(15, 17, 23, 0.7);
+            padding: 4px 10px;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        /* RIGHT PANEL */
+        .right-panel {
+            width: 300px;
+            flex-shrink: 0;
+            background: var(--panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-section {
+            border-bottom: 1px solid var(--border);
+            padding: 14px 16px;
+        }
+
+        .panel-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--text3);
+            margin-bottom: 10px;
+        }
+
+        .prop-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 7px;
+        }
+
+        .prop-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .prop-label {
+            font-size: 11px;
+            color: var(--text2);
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+
+        input[type=text],
+        input[type=number] {
+            flex: 1;
+            height: var(--input-h);
+            background: var(--panel2);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text);
+            font-size: 12px;
+            padding: 0 8px;
+            outline: none;
+            transition: border-color 0.15s;
+            min-width: 0;
+        }
+
+        input[type=text]:focus,
+        input[type=number]:focus {
+            border-color: var(--accent);
+        }
+
+        .face-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .face-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--panel2);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 4px 7px;
+        }
+
+        .face-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .face-item label {
+            font-size: 10px;
+            color: var(--text3);
+            min-width: 38px;
+        }
+
+        .face-item input {
+            flex: 1;
+            height: 22px;
+            min-width: 0;
+            font-size: 11px;
+            border: none;
+            background: transparent;
+            padding: 0 2px;
+            color: var(--text);
+        }
+
+        .face-item input:focus {
+            outline: none;
+            color: var(--accent);
+        }
+
+        .empty-state {
+            font-size: 11px;
+            color: var(--text3);
+            text-align: center;
+            padding: 20px 0;
+            line-height: 1.7;
+        }
+
+        .panel-scroll {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: var(--text3);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* placement info */
+        .placed-info {
+            font-size: 11px;
+            color: var(--text2);
+            background: var(--panel2);
+            border-radius: 5px;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+        }
+
+        .placed-info span {
+            color: var(--text3);
+            font-size: 10px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>WASAbi Experiment Designer</h1>
+        <div class="header-sep"></div>
+        <div class="toolbar">
+            <button class="tool-btn active" id="btn-draw" onclick="setMode('draw')">✏️ Draw Rect</button>
+            <button class="tool-btn" id="btn-select" onclick="setMode('select')">🔲 Select</button>
+            <button class="tool-btn src" id="btn-src" onclick="setMode('source')">📍 Source</button>
+            <button class="tool-btn rec" id="btn-rec" onclick="setMode('recorder')">🎙 Recorder</button>
+            <button class="tool-btn del" onclick="deleteSelected()">🗑 Delete</button>
+        </div>
+        <div class="header-right">
+            <button class="export-btn config" onclick="exportConfig()">⬇ config.json</button>
+            <button class="export-btn asset" onclick="exportAsset()">⬇ asset.json</button>
+        </div>
+    </header>
+
+    <div class="main">
+        <div class="canvas-wrap" id="canvas-wrap">
+            <canvas id="c"></canvas>
+            <div class="canvas-info" id="canvas-info">cursor: (0, 0) m</div>
+            <div class="canvas-hint" id="canvas-hint">Click and drag to draw a rectangle</div>
+        </div>
+
+        <div class="right-panel">
+            <div class="panel-section">
+                <div class="section-title">Experiment</div>
+                <div class="prop-row">
+                    <span class="prop-label">Name</span>
+                    <input type="text" id="exp-name" value="my_experiment" placeholder="experiment name">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Simulation</div>
+                <div class="prop-row"><span class="prop-label">dh (m)</span><input type="number" id="p-dh" value="0.2"
+                        step="0.05" min="0.01"></div>
+                <div class="prop-row"><span class="prop-label">dt (s)</span><input type="number" id="p-dt"
+                        value="0.0002" step="0.00005" min="0.00001"></div>
+                <div class="prop-row"><span class="prop-label">c₀ (m/s)</span><input type="number" id="p-c0"
+                        value="343.5" step="1"></div>
+                <div class="prop-row"><span class="prop-label">Duration (s)</span><input type="number" id="p-dur"
+                        value="0.5" step="0.1" min="0.01"></div>
+                <div class="prop-row"><span class="prop-label">PML layers</span><input type="number" id="p-pml"
+                        value="5" step="1" min="1"></div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Air Absorption</div>
+                <div class="prop-row"><span class="prop-label">α₁ (1/s)</span><input type="number" id="p-a1" value="0.0"
+                        step="0.00001"></div>
+                <div class="prop-row"><span class="prop-label">α₂ (1/s)</span><input type="number" id="p-a2" value="0.0"
+                        step="0.000001"></div>
+            </div>
+
+            <div class="panel-scroll">
+                <div class="panel-section" id="placement-section">
+                    <div class="section-title">Placements</div>
+                    <div id="src-info" class="placed-info" style="display:none"><span>Source</span><span
+                            id="src-pos"></span></div>
+                    <div id="rec-info" class="placed-info" style="display:none"><span>Recorder</span><span
+                            id="rec-pos"></span></div>
+                    <div class="prop-row" style="margin-top:8px">
+                        <span class="prop-label" style="font-size:10px">Z source (m)</span>
+                        <input type="number" id="src-z" value="1.5" step="0.1" min="0" style="font-size:11px">
+                    </div>
+                    <div class="prop-row">
+                        <span class="prop-label" style="font-size:10px">Z recorder (m)</span>
+                        <input type="number" id="rec-z" value="1.5" step="0.1" min="0" style="font-size:11px">
+                    </div>
+                </div>
+
+                <div class="panel-section" id="rect-section">
+                    <div class="section-title">Selected Rectangle</div>
+                    <div id="rect-props">
+                        <div class="empty-state">Select a rectangle<br>to edit its properties</div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <div class="section-title">Legend</div>
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:#4f8ef7"></div>Rectangle
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:#22c55e"></div>Source
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background:#f97316"></div>Recorder
+                        </div>
+                    </div>
+                    <div style="margin-top:10px; font-size:10px; color:var(--text3); line-height:1.7">
+                        Face colors on rect: red=high absorption, blue=low absorption.<br>
+                        Scroll wheel: zoom. Middle-drag / space+drag: pan.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // STATE
+        // ============================================================
+        const canvas = document.getElementById('c');
+        const ctx = canvas.getContext('2d');
+        const wrap = document.getElementById('canvas-wrap');
+
+        let rects = [];        // { id, x, y, w, h, d, ba: {xm,xp,ym,yp,zm,zp} }
+        let source = null;     // { x, y }
+        let recorder = null;   // { x, y }
+
+        let mode = 'draw';     // draw | select | source | recorder
+
+        // View transform
+        let viewX = 80, viewY = 80;
+        let zoom = 40;         // pixels per meter
+
+        // Drawing state
+        let drawing = false;
+        let drawStart = null;
+        let drawCurrent = null;
+
+        // Interaction
+        let selectedId = null;
+        let dragging = false;
+        let dragStart = null;
+        let dragRectStart = null;
+        let panning = false;
+        let panStart = null;
+        let panViewStart = null;
+        let spaceDown = false;
+
+        // Grid snap (meters)
+        const SNAP = 0.5;
+
+        let nextId = 1;
+
+        // ============================================================
+        // RESIZE
+        // ============================================================
+        function resize() {
+            const r = wrap.getBoundingClientRect();
+            canvas.width = r.width;
+            canvas.height = r.height;
+            render();
+        }
+        window.addEventListener('resize', resize);
+        setTimeout(resize, 0);
+
+        // ============================================================
+        // COORDINATE HELPERS
+        // ============================================================
+        function toWorld(px, py) {
+            return { x: (px - viewX) / zoom, y: (py - viewY) / zoom };
+        }
+        function toScreen(wx, wy) {
+            return { x: wx * zoom + viewX, y: wy * zoom + viewY };
+        }
+        function snapGrid(v) {
+            return Math.round(v / SNAP) * SNAP;
+        }
+
+        // ============================================================
+        // RENDER
+        // ============================================================
+        function absColor(v) {
+            // 0 → blue, 1 → red
+            v = Math.max(0, Math.min(1, v));
+            const r = Math.round(v * 220 + (1 - v) * 60);
+            const g = Math.round((1 - v) * 120 + v * 50);
+            const b = Math.round((1 - v) * 220 + v * 50);
+            return `rgb(${r},${g},${b})`;
+        }
+
+        function render() {
+            const W = canvas.width, H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(42,51,72,0.5)';
+            ctx.lineWidth = 1;
+            const startX = Math.floor(-viewX / zoom / SNAP) * SNAP;
+            const startY = Math.floor(-viewY / zoom / SNAP) * SNAP;
+            const endX = (W - viewX) / zoom;
+            const endY = (H - viewY) / zoom;
+
+            for (let gx = startX; gx <= endX; gx += SNAP) {
+                const sx = gx * zoom + viewX;
+                ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H);
+                ctx.stroke();
+            }
+            for (let gy = startY; gy <= endY; gy += SNAP) {
+                const sy = gy * zoom + viewY;
+                ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy);
+                ctx.stroke();
+            }
+
+            // Axes
+            ctx.strokeStyle = 'rgba(79,142,247,0.25)';
+            ctx.lineWidth = 1.5;
+            const ox = viewX, oy = viewY;
+            ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, H); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(W, oy); ctx.stroke();
+
+            // Rectangles
+            for (const r of rects) {
+                const s = toScreen(r.x, r.y);
+                const sw = r.w * zoom;
+                const sh = r.h * zoom;
+                const sel = r.id === selectedId;
+
+                // Fill
+                ctx.fillStyle = sel ? 'rgba(79,142,247,0.18)' : 'rgba(79,142,247,0.08)';
+                ctx.fillRect(s.x, s.y, sw, sh);
+
+                // Face absorption bars (thin colored stripe per edge)
+                const T = 5; // bar thickness in px
+                // x_minus (left)
+                ctx.fillStyle = absColor(r.ba.xm);
+                ctx.fillRect(s.x, s.y + T, T, sh - 2 * T);
+                // x_plus (right)
+                ctx.fillStyle = absColor(r.ba.xp);
+                ctx.fillRect(s.x + sw - T, s.y + T, T, sh - 2 * T);
+                // y_minus (top of canvas = low Y = "top" face)
+                ctx.fillStyle = absColor(r.ba.ym);
+                ctx.fillRect(s.x + T, s.y, sw - 2 * T, T);
+                // y_plus (bottom of canvas)
+                ctx.fillStyle = absColor(r.ba.yp);
+                ctx.fillRect(s.x + T, s.y + sh - T, sw - 2 * T, T);
+
+                // Outline
+                ctx.strokeStyle = sel ? '#4f8ef7' : 'rgba(79,142,247,0.5)';
+                ctx.lineWidth = sel ? 2 : 1;
+                ctx.strokeRect(s.x, s.y, sw, sh);
+
+                // Label
+                if (sw > 40 && sh > 20) {
+                    ctx.fillStyle = sel ? '#e2e8f0' : '#94a3b8';
+                    ctx.font = `${Math.min(12, sw / 8)}px Inter, monospace`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`${r.w}×${r.h}m`, s.x + sw / 2, s.y + sh / 2);
+                }
+            }
+
+            // Active draw preview
+            if (drawing && drawStart && drawCurrent) {
+                const s = toScreen(Math.min(drawStart.x, drawCurrent.x), Math.min(drawStart.y, drawCurrent.y));
+                const ew = Math.abs(drawCurrent.x - drawStart.x) * zoom;
+                const eh = Math.abs(drawCurrent.y - drawStart.y) * zoom;
+                ctx.strokeStyle = '#4f8ef7';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 4]);
+                ctx.strokeRect(s.x, s.y, ew, eh);
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'rgba(79,142,247,0.12)';
+                ctx.fillRect(s.x, s.y, ew, eh);
+            }
+
+            // Source
+            if (source) {
+                const s = toScreen(source.x, source.y);
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, 9, 0, Math.PI * 2);
+                ctx.fillStyle = '#22c55e';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 10px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('S', s.x, s.y);
+            }
+
+            // Recorder
+            if (recorder) {
+                const s = toScreen(recorder.x, recorder.y);
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, 9, 0, Math.PI * 2);
+                ctx.fillStyle = '#f97316';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 10px Inter';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('R', s.x, s.y);
+            }
+        }
+
+        // ============================================================
+        // MODE
+        // ============================================================
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            const map = { draw: 'btn-draw', select: 'btn-select', source: 'btn-src', recorder: 'btn-rec' };
+            if (map[m]) document.getElementById(map[m]).classList.add('active');
+            const hints = {
+                draw: 'Click and drag to draw a rectangle',
+                select: 'Click to select a rectangle',
+                source: 'Click to place the source',
+                recorder: 'Click to place the recorder',
+            };
+            document.getElementById('canvas-hint').textContent = hints[m] || '';
+            canvas.style.cursor = m === 'select' ? 'default' : m === 'draw' ? 'crosshair' : 'cell';
+        }
+
+        // ============================================================
+        // MOUSE
+        // ============================================================
+        function getPos(e) {
+            const r = canvas.getBoundingClientRect();
+            return { px: e.clientX - r.left, py: e.clientY - r.top };
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 1 || spaceDown) {
+                panning = true;
+                panStart = { px: e.clientX, py: e.clientY };
+                panViewStart = { x: viewX, y: viewY };
+                return;
+            }
+            const { px, py } = getPos(e);
+            const w = toWorld(px, py);
+            const ws = { x: snapGrid(w.x), y: snapGrid(w.y) };
+
+            if (mode === 'draw') {
+                drawing = true;
+                drawStart = ws;
+                drawCurrent = ws;
+            } else if (mode === 'select') {
+                const hit = rectAt(w.x, w.y);
+                selectedId = hit ? hit.id : null;
+                if (hit) {
+                    dragging = true;
+                    dragStart = ws;
+                    dragRectStart = { x: hit.x, y: hit.y };
+                }
+                updateRectPanel();
+                render();
+            } else if (mode === 'source') {
+                source = { x: snapGrid(w.x), y: snapGrid(w.y) };
+                updatePlacementPanel();
+                render();
+            } else if (mode === 'recorder') {
+                recorder = { x: snapGrid(w.x), y: snapGrid(w.y) };
+                updatePlacementPanel();
+                render();
+            }
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (panning) {
+                viewX = panViewStart.x + (e.clientX - panStart.px);
+                viewY = panViewStart.y + (e.clientY - panStart.py);
+                render();
+                return;
+            }
+            const { px, py } = getPos(e);
+            const w = toWorld(px, py);
+            const ws = { x: snapGrid(w.x), y: snapGrid(w.y) };
+
+            document.getElementById('canvas-info').textContent = `cursor: (${ws.x.toFixed(1)}, ${ws.y.toFixed(1)}) m`;
+
+            if (drawing) {
+                drawCurrent = ws;
+                render();
+            } else if (dragging && selectedId !== null) {
+                const r = rects.find(r => r.id === selectedId);
+                if (r) {
+                    r.x = snapGrid(dragRectStart.x + (ws.x - dragStart.x));
+                    r.y = snapGrid(dragRectStart.y + (ws.y - dragStart.y));
+                    updateRectPanel();
+                    render();
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', e => {
+            if (panning) { panning = false; return; }
+            if (drawing) {
+                drawing = false;
+                if (drawStart && drawCurrent) {
+                    const x = Math.min(drawStart.x, drawCurrent.x);
+                    const y = Math.min(drawStart.y, drawCurrent.y);
+                    const w = Math.abs(drawCurrent.x - drawStart.x);
+                    const h = Math.abs(drawCurrent.y - drawStart.y);
+                    if (w >= SNAP && h >= SNAP) {
+                        const r = {
+                            id: nextId++,
+                            x: snapGrid(x), y: snapGrid(y),
+                            w: snapGrid(w), h: snapGrid(h),
+                            d: 3.0,
+                            ba: { xm: 1.0, xp: 1.0, ym: 1.0, yp: 1.0, zm: 1.0, zp: 1.0 }
+                        };
+                        rects.push(r);
+                        selectedId = r.id;
+                        setMode('select');
+                        updateRectPanel();
+                    }
+                }
+                drawStart = null; drawCurrent = null;
+                render();
+            }
+            if (dragging) { dragging = false; }
+        });
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const { px, py } = getPos(e);
+            const factor = e.deltaY < 0 ? 1.12 : 0.89;
+            const wx = (px - viewX) / zoom;
+            const wy = (py - viewY) / zoom;
+            zoom *= factor;
+            zoom = Math.max(8, Math.min(200, zoom));
+            viewX = px - wx * zoom;
+            viewY = py - wy * zoom;
+            render();
+        }, { passive: false });
+
+        // ============================================================
+        // KEYBOARD
+        // ============================================================
+        window.addEventListener('keydown', e => {
+            if (e.code === 'Space') { spaceDown = true; canvas.style.cursor = 'grab'; }
+            if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+            if (e.key === 'Escape') { selectedId = null; updateRectPanel(); render(); }
+        });
+        window.addEventListener('keyup', e => {
+            if (e.code === 'Space') { spaceDown = false; setMode(mode); }
+        });
+
+        // ============================================================
+        // RECT HELPERS
+        // ============================================================
+        function rectAt(wx, wy) {
+            for (let i = rects.length - 1; i >= 0; i--) {
+                const r = rects[i];
+                if (wx >= r.x && wx <= r.x + r.w && wy >= r.y && wy <= r.y + r.h) return r;
+            }
+            return null;
+        }
+
+        function deleteSelected() {
+            if (selectedId === null) return;
+            rects = rects.filter(r => r.id !== selectedId);
+            selectedId = null;
+            updateRectPanel();
+            render();
+        }
+
+        // ============================================================
+        // RIGHT PANEL
+        // ============================================================
+        function updatePlacementPanel() {
+            if (source) {
+                document.getElementById('src-info').style.display = '';
+                const z = parseFloat(document.getElementById('src-z').value) || 1.5;
+                document.getElementById('src-pos').textContent = `x=${source.x}, y=${source.y}, z=${z} m`;
+            }
+            if (recorder) {
+                document.getElementById('rec-info').style.display = '';
+                const z = parseFloat(document.getElementById('rec-z').value) || 1.5;
+                document.getElementById('rec-pos').textContent = `x=${recorder.x}, y=${recorder.y}, z=${z} m`;
+            }
+        }
+
+        ['src-z', 'rec-z'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updatePlacementPanel);
+        });
+
+        function updateRectPanel() {
+            const el = document.getElementById('rect-props');
+            if (selectedId === null) {
+                el.innerHTML = `<div class="empty-state">Select a rectangle<br>to edit its properties</div>`;
+                return;
+            }
+            const r = rects.find(r => r.id === selectedId);
+            if (!r) { el.innerHTML = ''; return; }
+
+            el.innerHTML = `
+    <div class="prop-row"><span class="prop-label">x (m)</span><input type="number" id="ri-x" value="${r.x}" step="${SNAP}"></div>
+    <div class="prop-row"><span class="prop-label">y (m)</span><input type="number" id="ri-y" value="${r.y}" step="${SNAP}"></div>
+    <div class="prop-row"><span class="prop-label">w (m)</span><input type="number" id="ri-w" value="${r.w}" step="${SNAP}" min="${SNAP}"></div>
+    <div class="prop-row"><span class="prop-label">h (m)</span><input type="number" id="ri-h" value="${r.h}" step="${SNAP}" min="${SNAP}"></div>
+    <div class="prop-row"><span class="prop-label">depth d (m)</span><input type="number" id="ri-d" value="${r.d}" step="0.5" min="0.5"></div>
+    <div class="section-title" style="margin-top:12px;margin-bottom:8px">Boundary Absorption</div>
+    <div class="face-grid">
+      ${face('xm', 'x_minus', '#ef4444', r.ba.xm)}
+      ${face('xp', 'x_plus', '#f97316', r.ba.xp)}
+      ${face('ym', 'y_minus', '#eab308', r.ba.ym)}
+      ${face('yp', 'y_plus', '#22c55e', r.ba.yp)}
+      ${face('zm', 'z_minus', '#06b6d4', r.ba.zm)}
+      ${face('zp', 'z_plus', '#8b5cf6', r.ba.zp)}
+    </div>
+  `;
+
+            ['x', 'y', 'w', 'h', 'd'].forEach(k => {
+                document.getElementById('ri-' + k).addEventListener('input', e => {
+                    r[k === 'w' || k === 'h' || k === 'd' ? k : k] = parseFloat(e.target.value) || 0;
+                    render();
+                });
+            });
+            ['xm', 'xp', 'ym', 'yp', 'zm', 'zp'].forEach(k => {
+                document.getElementById('rba-' + k).addEventListener('input', e => {
+                    r.ba[k] = Math.max(0, Math.min(1, parseFloat(e.target.value) || 0));
+                    render();
+                });
+            });
+        }
+
+        function face(key, label, color, val) {
+            return `<div class="face-item">
+    <div class="face-dot" style="background:${color}"></div>
+    <label>${label}</label>
+    <input type="number" id="rba-${key}" value="${val}" min="0" max="1" step="0.05">
+  </div>`;
+        }
+
+        // ============================================================
+        // EXPORT
+        // ============================================================
+        // Snap value to nearest multiple of dh (ensures integer grid indices in C++)
+        function snapDh(v, dh) { return Math.round(v / dh) * dh; }
+
+        function exportAsset() {
+            const dh = parseFloat(document.getElementById('p-dh').value) || 0.2;
+            const a1 = parseFloat(document.getElementById('p-a1').value) || 0;
+            const a2 = parseFloat(document.getElementById('p-a2').value) || 0;
+            const srcZ = parseFloat(document.getElementById('src-z').value) || 1.5;
+            const recZ = parseFloat(document.getElementById('rec-z').value) || 1.5;
+
+            // Validate
+            if (!source) { alert('Place a source first!'); return; }
+            if (!recorder) { alert('Place a recorder first!'); return; }
+            if (rects.length === 0) { alert('Draw at least one rectangle!'); return; }
+
+            // All geometry values must be multiples of dh (C++ uses integer grid units).
+            // We round to the nearest dh multiple to avoid fractional grid indices.
+            const partitions = rects.map(r => ({
+                x: snapDh(r.x, dh), y: snapDh(r.y, dh), z: 0,
+                w: Math.max(dh, snapDh(r.w, dh)),
+                h: Math.max(dh, snapDh(r.h, dh)),
+                d: Math.max(dh, snapDh(r.d, dh)),
+                boundary_absorption: {
+                    x_minus: r.ba.xm, x_plus: r.ba.xp,
+                    y_minus: r.ba.ym, y_plus: r.ba.yp,
+                    z_minus: r.ba.zm, z_plus: r.ba.zp
+                }
+            }));
+
+            const obj = {
+                air_absorption: { alpha1: a1, alpha2: a2 },
+                partitions,
+                sources: [{
+                    type: 'gaussian',
+                    x: snapDh(source.x, dh), y: snapDh(source.y, dh),
+                    z: snapDh(srcZ, dh)
+                }],
+                recorders: [{
+                    x: snapDh(recorder.x, dh), y: snapDh(recorder.y, dh),
+                    z: snapDh(recZ, dh)
+                }]
+            };
+
+            download('asset.json', JSON.stringify(obj, null, 4));
+        }
+
+        function exportConfig() {
+            const name = document.getElementById('exp-name').value || 'my_experiment';
+            const obj = {
+                simulation: {
+                    asset_name: name,
+                    duration: parseFloat(document.getElementById('p-dur').value) || 0.5,
+                    dh: parseFloat(document.getElementById('p-dh').value) || 0.2,
+                    dt: parseFloat(document.getElementById('p-dt').value) || 0.0002,
+                    c0: parseFloat(document.getElementById('p-c0').value) || 343.5,
+                    n_pml_layers: parseInt(document.getElementById('p-pml').value) || 5
+                },
+                visualization: {
+                    viz_skip: 0,
+                    max_viz_gain: 0.000002
+                }
+            };
+            download('config.json', JSON.stringify(obj, null, 4));
+        }
+
+        function download(filename, content) {
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // ============================================================
+        // INIT
+        // ============================================================
+        setMode('draw');
+        render();
+    </script>
+</body>
+
+</html>
