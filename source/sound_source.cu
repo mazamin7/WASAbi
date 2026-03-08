@@ -57,6 +57,9 @@ std::vector<std::shared_ptr<SoundSource>> SoundSource::ImportSources(std::string
         } catch (const std::exception& e) {
             std::cerr << "ERROR parsing JSON asset file: " << e.what() << std::endl;
         }
+        for (auto source : sources) {
+            source->RecordSource();
+        }
         return sources;
     }
 

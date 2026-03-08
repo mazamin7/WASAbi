@@ -28,6 +28,10 @@ private:
 	std::string response_path_;
 	std::string dir_path_;
 
+	double* field_buffer_ = nullptr;
+	int gs_x_ = 0, gs_y_ = 0, gs_z_ = 0;
+	int go_x_ = 0, go_y_ = 0, go_z_ = 0;
+
 public:
 	Recorder(const Config& config, int x, int y, int z, int total_steps__, std::string dir_path);
 	~Recorder();

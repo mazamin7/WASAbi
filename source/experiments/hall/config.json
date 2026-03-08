@@ -7,7 +7,7 @@
         "c0": 343.5,
         "boundary_absorption": 1.0,
         "n_pml_layers": 5,
-        "precision": "fine",
+        "precision": "coarse",
         "air_absorption_alpha1": 0.0,
         "air_absorption_alpha2": 0.0
     },

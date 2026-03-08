@@ -21,6 +21,7 @@ Recorder::Recorder(const Config& config, int x, int y, int z, int total_steps, s
 
 Recorder::~Recorder()
 {
+	if (field_buffer_) free(field_buffer_);
 	output_.close();
 	response_.close();
 }
@@ -39,43 +40,43 @@ void Recorder::FindPartition(std::vector<std::shared_ptr<Partition>> partitions)
 	}
 
 	partitions_ = partitions;
+
+	// Calculate global simulation dimensions once
+	go_x_ = go_y_ = go_z_ = std::numeric_limits<int>::max();
+	int xe = std::numeric_limits<int>::min();
+	int ye = std::numeric_limits<int>::min();
+	int ze = std::numeric_limits<int>::min();
+
+	for (auto p : partitions_) {
+		go_x_ = std::min(go_x_, p->x_start_);
+		go_y_ = std::min(go_y_, p->y_start_);
+		go_z_ = std::min(go_z_, p->z_start_);
+		xe = std::max(xe, p->x_end_);
+		ye = std::max(ye, p->y_end_);
+		ze = std::max(ze, p->z_end_);
+	}
+	gs_x_ = xe - go_x_;
+	gs_y_ = ye - go_y_;
+	gs_z_ = ze - go_z_;
+
+	// Pre-allocate field buffer to avoid mid-loop overhead
+	if (field_buffer_) free(field_buffer_);
+	field_buffer_ = (double*)calloc(gs_x_ * gs_y_ * gs_z_, sizeof(double));
 }
 
 void Recorder::RecordField(int time_step)
 {
 	bool render_pml = false;
 
-	int x_start_, x_end_;
-	int y_start_, y_end_;
-	int z_start_, z_end_;
-
-	int size_x_, size_y_, size_z_;
-
-	x_start_ = y_start_ = z_start_ = std::numeric_limits<int>::max();
-	x_end_ = y_end_ = z_end_ = std::numeric_limits<int>::min();
-
-	for (auto partition : partitions_)
-	{
-		x_start_ = std::min(x_start_, partition->x_start_);
-		y_start_ = std::min(y_start_, partition->y_start_);
-		z_start_ = std::min(z_start_, partition->z_start_);
-
-		x_end_ = std::max(x_end_, partition->x_end_);
-		y_end_ = std::max(y_end_, partition->y_end_);
-		z_end_ = std::max(z_end_, partition->z_end_);
-	}
-
-	size_x_ = x_end_ - x_start_;
-	size_y_ = y_end_ - y_start_;
-	size_z_ = z_end_ - z_start_;
-	
-	// NOTE THAT IT SAVES 1 EVERY 10 TIME STEPS
-	if ((time_step < total_steps_) && (time_step % 10 == 0))
+	// Record EVERY time step to match expected frame count
+	if (time_step < total_steps_)
 	{
 		if (!output_.is_open()) {
 			output_.open(output_path_, std::ios::out | std::ios::binary);
 		}
-		double* values_ = (double*)calloc(size_x_ * size_y_ * size_z_, sizeof(double));
+		
+		// Clear local host buffer before assembling
+		memset(field_buffer_, 0, gs_x_ * gs_y_ * gs_z_ * sizeof(double));
 
 		for (auto partition : partitions_)
 		{
@@ -84,20 +85,31 @@ void Recorder::RecordField(int time_step)
 				if (!partition->should_render_) continue;
 			}
 
-			for (int i = 0; i < partition->width_; i++) {
+			// OPTIMIZATION: Bulk transfer from GPU to CPU per partition 
+			// Instead of million individual get_pressure() calls
+			size_t vol_size = partition->width_ * partition->height_ * partition->depth_ * sizeof(double);
+			double* h_partition_field = (double*)malloc(vol_size);
+			cudaMemcpy(h_partition_field, partition->d_pressure_, vol_size, cudaMemcpyDeviceToHost);
+
+			// Assemble the partition field into the global field buffer
+			for (int k = 0; k < partition->depth_; k++) {
 				for (int j = 0; j < partition->height_; j++) {
-					for (int k = 0; k < partition->depth_; k++) {
-						values_[(partition->z_start_ - z_start_ + k) * size_y_ * size_x_ + (partition->y_start_ - y_start_ + j) * size_x_ + (partition->x_start_ - x_start_ + i)] = partition->get_pressure(i, j, k);
-					}
+					// Single memcpy for the entire row (X-dimension)
+					size_t row_bytes = partition->width_ * sizeof(double);
+					size_t src_offset = (k * partition->height_ * partition->width_) + (j * partition->width_);
+					size_t dst_offset = ((partition->z_start_ - go_z_ + k) * gs_y_ * gs_x_) + 
+					                   ((partition->y_start_ - go_y_ + j) * gs_x_) + 
+					                   (partition->x_start_ - go_x_);
+					
+					memcpy(field_buffer_ + dst_offset, h_partition_field + src_offset, row_bytes);
 				}
 			}
+			free(h_partition_field);
 		}
 
 		// Dump directly as binary
-        int total_points = size_x_ * size_y_ * size_z_;
-		output_.write(reinterpret_cast<const char*>(values_), total_points * sizeof(double));
-		
-		free(values_);
+        int total_points = gs_x_ * gs_y_ * gs_z_;
+		output_.write(reinterpret_cast<const char*>(field_buffer_), total_points * sizeof(double));
 	}
 }
 

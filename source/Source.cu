@@ -176,40 +176,23 @@ int main(int argc, char* argv[]) {
     } 
     // --- PLAYBACK LOOP ---
     else {
-        // Attempt to find and load the accompanying JSON metadata
-        std::string meta_path = cli_args.playback_file;
-        size_t bin_idx = meta_path.rfind(".bin");
-        if (bin_idx != string::npos) meta_path.replace(bin_idx, 4, ".json");
-        size_t data_idx = meta_path.rfind("record_data_");
-        if (data_idx != string::npos) meta_path.replace(data_idx, 12, "record_meta_");
-        
-        nlohmann::json meta;
-        std::ifstream meta_in(meta_path);
-        if (meta_in.is_open()) {
-            meta_in >> meta;
-            meta_in.close();
-            cout << "Loaded playback metadata from " << meta_path << endl;
-            if (meta.contains("grid_size")) {
-                dim_x = meta["grid_size"][0];
-                dim_y = meta["grid_size"][1];
-                dim_z = meta["grid_size"][2];
-            }
-        } else {
-            cerr << "WARNING: Could not find metadata file " << meta_path << ". Trusting config constraints." << endl;
-        }
-
-        ifstream ifs(cli_args.playback_file, std::ios::binary); 
+        // Read directly from binary stream
         int pml_lay = Simulation::n_pml_layers_;
         int sx_p = sources.empty() ? dim_x / 2 : (sources[0]->x() - rxs);
         int sy_p = sources.empty() ? dim_y / 2 : (sources[0]->y() - rys);
         int sz_p = sources.empty() ? dim_z / 2 : (sources[0]->z() - rzs);
-        
+
         vector<double> fd(dim_x * dim_y * dim_z); 
         size_t frame_bytes = fd.size() * sizeof(double);
         vector<Uint32> pixels(resolution_x * resolution_y, 0x000000);
         float smooth_v = 0.0f; 
         int fi = 0;
-        
+
+        ifstream ifs(cli_args.playback_file, std::ios::binary); 
+        if (!ifs.is_open()) {
+            cerr << "FATAL ERROR: Could not open playback file " << cli_args.playback_file << endl;
+            return 1;
+        }
         // Read directly from binary stream
         while (ifs.read(reinterpret_cast<char*>(fd.data()), frame_bytes) && !quit) {
             visualizer.HandleEvents(quit);
@@ -254,6 +237,7 @@ int main(int argc, char* argv[]) {
             }
             
             visualizer.RenderPlaybackFrame(fi, total_steps, max_p, pixels);
+            if (fi % 50 == 0) { cout << "Playback Progress: " << fi << "/" << total_steps << "\r"; cout.flush(); }
             fi++; 
             SDL_Delay(cli_args.playback_delay);
         }
