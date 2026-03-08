@@ -19,8 +19,8 @@ Visualizer::Visualizer(RunMode mode, int panel_sz, int panel_w_sim, int panel_h_
         
         window_ = SDL_CreateWindow("WASAbi 2.5D", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, win_w, win_h, 0);
         renderer_ = SDL_CreateRenderer(window_, -1, 0);
-        texture_ = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING, resolution_x_, resolution_y_);
-        font_ = TTF_OpenFont("font/SourceSansPro-Regular.ttf", 48);
+        texture_ = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, resolution_x_, resolution_y_);
+        font_ = TTF_OpenFont("source/font/SourceSansPro-Regular.ttf", 48);
         
         message_rect_ = { 4, win_h - 20, 120, 18 }; 
         message_rect2_ = { win_w - 124, win_h - 20, 118, 18 };
@@ -148,9 +148,10 @@ Uint32 Visualizer::CalculateColorPlayback(double p, float v_coef) {
         double neg = norm * 2.0;
         r = (int)(255 * neg); g = (int)(255 * neg); b = 255;
     }
-    // Color normalization and shift to match SDL_PIXELFORMAT_RGB888 (original)
-    // RGB888 expects 24 bits: R:16-23, G:8-15, B:0-7
-    return (r << 16) | (g << 8) | b;
+    // Color normalization and shift to match SDL_PIXELFORMAT_RGBA8888 (A:24-31, B:16-23, G:8-15, R:0-7)
+    // To match the CUDA kernel RGBAToUint32: (a << 24) | (b << 16) | (g << 8) | r
+    uint32_t a = 255;
+    return (a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | (uint32_t)r;
 }
 
 void Visualizer::SetMarkers(const std::vector<Marker>& sources, const std::vector<Marker>& receivers, 

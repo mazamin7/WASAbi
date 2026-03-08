@@ -240,7 +240,7 @@ int main(int argc, char* argv[]) {
                 int px1 = p->x_start_ - rxs + pml_lay, px2 = p->x_end_ - rxs + pml_lay;
                 int py1 = p->y_start_ - rys + pml_lay, py2 = p->y_end_ - rys + pml_lay;
                 int pz1 = p->z_start_ - rzs + pml_lay, pz2 = p->z_end_ - rzs + pml_lay;
-                Uint32 c = p->should_render_ ? 0xFFFFFF : 0x808080;
+                Uint32 c = p->should_render_ ? 0xFFFFFFFF : 0xFF808080;
                 
                 if (sz_p + pml_lay >= pz1 && sz_p + pml_lay < pz2) 
                     for (int j = py1; j < py2; j++) for (int i = px1; i < px2; i++) pixels[j * resolution_x + i] = c;
