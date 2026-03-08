@@ -246,10 +246,10 @@
 
     <div id="main">
         <div id="canvas-wrap">
-            <canvas id="canvas"></canvas>
+            <canvas id="canvas" width="800" height="600"></canvas>
             <div id="ir-canvas-container">
                 <div class="ir-label">Live Impulse Response (interpolated)</div>
-                <canvas id="ir-canvas"></canvas>
+                <canvas id="ir-canvas" width="800" height="150"></canvas>
             </div>
             <div id="visual-hint">Drag the <b>orange marker</b> to move the listener</div>
         </div>
@@ -317,6 +317,7 @@
             updateStatus();
             initListener();
             render();
+            if (irGrid) updateConvolvers();
         });
 
         document.getElementById('grid-input').addEventListener('change', async (e) => {
@@ -325,6 +326,7 @@
             const buffer = await file.arrayBuffer();
             irGrid = new Float32Array(buffer);
             updateStatus();
+            if (meta) updateConvolvers(); // Initial plot
         });
 
         document.getElementById('audio-input').addEventListener('change', async (e) => {
@@ -390,29 +392,28 @@
             }
         }
 
-        async function updateConvolvers() {
-            if (!audioCtx || !meta || !irGrid) return;
-
-            // Find 4 nearest points in the grid
+        function getWeightsAndCoords() {
+            if (!meta) return null;
             const gx = (listenerPos.x - meta.rxs) / meta.dh;
             const gy = (listenerPos.y - meta.rys) / meta.dh;
-
             const ix = Math.floor(gx);
             const iy = Math.floor(gy);
             const fx = gx - ix;
             const fy = gy - iy;
+            const weights = [(1 - fx) * (1 - fy), fx * (1 - fy), (1 - fx) * fy, fx * fy];
+            const coords = [[ix, iy], [ix + 1, iy], [ix, iy + 1], [ix + 1, iy + 1]];
+            return { weights, coords };
+        }
 
-            // Weights for bilinear interpolation
-            const weights = [
-                (1 - fx) * (1 - fy), // Top-left
-                fx * (1 - fy),       // Top-right
-                (1 - fx) * fy,       // Bottom-left
-                fx * fy              // Bottom-right
-            ];
+        async function updateConvolvers() {
+            if (!audioCtx || !meta || !irGrid) {
+                // Even without audioCtx, we can at least render the IR plot
+                const data = getWeightsAndCoords();
+                if (data) renderIR(data.weights, data.coords);
+                return;
+            }
 
-            const coords = [
-                [ix, iy], [ix + 1, iy], [ix, iy + 1], [ix + 1, iy + 1]
-            ];
+            const { weights, coords } = getWeightsAndCoords();
 
             for (let i = 0; i < 4; i++) {
                 const [cx, cy] = coords[i];
@@ -605,6 +606,10 @@
             listenerPos.x = w.x;
             listenerPos.y = w.y;
             render();
+
+            // Real-time IR plot update while dragging
+            const data = getWeightsAndCoords();
+            if (data) renderIR(data.weights, data.coords);
         });
 
         window.addEventListener('mouseup', () => {
