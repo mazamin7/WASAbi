@@ -4,6 +4,7 @@
 #include <string>
 
 struct Config {
+    std::string experiment_name;
     std::string asset_name;
     double boundary_absorption;
     double air_absorption_alpha1;
@@ -15,10 +16,13 @@ struct Config {
     int viz_skip;
     int fixed_panel_size;
     float max_viz_gain;
+    
+    // Recording settings
+    bool is_record_response;
+    bool is_record_field;
 };
 
-Config load_config(const std::string& filename);
+Config load_config(const std::string& filename, const std::string& experiment_name = "");
 void set_precision_params(const std::string& precision, double& dh, double& dt);
-void ensureConfigExists(const std::string& config_path, const std::string& default_path);
 
 #endif // CONFIG_LOADER_H

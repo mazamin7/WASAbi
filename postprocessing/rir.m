@@ -1,16 +1,23 @@
 clear all; close all; clc;
 
-source_filename = 'source_0.txt';
-receiver_filename = 'response_0.txt';
-alpha1 = 0; % air telegrapher damping
-alpha2 = 0; % air viscoelastic damping
-alpha_b = 1; % boundary absorption
+% Correct Binary Filenames
+source_filename = [experiment_path, '/output/source_data_0.bin'];
+receiver_filename = [experiment_path, '/output/response_data_0.bin'];
 
-% Parameters
-c = 343.5;
-sim_dur = 1;
-dh = 0.5;
+% Load Experiment Config
+config_str = fileread([experiment_path, '/config.json']);
+config = jsondecode(config_str);
 
+% Load Experiment Config
+config_str = fileread([experiment_path, '/config.json']);
+config = jsondecode(config_str);
+
+alpha1 = config.simulation.air_absorption_alpha1;
+alpha2 = config.simulation.air_absorption_alpha2;
+alpha_b = config.simulation.boundary_absorption;
+c = config.simulation.c0;
+sim_dur = config.simulation.duration;
+dh = config.simulation.dh;
 
 % Sampling rate and bandwidth based on dh
 switch dh
@@ -50,9 +57,16 @@ for i = 1:length(octave_bands)
     alpha_a = alpha1 + alpha2 * (2*pi*fc)^2;
     disp(['Air absorption: ' num2str(alpha_a) ' 1/sec.']);
 
-    % Load source and response
-    src = load(source_filename);
-    rr = load(receiver_filename);
+    % Load Binary Source
+    fid_src = fopen(source_filename, 'r');
+    src = fread(fid_src, inf, 'double');
+    fclose(fid_src);
+
+    % Stream Response Binary
+    fileID = fopen(receiver_filename, 'r');
+    rr = fread(fileID, inf, 'double');
+    fclose(fileID);
+
     Ns = size(rr,1);
     
     % Compute impulse response through deconvolution

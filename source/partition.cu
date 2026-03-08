@@ -8,6 +8,7 @@
 #include <iostream>
 #include <sstream>
 #include <cuda_runtime.h>
+#include <filesystem>
 #include <stdexcept>
 
 #define CHECK_CUDA(call) \
@@ -368,9 +369,35 @@ void Partition::AddSource(std::shared_ptr<SoundSource> source)
 	sources_.push_back(source);
 }
 
+#include "json.hpp"
+using json = nlohmann::json;
+
 std::vector<std::shared_ptr<Partition>> Partition::ImportPartitions(std::string path)
 {
 	std::vector<std::shared_ptr<Partition>> partitions;
+    
+    if (std::filesystem::path(path).extension() == ".json") {
+        std::ifstream file(path);
+        if (!file.is_open()) {
+            std::cerr << "WARNING: Could not open JSON asset file: " << path << std::endl;
+            return partitions;
+        }
+        try {
+            json j;
+            file >> j;
+            if (j.contains("partitions")) {
+                for (auto& p : j["partitions"]) {
+                    partitions.push_back(std::make_shared<DctPartition>(
+                        (int)((double)p["x"] / Simulation::dh_), (int)((double)p["y"] / Simulation::dh_), (int)((double)p["z"] / Simulation::dh_),
+                        (int)((double)p["w"] / Simulation::dh_), (int)((double)p["h"] / Simulation::dh_), (int)((double)p["d"] / Simulation::dh_)));
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "ERROR parsing JSON asset file: " << e.what() << std::endl;
+        }
+        return partitions;
+    }
+
 	std::ifstream file(path);
 	if (!file.is_open())
 	{

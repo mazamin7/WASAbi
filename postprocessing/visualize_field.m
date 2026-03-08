@@ -1,22 +1,56 @@
 clear all, close all, clc;
 
-out_filename = 'out_0.txt';
-room_filename = "hall.txt";
-dh = 0.5;
+experiment_path = '../source/experiments/hall';
+% Load Experiment Config
+config_str = fileread([experiment_path, '/config.json']);
+config = jsondecode(config_str);
 
-A = load(out_filename);
-N = size(A,1);
+% Load Assets
+asset_str = fileread([experiment_path, '/asset.json']);
+asset = jsondecode(asset_str);
 
-[Lx_int, Ly_int, Lz_int] = calculate_grid_size(room_filename,dh);
-Lx = double(Lx_int);
-Ly = double(Ly_int);
-Lz = double(Lz_int);
+% Simulation Params
+dh = config.simulation.dh;
+n_pml = config.simulation.n_pml_layers;
 
-% Reshape the data into a 3D array
-pressure_values = zeros(N,Lx,Ly,Lz);
+% Calculate Grid Size from Partitions (Bounding Box)
+partitions = asset.partitions;
+x_min = inf; x_max = -inf;
+y_min = inf; y_max = -inf;
+z_min = inf; z_max = -inf;
+
+for i = 1:length(partitions)
+    p = partitions(i);
+    % Partitions in JSON are in WORLD meters. Convert to grid indices.
+    x_min = min(x_min, floor(p.x / dh));
+    x_max = max(x_max, ceil((p.x + p.w) / dh));
+    y_min = min(y_min, floor(p.y / dh));
+    y_max = max(y_max, ceil((p.y + p.h) / dh));
+    z_min = min(z_min, floor(p.z / dh));
+    z_max = max(z_max, ceil((p.z + p.d) / dh));
+end
+
+% Total dimensions including PML
+Lx = (x_max - x_min) + 2 * n_pml;
+Ly = (y_max - y_min) + 2 * n_pml;
+Lz = (z_max - z_min) + 2 * n_pml;
+
+% Stream Binary Chunk
+fileID = fopen(data_filename, 'r');
+A = fread(fileID, inf, 'double');
+fclose(fileID);
+
+% Reshape the data into a 4D array (Time, X, Y, Z)
+% We calculate the number of time steps (N) based on the total elements
+points_per_frame = Lx * Ly * Lz;
+N = length(A) / points_per_frame;
+
+pressure_values = zeros(N, Lx, Ly, Lz);
 
 for iT = 1:N
-    pressure_values(iT,:,:,:) = reshape(A(iT,:), Lx, Ly, Lz);
+    start_idx = (iT - 1) * points_per_frame + 1;
+    end_idx = iT * points_per_frame;
+    pressure_values(iT,:,:,:) = reshape(A(start_idx:end_idx), Lx, Ly, Lz);
 end
 
 %%

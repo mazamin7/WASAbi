@@ -1,0 +1,19 @@
+{
+    "simulation": {
+        "asset_name": "scene-3",
+        "duration": 0.2,
+        "dh": 0.5,
+        "dt": 0.000625,
+        "c0": 343.5,
+        "boundary_absorption": 1.0,
+        "n_pml_layers": 5,
+        "precision": "coarse",
+        "air_absorption_alpha1": 0.0,
+        "air_absorption_alpha2": 0.0
+    },
+    "visualization": {
+        "viz_skip": 10,
+        "fixed_panel_size": 400,
+        "max_viz_gain": 100
+    }
+}

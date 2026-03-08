@@ -13,6 +13,7 @@ CliArgs parse_cli_args(int argc, char* argv[]) {
             else if (m == "sim-viz") args.mode = RunMode::SIM_VIZ;
             else if (m == "viz-record") args.mode = RunMode::VIZ_RECORD;
         }
+        else if ((arg == "--experiment" || arg == "-e") && i + 1 < argc) args.experiment_name = argv[++i];
         else if (arg == "--config" && i + 1 < argc) args.config_path = argv[++i];
         else if (arg == "--playback-file" && i + 1 < argc) args.playback_file = argv[++i];
         else if (arg == "--playback-delay" && i + 1 < argc) args.playback_delay = atoi(argv[++i]);

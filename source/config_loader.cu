@@ -1,37 +1,73 @@
 #include "config_loader.h"
 #include <iostream>
+#include <fstream>
 #include <filesystem>
-#include "ini.h"
-#include <cstring>
+#include "json.hpp"
 
 using namespace std;
+using json = nlohmann::json;
 
-int parse_ini_handler(void* user, const char* section, const char* name, const char* value) {
-    Config* config = (Config*)user;
-    if (strcmp(section, "simulation") == 0) {
-        if (strcmp(name, "asset_name") == 0) config->asset_name = value;
-        else if (strcmp(name, "boundary_absorption") == 0) config->boundary_absorption = atof(value);
-        else if (strcmp(name, "air_absorption_alpha1") == 0) config->air_absorption_alpha1 = atof(value);
-        else if (strcmp(name, "air_absorption_alpha2") == 0) config->air_absorption_alpha2 = atof(value);
-        else if (strcmp(name, "duration") == 0) config->duration = atof(value);
-        else if (strcmp(name, "c0") == 0) config->c0 = atof(value);
-        else if (strcmp(name, "n_pml_layers") == 0) config->n_pml_layers = atoi(value);
-        else if (strcmp(name, "precision") == 0) config->precision = value;
-        else if (strcmp(name, "viz_skip") == 0) config->viz_skip = atoi(value);
-        else if (strcmp(name, "fixed_panel_size") == 0) config->fixed_panel_size = atoi(value);
-        else if (strcmp(name, "max_viz_gain") == 0) config->max_viz_gain = atof(value);
-    }
-    return 1;
-}
-
-Config load_config(const std::string& filename) {
+Config load_config(const std::string& filename, const std::string& experiment_name) {
     Config config;
+    config.experiment_name = experiment_name;
+    
+    // Explicit Default Fallbacks
+    config.asset_name = "hall";
+    // ... (rest of defaults)
+    config.boundary_absorption = 1.0;
+    config.air_absorption_alpha1 = 0.0;
+    config.air_absorption_alpha2 = 0.0;
+    config.duration = 0.2;
+    config.c0 = 343.5;
+    config.n_pml_layers = 5;
+    config.precision = "coarse";
+    config.is_record_response = false;
+    config.is_record_field = false;
+    
     config.viz_skip = 10;
     config.fixed_panel_size = 400;
     config.max_viz_gain = 100.0f;
-    if (ini_parse(filename.c_str(), parse_ini_handler, &config) < 0) {
-        cerr << "Can't load " << filename << endl;
+
+    std::string actual_path = filename;
+    if (!experiment_name.empty()) {
+        actual_path = "./experiments/" + experiment_name + "/config.json";
     }
+
+    std::ifstream file(actual_path);
+    if (!file.is_open()) {
+        cerr << "WARNING: Can't load " << actual_path << ". Using default parameters." << endl;
+        return config;
+    }
+
+    try {
+        json j;
+        file >> j;
+        
+        if (j.contains("simulation")) {
+            auto& s = j["simulation"];
+            if (s.contains("asset_name")) config.asset_name = s["asset_name"];
+            // ... (keep the existing mapping logic)
+            if (s.contains("boundary_absorption")) config.boundary_absorption = s["boundary_absorption"];
+            if (s.contains("air_absorption_alpha1")) config.air_absorption_alpha1 = s["air_absorption_alpha1"];
+            if (s.contains("air_absorption_alpha2")) config.air_absorption_alpha2 = s["air_absorption_alpha2"];
+            if (s.contains("duration")) config.duration = s["duration"];
+            if (s.contains("c0")) config.c0 = s["c0"];
+            if (s.contains("n_pml_layers")) config.n_pml_layers = s["n_pml_layers"];
+            if (s.contains("precision")) config.precision = s["precision"];
+            if (s.contains("is_record_response")) config.is_record_response = s["is_record_response"];
+            if (s.contains("is_record_field")) config.is_record_field = s["is_record_field"];
+        }
+        
+        if (j.contains("visualization")) {
+            auto& v = j["visualization"];
+            if (v.contains("viz_skip")) config.viz_skip = v["viz_skip"];
+            if (v.contains("fixed_panel_size")) config.fixed_panel_size = v["fixed_panel_size"];
+            if (v.contains("max_viz_gain")) config.max_viz_gain = v["max_viz_gain"];
+        }
+    } catch (const std::exception& e) {
+        cerr << "FATAL ERROR parsing " << actual_path << ": " << e.what() << endl;
+    }
+
     return config;
 }
 
@@ -43,18 +79,4 @@ void set_precision_params(const std::string& precision, double& dh, double& dt) 
     else { dh = 0.2; dt = 2e-4; }
 }
 
-void ensureConfigExists(const std::string& config_path, const std::string& default_path) {
-    if (!std::filesystem::exists(config_path)) {
-        cout << "Config not found at " << config_path << ". Attempting to copy " << default_path << "..." << endl;
-        if (std::filesystem::exists(default_path)) {
-            try {
-                std::filesystem::copy(default_path, config_path);
-                cout << "Successfully created " << config_path << " from default." << endl;
-            } catch (const std::exception& e) {
-                cerr << "Failed to copy default config: " << e.what() << endl;
-            }
-        } else {
-            cerr << "CRITICAL: Default config not found at " << default_path << endl;
-        }
-    }
-}
+

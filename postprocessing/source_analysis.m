@@ -1,6 +1,6 @@
 clear all, close all, clc;
 
-source_filename = 'source_0.txt';
+source_filename = 'source_data_0.bin';
 
 % Parameters
 c = 343.5;
@@ -29,8 +29,10 @@ end
 
 fs = 1/dt; % Sampling rate of impulse response
 
-% Load source
-src = load(source_filename);
+% Load binary source
+fid_src = fopen(source_filename, 'r');
+src = fread(fid_src, inf, 'double');
+fclose(fid_src);
 Ns = size(src,1);
 
 t_axis = (0:length(src)-1) / fs;

@@ -1,3 +1,6 @@
 @echo off
-.\build\WASAbiApp.exe --mode sim-record-response --config ./config/config.ini %*
+set EXP=%1
+if "%EXP%"=="" set EXP=hall
+echo Recording response for experiment: %EXP%
+.\build\WASAbiApp.exe --experiment %EXP% --mode sim-record-response
 pause

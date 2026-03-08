@@ -5,22 +5,19 @@
 #include <sstream>
 #include <string>
 #include <filesystem>
+#include "json.hpp"
 
+using json = nlohmann::json;
 
-Recorder::Recorder(int x, int y, int z, int total_steps)
-	: x_(x), y_(y), z_(z), total_steps_(total_steps)
+Recorder::Recorder(const Config& config, int x, int y, int z, int total_steps, std::string dir_path)
+	: config_(config), x_(x), y_(y), z_(z), total_steps_(total_steps), dir_path_(dir_path)
 {
 	static int id_generator = 0;
 	id_ = id_generator++;
-	std::string dir_name = std::to_string(Simulation::dh_) + "_" + std::to_string(Partition::boundary_absorption_) + "_" + std::to_string(Simulation::air_absorption_alpha1_) + "_" + std::to_string(Simulation::air_absorption_alpha2_);
 	
-	std::string dir_path = "./output/" + dir_name;
-	std::filesystem::create_directories(dir_path);
-
-	output_path_ = dir_path + "/out_" + std::to_string(id_) + ".txt";
-	response_path_ = dir_path + "/response_" + std::to_string(id_) + ".txt";
+	output_path_ = dir_path_ + "/record_data_" + std::to_string(id_) + ".bin";
+	response_path_ = dir_path_ + "/response_data_" + std::to_string(id_) + ".bin";
 }
-
 
 Recorder::~Recorder()
 {
@@ -76,7 +73,7 @@ void Recorder::RecordField(int time_step)
 	if ((time_step < total_steps_) && (time_step % 10 == 0))
 	{
 		if (!output_.is_open()) {
-			output_.open(output_path_, std::ios::out);
+			output_.open(output_path_, std::ios::out | std::ios::binary);
 		}
 		double* values_ = (double*)calloc(size_x_ * size_y_ * size_z_, sizeof(double));
 
@@ -96,11 +93,11 @@ void Recorder::RecordField(int time_step)
 			}
 		}
 
-		for (int i = 0; i < size_x_ * size_y_ * size_z_; ++i) {
-			output_ << values_[i] << " "; // Write each value followed by a newline
-		}
-
-		output_ << std::endl;
+		// Dump directly as binary
+        int total_points = size_x_ * size_y_ * size_z_;
+		output_.write(reinterpret_cast<const char*>(values_), total_points * sizeof(double));
+		
+		free(values_);
 	}
 }
 
@@ -109,15 +106,41 @@ void Recorder::RecordResponse(int time_step)
 	if (time_step <= total_steps_)
 	{
 		if (!response_.is_open()) {
-			response_.open(response_path_, std::ios::out);
+			response_.open(response_path_, std::ios::out | std::ios::binary);
 		}
-		response_ << part_->get_pressure(x_, y_, z_) << std::endl;
+        double val = part_->get_pressure(x_, y_, z_);
+		response_.write(reinterpret_cast<const char*>(&val), sizeof(double));
 	}
 }
 
-std::vector<std::shared_ptr<Recorder>> Recorder::ImportRecorders(std::string path)
+std::vector<std::shared_ptr<Recorder>> Recorder::ImportRecorders(const Config& config, std::string path, int total_steps__, std::string dir_path)
 {
 	std::vector<std::shared_ptr<Recorder>> recorders;
+
+    if (std::filesystem::path(path).extension() == ".json") {
+        std::ifstream file(path);
+        if (!file.is_open()) {
+            std::cerr << "WARNING: Could not open JSON asset file: " << path << std::endl;
+            return recorders;
+        }
+        try {
+            json j;
+            file >> j;
+            if (j.contains("recorders")) {
+                for (auto& r : j["recorders"]) {
+                    recorders.push_back(std::make_shared<Recorder>(config, 
+                        (int)((double)r["x"] / Simulation::dh_), 
+                        (int)((double)r["y"] / Simulation::dh_), 
+                        (int)((double)r["z"] / Simulation::dh_), 
+                        total_steps__, dir_path));
+                }
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "ERROR parsing JSON asset file: " << e.what() << std::endl;
+        }
+        return recorders;
+    }
+
 	std::ifstream file(path);
 	if (!file.is_open())
 	{
@@ -138,7 +161,7 @@ std::vector<std::shared_ptr<Recorder>> Recorder::ImportRecorders(std::string pat
 			// It's explicitly a recorder
 			double x, y, z, dummy;
 			if ((ss >> x >> y >> z) && !(ss >> dummy)) {
-				recorders.push_back(std::make_shared<Recorder>((int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), (int)(Simulation::duration_ / Simulation::dt_)));
+				recorders.push_back(std::make_shared<Recorder>(config, (int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), total_steps__, dir_path));
 			}
 		}
 		else {
@@ -147,7 +170,7 @@ std::vector<std::shared_ptr<Recorder>> Recorder::ImportRecorders(std::string pat
 				double x = std::stod(first_token);
 				double y, z, dummy;
 				if ((ss >> y >> z) && !(ss >> dummy)) {
-					recorders.push_back(std::make_shared<Recorder>((int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), (int)(Simulation::duration_ / Simulation::dt_)));
+					recorders.push_back(std::make_shared<Recorder>(config, (int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), total_steps__, dir_path));
 				}
 			} catch (...) {
 				// Not a number, not an 'R', ignore line
@@ -155,10 +178,5 @@ std::vector<std::shared_ptr<Recorder>> Recorder::ImportRecorders(std::string pat
 		}
 	}
 	file.close();
-	if (!recorders.empty())
-    {
-        std::cout << "SUCCESS: Imported " << recorders.size() << " recorders." << std::endl;
-    }
-
     return recorders;
 }

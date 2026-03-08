@@ -1,13 +1,9 @@
 @echo off
-if "%~1"=="" (
-    echo Usage: run_viz_record.bat [path_to_playback_file] [delay_ms]
-    echo Example: run_viz_record.bat ./output/0.500000_1.000000_0.000000_0.000000/out_0.txt 50
-    pause
-    exit /b
-)
-set PLAYBACK_FILE=%~1
-set DELAY=%~2
-if "%DELAY%"=="" set DELAY=50
-
-.\build\WASAbiApp.exe --mode viz-record --playback-file "%PLAYBACK_FILE%" --playback-delay %DELAY% --config ./config/config.ini %*
+set EXP=%1
+if "%EXP%"=="" set EXP=hall
+set PFILE=%2
+if "%PFILE%"=="" set PFILE=experiments/%EXP%/output/record_data_0.bin
+echo Visualizing playback for experiment: %EXP%
+echo File: %PFILE%
+.\build\WASAbiApp.exe --experiment %EXP% --mode viz-record --playback-file %PFILE%
 pause

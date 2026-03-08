@@ -4,12 +4,14 @@
 #include <memory>
 #include <fstream>
 #include "partition.h"
+#include "config_loader.h"
 
 class Recorder
 {
 	int id_;
 	int x_, y_, z_;
 	int total_steps_;
+	Config config_;
 
 public:
 	int x() const { return x_; }
@@ -24,16 +26,17 @@ private:
 	std::fstream response_;
 	std::string output_path_;
 	std::string response_path_;
+	std::string dir_path_;
 
 public:
-	Recorder(int x, int y, int z, int total_steps = 1000);
+	Recorder(const Config& config, int x, int y, int z, int total_steps__, std::string dir_path);
 	~Recorder();
 
 	void FindPartition(std::vector<std::shared_ptr<Partition>> partitions);
 	void RecordField(int time_step = 0);
 	void RecordResponse(int time_step = 0);
 
-	static std::vector<std::shared_ptr<Recorder>> ImportRecorders(std::string path);
+	static std::vector<std::shared_ptr<Recorder>> ImportRecorders(const Config& config, std::string path, int total_steps__, std::string dir_path);
 
 };
 

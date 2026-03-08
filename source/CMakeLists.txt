@@ -16,21 +16,16 @@ include_directories(
     ${PROJ_ROOT}/SDL2-2.28.4/include
     ${PROJ_ROOT}/SDL2_ttf-2.20.2/include
     .
-    ../inih-r58
 )
 
 file(GLOB ALL_SOURCES "*.cpp" "*.cu")
 set(SOURCES ${ALL_SOURCES})
 
 # --- 3. Create Executable ---
-set(INI_SOURCE "D:/Documents/projects/WASAbi/inih-r58/ini.c")
-add_executable(WASAbiApp ${SOURCES} ${INI_SOURCE})
+add_executable(WASAbiApp ${SOURCES})
 
 # --- 4. OS-Specific Logic (Linking & Copying) ---
 set(CURRENT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-set(SRC_ASSETS  "${CURRENT_DIR}/assets")
-set(SRC_CONFIG  "${CURRENT_DIR}/config")
-set(SRC_FONT    "${CURRENT_DIR}/font")
 set(DEST_DIR    "$<TARGET_FILE_DIR:WASAbiApp>")
 
 if(WIN32)
@@ -64,10 +59,6 @@ if(WIN32)
         # CUDA DLLs
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MY_CUDART_DLL}"   "${DEST_DIR}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${MY_CUFFT_DLL}"    "${DEST_DIR}"
-        # Assets (Disabled copying per user request - use source originals)
-        # COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_ASSETS}" "${DEST_DIR}/assets"
-        # COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_CONFIG}" "${DEST_DIR}/config"
-        # COMMAND ${CMAKE_COMMAND} -E copy_directory "${SRC_FONT}"   "${DEST_DIR}/font"
         COMMENT "Deploying Windows DLLs and Assets..."
     )
 else()

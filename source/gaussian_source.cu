@@ -4,7 +4,7 @@
 #include "simulation.h"
 
 
-GaussianSource::GaussianSource(int x, int y, int z) :SoundSource(x, y, z)
+GaussianSource::GaussianSource(int x, int y, int z, std::string dir_path) :SoundSource(x, y, z, dir_path)
 {
 }
 

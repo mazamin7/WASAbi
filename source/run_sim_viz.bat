@@ -1,3 +1,6 @@
 @echo off
-.\build\WASAbiApp.exe --mode sim-viz --config ./config/config.ini %*
+set EXP=%1
+if "%EXP%"=="" set EXP=hall
+echo Running experiment: %EXP%
+.\build\WASAbiApp.exe --experiment %EXP% --mode sim-viz
 pause

@@ -12,102 +12,95 @@ Theory:
 Extended from ARD-simulator by [@jinnsjj](https://github.com/jinnsjj).
 > [https://github.com/jinnsjj/ARD-simulator](https://github.com/jinnsjj/ARD-simulator)
 
-## Input data
-`assets/*.txt` records the structure of room on x-y plane. Note that this simulator only supports 2.5D room geometries: z should always be 0 and depth of all partition should be equal.
+## Experiment Workflow
+WASAbi is structured around **Experiments**. Each experiment is a self-contained directory within `source/experiments/` containing all necessary configurations and definitions.
 
-Input example:
-
-partition:
-```
-0 0 0 3 3 3  <- partition 0: x, y, z, width, height, depth
-3 0 0 3 3 3  <- partition 1: x, y, z, width, height, depth
-```
-
-source:
-```
-1 1 1 <- source 0: x, y, z
+### 📁 Directory Structure
+```text
+experiments/[experiment_name]/
+├── config.json       # Simulation & Visualization parameters
+├── asset.json        # Geometry (Partitions), Sources, and Recorders
+└── output/           # Binary simulation results (.bin)
 ```
 
-recorder:
+### ⚙️ Configuration (`config.json`)
+Defines the physics and technical parameters of the simulation.
+```json
+{
+    "simulation": {
+        "duration": 0.2,            // Total simulation time (s)
+        "dh": 0.5,                 // Spatial step (m)
+        "dt": 0.000625,            // Temporal step (s)
+        "c0": 343.5,               // Speed of sound (m/s)
+        "boundary_absorption": 1.0, // Global wall absorption [0, 1]
+        "n_pml_layers": 5          // Absorbing boundary layers
+    },
+    "visualization": {
+        "viz_skip": 10,            // Steps to skip between renders
+        "max_viz_gain": 100        // Visual intensity scaling
+    }
+}
 ```
-1 1 1 <- recorder 0: x, y, z
+
+### 🧱 Assets (`asset.json`)
+Defines the spatial layout and transducer positions.
+```json
+{
+    "partitions": [
+        { "x": 0, "y": 0, "z": 0, "w": 30, "h": 10, "d": 10 }
+    ],
+    "sources": [
+        { "type": "gaussian", "x": 15, "y": 25, "z": 3 }
+    ],
+    "recorders": [
+        { "x": 15, "y": 15, "z": 3 }
+    ]
+}
 ```
 
-All the values above are in real world scale (meter).
+---
 
-**Don't forget to add an extra blank line at the end of file.**
+## Running the Simulator
 
-## Features
+Launch the simulator using the provided batch scripts or directly from the command line.
 
-- Frequency dependent atmospheric absorption
-- Partial absorbing boundaries through PML partitions
-- Cross-platform support (Windows & Linux)
-- Test cases included
+### 🕹️ CLI Modes (`--mode`)
+- **`sim-viz`**: Standard real-time visualization mode.
+- **`sim-record-field`**: Records the 3D pressure field over time to `record_data_*.bin`.
+- **`sim-record-response`**: Records the pressure at recorder positions to `response_data_*.bin`.
+- **`viz-record`**: Benchmarking mode for visualization performance.
 
-## Building and Running
+### 🚀 Commands
+**Using the batch scripts (easiest):**
+```cmd
+.\run_sim_viz.bat hall            # Run 'hall' experiment in viz mode
+.\run_sim_record_field.bat room   # Record 3D field for 'room'
+```
 
-This project uses **CMake** and provides automated build scripts for Linux and Windows (MinGW), as well as native support for Visual Studio.
+**Direct Execution:**
+```cmd
+.\WASAbiApp.exe --experiment hall --mode sim-record-response
+```
+
+---
+
+## Post-Processing (MATLAB)
+Tools are provided in `postprocessing/` to analyze the binary outputs:
+- **`visualize_field.m`**: Standard 3D field visualizer. Automatically orchestrates `config.json` and `asset.json` to decode binary field data.
+- **`rir.m`**: Computes Energy Decay Curves (EDC) and RIR statistics.
+
+---
+
+## Building WASAbi
 
 ### 🟢 Prerequisites
-Since this simulator is fully executed on the GPU, you will need:
-- An NVIDIA GPU with CUDA compute capability 6.1 or higher (GTX 10-series or newer).
-- [CUDA Toolkit](https://developer.nvidia.com/cuda-downloads) (Tested with v12.4).
-- Microsoft Visual Studio 2022 (with MSVC Build Tools).
-- CMake (bundled with Visual Studio or standalone).
+- **NVIDIA GPU** (Compute Capability 6.1+).
+- **CUDA Toolkit** (Tested with v12.4).
+- **Visual Studio 2022** with MSVC.
 
 ### 🪟 Windows Build
-The project uses `build_cuda.bat` to automate the configuration and compilation via `nvcc` and `cl.exe`.
-
-**1. Install Dependencies**
-You will need SDL2, SDL2_ttf, and FreeType. Extract them into the project root as expected by `CMakeLists.txt` or configure your library paths manually.
-
-**2. Compile from Source**
-Run the automated build script from a standard shell:
+Execute the automated build script from the project root:
 ```cmd
 .\build_cuda.bat
 ```
-This script will:
-- Clean any previous `source/build/` directory.
-- Initialize the MSVC 64-bit developer environment.
-- Call `cmake` pointing to the NVIDIA CUDA compiler (`nvcc`).
-- Build the project using `Ninja` with `-arch=sm_61` flags.
-
-**3. Run the Simulator**
-Upon a successful build, the executable and all required DLLs/assets will be deployed in the build directory. Run it directly:
-```cmd
-cd source/build
-.\WASAbiApp.exe
-```
-
-## Examples
-
-Scene 1:
-
-partition:
-```
-0 0 0 5 5 5
-```
-![scene-1.gif](https://i.loli.net/2019/01/25/5c4b06204451f.gif)
-
-Scene 2:
-
-partition:
-```
-0 0 0 2 2 2
-1 2 0 1 1 2
-2 1 0 1 3 2
-3 2 0 1 2 2
-```
-![scene-2.gif](https://i.loli.net/2019/01/25/5c4b06215ce95.gif)
-
-Scene 2:
-
-partition:
-```
-0 0 0 3 3 2
-0 3 0 2 1 2
-3 0 0 1 2 2
-4 0 0 1 1 2
-0 4 0 1 1 2
-```
-![scene-3.gif](https://i.loli.net/2019/01/25/5c4b0622c3267.gif)
+This will initialize the environment, configure CMake, and build the `WASAbiApp.exe` executable into `source/build/`.

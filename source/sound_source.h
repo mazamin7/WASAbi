@@ -11,12 +11,12 @@ class SoundSource
 	std::fstream source_;
 
 public:
-	SoundSource(int x, int y, int z);
+	SoundSource(int x, int y, int z, std::string dir_path);
 	~SoundSource();
 
 	virtual double SampleValue(double t) = 0;
 
-	static std::vector<std::shared_ptr<SoundSource>> ImportSources(std::string path);
+	static std::vector<std::shared_ptr<SoundSource>> ImportSources(std::string path, std::string dir_path);
 
 	void RecordSource();
 

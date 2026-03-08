@@ -13,6 +13,7 @@
 #include <string>
 #include <algorithm>
 #include <limits>
+#include "json.hpp"
 
 #undef main
 #include "simulation.h"
@@ -62,9 +63,15 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // 3. Ensure config and load it
-    ensureConfigExists(cli_args.config_path, "./config/default.ini");
-    Config config = load_config(cli_args.config_path);
+    // 3. Resolve active config
+    std::string active_config = cli_args.config_path;
+    
+    // Default to 'hall' experiment if nothing is specified
+    if (cli_args.experiment_name.empty() && active_config.empty()) {
+        cli_args.experiment_name = "hall";
+    }
+
+    Config config = load_config(active_config, cli_args.experiment_name);
 
     Partition::boundary_absorption_ = config.boundary_absorption;
     Simulation::air_absorption_alpha1_ = config.air_absorption_alpha1;
@@ -83,25 +90,35 @@ int main(int argc, char* argv[]) {
     double time1 = omp_get_wtime();
     cout << "Current Working Directory: " << std::filesystem::current_path() << endl;
 
-    string dir_name = "./output/" + to_string(Simulation::dh_) + "_" + to_string(Partition::boundary_absorption_) + "_" + to_string(Simulation::air_absorption_alpha1_) + "_" + to_string(Simulation::air_absorption_alpha2_);
+    string dir_name;
+    if (!config.experiment_name.empty()) {
+        dir_name = "./experiments/" + config.experiment_name + "/output";
+    } else {
+        dir_name = "./output/" + to_string(Simulation::dh_) + "_" + to_string(Partition::boundary_absorption_) + "_" + to_string(Simulation::air_absorption_alpha1_) + "_" + to_string(Simulation::air_absorption_alpha2_);
+    }
     std::filesystem::create_directories(dir_name);
 
     vector<shared_ptr<Partition>> partitions;
     vector<shared_ptr<SoundSource>> sources;
     vector<shared_ptr<Recorder>> recorders;
 
-    string asset_path = "./assets/" + config.asset_name + ".txt";
+    string asset_path;
+    if (!config.experiment_name.empty()) {
+        asset_path = "./experiments/" + config.experiment_name + "/asset.json";
+    } else {
+        asset_path = "./assets/" + config.asset_name + ".txt";
+    }
     cout << "Loading assets from: " << asset_path << endl;
     partitions = Partition::ImportPartitions(asset_path);
     if (partitions.empty()) {
         cerr << "FATAL ERROR: No partitions loaded from " << asset_path << "! Check file path and content." << endl;
         return 1;
     }
-    sources = SoundSource::ImportSources(asset_path);
+    sources = SoundSource::ImportSources(asset_path, dir_name);
     cout << "Loaded " << partitions.size() << " partitions and " << sources.size() << " sources." << endl;
 
     // Unconditionally load recorders to know their positions for the visualizer
-    recorders = Recorder::ImportRecorders(asset_path);
+    recorders = Recorder::ImportRecorders(config, asset_path, Simulation::duration_ / Simulation::dt_, dir_name);
     for (auto r : recorders) r->FindPartition(partitions);
 
     shared_ptr<Simulation> simulation = nullptr;
@@ -159,25 +176,46 @@ int main(int argc, char* argv[]) {
     } 
     // --- PLAYBACK LOOP ---
     else {
-        ifstream ifs(cli_args.playback_file); 
-        string line; 
+        // Attempt to find and load the accompanying JSON metadata
+        std::string meta_path = cli_args.playback_file;
+        size_t bin_idx = meta_path.rfind(".bin");
+        if (bin_idx != string::npos) meta_path.replace(bin_idx, 4, ".json");
+        size_t data_idx = meta_path.rfind("record_data_");
+        if (data_idx != string::npos) meta_path.replace(data_idx, 12, "record_meta_");
+        
+        nlohmann::json meta;
+        std::ifstream meta_in(meta_path);
+        if (meta_in.is_open()) {
+            meta_in >> meta;
+            meta_in.close();
+            cout << "Loaded playback metadata from " << meta_path << endl;
+            if (meta.contains("grid_size")) {
+                dim_x = meta["grid_size"][0];
+                dim_y = meta["grid_size"][1];
+                dim_z = meta["grid_size"][2];
+            }
+        } else {
+            cerr << "WARNING: Could not find metadata file " << meta_path << ". Trusting config constraints." << endl;
+        }
+
+        ifstream ifs(cli_args.playback_file, std::ios::binary); 
         int pml_lay = Simulation::n_pml_layers_;
         int sx_p = sources.empty() ? dim_x / 2 : (sources[0]->x() - rxs);
         int sy_p = sources.empty() ? dim_y / 2 : (sources[0]->y() - rys);
         int sz_p = sources.empty() ? dim_z / 2 : (sources[0]->z() - rzs);
         
         vector<double> fd(dim_x * dim_y * dim_z); 
+        size_t frame_bytes = fd.size() * sizeof(double);
         vector<Uint32> pixels(resolution_x * resolution_y, 0x000000);
         float smooth_v = 0.0f; 
         int fi = 0;
         
-        while (getline(ifs, line) && !quit) {
+        // Read directly from binary stream
+        while (ifs.read(reinterpret_cast<char*>(fd.data()), frame_bytes) && !quit) {
             visualizer.HandleEvents(quit);
             
-            stringstream ss(line); 
             double max_p = 0;
-            for (int i = 0; i < dim_x * dim_y * dim_z; i++) { 
-                ss >> fd[i]; 
+            for (size_t i = 0; i < fd.size(); i++) { 
                 max_p = max(max_p, abs(fd[i])); 
             }
             
