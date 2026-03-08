@@ -116,10 +116,10 @@ __global__ void InitConstantsKernel(
 }
 
 DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
-    : Partition(xs, ys, zs, w, h, d)
+    : Partition(xs, ys, zs, w, h, d, false) // Don't allocate default Partition buffers (prevents leak)
 {
     // The sizes
-    size_t vol_size = w * h * d * sizeof(double);
+    size_t vol_size = (size_t)w * h * d * sizeof(double);
     cudaMalloc((void**)&d_w0_, vol_size);
     cudaMalloc((void**)&d_alpha_, vol_size);
     
@@ -130,21 +130,31 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
     cudaMalloc((void**)&d_coef_E_, vol_size);
     cudaMalloc((void**)&d_coef_F_, vol_size);
 
-    // Swap the class members to use the DctVolume
-    pressure_vol_ = new DctVolume(w, h, d);
-    velocity_vol_ = new DctVolume(w, h, d);
-    force_vol_ = new DctVolume(w, h, d);
+    // Allocate shared buffers for DCT operations to save VRAM
+    int w2 = 2 * w, h2 = 2 * h, d2 = 2 * d;
+    size_t size_ext = (size_t)w2 * h2 * d2 * sizeof(double);
+    size_t size_complex = (size_t)d2 * h2 * (w + 1) * sizeof(cufftDoubleComplex);
+    
+    cudaMalloc((void**)&d_shared_ext_, size_ext);
+    cudaMalloc((void**)&d_shared_complex_, size_complex);
+
+    // Create DctVolumes using the shared buffers
+    pressure_vol_ = new DctVolume(w, h, d, d_shared_ext_, d_shared_complex_);
+    velocity_vol_ = new DctVolume(w, h, d, d_shared_ext_, d_shared_complex_);
+    force_vol_    = new DctVolume(w, h, d, d_shared_ext_, d_shared_complex_);
     
     // Wire the base Partition pointers to point to the Volume device arrays
     d_pressure_ = pressure_vol_->d_values_;
     d_velocity_ = velocity_vol_->d_values_;
-    d_force_ = force_vol_->d_values_;
+    d_force_    = force_vol_->d_values_;
 
     InitializeConstants();
 }
 
 DctPartition::~DctPartition()
 {
+    cudaFree(d_shared_ext_);
+    cudaFree(d_shared_complex_);
     cudaFree(d_w0_);
     cudaFree(d_alpha_);
     cudaFree(d_coef_A_); cudaFree(d_coef_B_); cudaFree(d_coef_C_);

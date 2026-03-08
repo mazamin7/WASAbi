@@ -161,9 +161,10 @@ __global__ void PostProcessIdctKernel(
 // -----------------------------------------------------------------------
 // DctVolume implementation
 // -----------------------------------------------------------------------
-DctVolume::DctVolume(int w, int h, int d)
+DctVolume::DctVolume(int w, int h, int d, double* shared_ext, cufftDoubleComplex* shared_complex)
     : width_(w), height_(h), depth_(d)
-    , d_values_(nullptr), d_modes_(nullptr), d_complex_modes_(nullptr)
+    , d_values_(nullptr), d_modes_(nullptr), d_complex_modes_(shared_complex), d_extended_(shared_ext)
+    , owns_extended_(shared_ext == nullptr), owns_complex_(shared_complex == nullptr)
 {
     size_t size_orig = (size_t)width_ * height_ * depth_ * sizeof(double);
     cudaMalloc((void**)&d_values_, size_orig);
@@ -175,13 +176,17 @@ DctVolume::DctVolume(int w, int h, int d)
     int h2 = 2 * height_;
     int d2 = 2 * depth_;
 
-    // R2C output: (d2, h2, w2/2+1)
-    size_t size_complex = (size_t)d2 * h2 * (width_ + 1) * sizeof(cufftDoubleComplex);
-    cudaMalloc((void**)&d_complex_modes_, size_complex);
+    if (owns_complex_) {
+        // R2C output: (d2, h2, w2/2+1)
+        size_t size_complex = (size_t)d2 * h2 * (width_ + 1) * sizeof(cufftDoubleComplex);
+        cudaMalloc((void**)&d_complex_modes_, size_complex);
+    }
 
-    // Extended real buffer for DCT
-    size_t size_ext = (size_t)w2 * h2 * d2 * sizeof(double);
-    cudaMalloc((void**)&d_extended_, size_ext);
+    if (owns_extended_) {
+        // Extended real buffer for DCT
+        size_t size_ext = (size_t)w2 * h2 * d2 * sizeof(double);
+        cudaMalloc((void**)&d_extended_, size_ext);
+    }
 
     // D2Z = real-to-complex, Z2D = complex-to-real
     cufftPlan3d(&r2c_plan_, d2, h2, w2, CUFFT_D2Z);
@@ -194,8 +199,8 @@ DctVolume::~DctVolume()
     cufftDestroy(c2r_plan_);
     cudaFree(d_values_);
     cudaFree(d_modes_);
-    cudaFree(d_complex_modes_);
-    cudaFree(d_extended_);
+    if (owns_complex_) cudaFree(d_complex_modes_);
+    if (owns_extended_) cudaFree(d_extended_);
 }
 
 void DctVolume::ExecuteDct(cudaStream_t stream)

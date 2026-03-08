@@ -49,7 +49,7 @@ public:
     // Removed static boundary absorption
 
 
-	Partition(int xs, int ys, int zs, int w, int h, int d);
+	Partition(int xs, int ys, int zs, int w, int h, int d, bool allocate_buffers = true);
 	virtual ~Partition();
 
 	virtual void Update() = 0;

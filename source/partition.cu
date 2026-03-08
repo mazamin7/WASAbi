@@ -19,7 +19,7 @@
         } \
     }
 
-Partition::Partition(int xs, int ys, int zs, int w, int h, int d)
+Partition::Partition(int xs, int ys, int zs, int w, int h, int d, bool allocate_buffers)
 	: x_start_(xs), y_start_(ys), z_start_(zs), width_(w), height_(h), depth_(d)
 {
 	static int id_generator = 0;
@@ -37,15 +37,23 @@ Partition::Partition(int xs, int ys, int zs, int w, int h, int d)
 
     // Allocate core simulation arrays natively on the GPU VRAM
     size_t vol_size = width_ * height_ * depth_ * sizeof(double);
-    cudaMalloc((void**)&d_pressure_, vol_size);
-    cudaMalloc((void**)&d_velocity_, vol_size);
-    cudaMalloc((void**)&d_force_, vol_size);
+    if (allocate_buffers) {
+        cudaMalloc((void**)&d_pressure_, vol_size);
+        cudaMalloc((void**)&d_velocity_, vol_size);
+        cudaMalloc((void**)&d_force_, vol_size);
+        
+        CHECK_CUDA(cudaMemset((void*)d_pressure_, 0, vol_size));
+        CHECK_CUDA(cudaMemset((void*)d_velocity_, 0, vol_size));
+        CHECK_CUDA(cudaMemset((void*)d_force_, 0, vol_size));
+    } else {
+        d_pressure_ = nullptr;
+        d_velocity_ = nullptr;
+        d_force_ = nullptr;
+    }
+
     cudaMalloc((void**)&d_residue_, vol_size);
     cudaMalloc((void**)&d_max_p_, sizeof(double));
 
-    CHECK_CUDA(cudaMemset((void*)d_pressure_, 0, vol_size));
-    CHECK_CUDA(cudaMemset((void*)d_velocity_, 0, vol_size));
-    CHECK_CUDA(cudaMemset((void*)d_force_, 0, vol_size));
     CHECK_CUDA(cudaMemset((void*)d_residue_, 0, vol_size));
     
     cudaStreamCreate(&stream_);

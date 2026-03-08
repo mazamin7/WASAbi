@@ -19,6 +19,8 @@ private:
 	// Precomputed frequency/absorption arrays residing on GPU
 	double* d_w0_;
 	double* d_alpha_;
+	double* d_shared_ext_;
+	cufftDoubleComplex* d_shared_complex_;
 
 	// Pre-calculated physics update coefficients
 	// A, B, C: velocity coefficients

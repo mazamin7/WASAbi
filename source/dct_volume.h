@@ -5,7 +5,7 @@
 class DctVolume
 {
 public:
-	DctVolume(int w, int h, int d);
+	DctVolume(int w, int h, int d, double* shared_ext = nullptr, cufftDoubleComplex* shared_complex = nullptr);
 	~DctVolume();
 
 	void ExecuteDct(cudaStream_t stream = 0);
@@ -19,12 +19,12 @@ public:
 	int width_;
 	int height_;
 	int depth_;
-
 private:
 	cufftHandle r2c_plan_;
 	cufftHandle c2r_plan_;
 	
-	// Intermediate buffers for cuFFT
+	bool owns_extended_;
+	bool owns_complex_;
 	cufftDoubleComplex* d_complex_modes_;
 	double* d_extended_;  // 2N-extended real signal for DCT/IDCT
 };
