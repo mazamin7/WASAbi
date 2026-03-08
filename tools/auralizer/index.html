@@ -189,6 +189,10 @@
         <div class="section">
             <div class="section-title">Step 1: Data Files</div>
             <label class="file-input-btn">
+                📁 Load asset.json
+                <input type="file" id="asset-input" accept=".json" style="display:none">
+            </label>
+            <label class="file-input-btn">
                 📁 Load ir_metadata.json
                 <input type="file" id="meta-input" accept=".json" style="display:none">
             </label>
@@ -253,6 +257,7 @@
 
         // App State
         let meta = null;
+        let asset = null;
         let irGrid = null; // Float32Array
         let listenerPos = { x: 0, y: 0 }; // World units
         let dragging = false;
@@ -265,6 +270,13 @@
         let viewY = 0;
 
         // --- INIT & FILE LOADING ---
+
+        document.getElementById('asset-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            asset = JSON.parse(await file.text());
+            render();
+        });
 
         document.getElementById('meta-input').addEventListener('change', async (e) => {
             const file = e.target.files[0];
@@ -433,10 +445,39 @@
 
             if (!meta) return;
 
+            // Draw Partitions from asset if available
+            if (asset && asset.partitions) {
+                ctx.lineWidth = 1;
+                asset.partitions.forEach(p => {
+                    const s = toScreen(p.x, p.y);
+                    ctx.strokeStyle = '#444';
+                    ctx.strokeRect(s.x, s.y, p.w * zoom, p.h * zoom);
+                    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                    ctx.fillRect(s.x, s.y, p.w * zoom, p.h * zoom);
+                });
+            }
+
             // Draw grid area
             const tl = toScreen(meta.rxs, meta.rys);
+            ctx.setLineDash([5, 5]);
             ctx.strokeStyle = '#333';
             ctx.strokeRect(tl.x, tl.y, meta.nx * meta.dh * zoom, meta.ny * meta.dh * zoom);
+            ctx.setLineDash([]);
+
+            // Draw Sources from asset if available
+            if (asset && asset.sources) {
+                asset.sources.forEach((s, idx) => {
+                    const sp = toScreen(s.x, s.y);
+                    ctx.beginPath();
+                    ctx.arc(sp.x, sp.y, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = varColor('--green');
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '10px Inter';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('S' + (idx + 1), sp.x, sp.y - 10);
+                });
+            }
 
             // Draw Listener
             const l = toScreen(listenerPos.x, listenerPos.y);
