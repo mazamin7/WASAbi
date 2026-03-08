@@ -34,7 +34,6 @@ bool is_record_response = false;
 bool is_record_field = false;
 
 // Global settings defaults
-double Partition::boundary_absorption_ = 0.5;
 double Simulation::air_absorption_alpha1_ = 0.0;
 double Simulation::air_absorption_alpha2_ = 1e-6;
 double Simulation::duration_ = 2e-2;
@@ -73,9 +72,6 @@ int main(int argc, char* argv[]) {
 
     Config config = load_config(active_config, cli_args.experiment_name);
 
-    Partition::boundary_absorption_ = config.boundary_absorption;
-    Simulation::air_absorption_alpha1_ = config.air_absorption_alpha1;
-    Simulation::air_absorption_alpha2_ = config.air_absorption_alpha2;
     Simulation::duration_ = config.duration;
     Simulation::c0_ = config.c0;
     Simulation::n_pml_layers_ = config.n_pml_layers;
@@ -95,7 +91,7 @@ int main(int argc, char* argv[]) {
     if (!config.experiment_name.empty()) {
         dir_name = "./experiments/" + config.experiment_name + "/output";
     } else {
-        dir_name = "./output/" + to_string(Simulation::dh_) + "_" + to_string(Partition::boundary_absorption_) + "_" + to_string(Simulation::air_absorption_alpha1_) + "_" + to_string(Simulation::air_absorption_alpha2_);
+        dir_name = "./output";
     }
     std::filesystem::create_directories(dir_name);
 

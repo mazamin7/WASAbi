@@ -6,9 +6,6 @@
 struct Config {
     std::string experiment_name;
     std::string asset_name;
-    double boundary_absorption;
-    double air_absorption_alpha1;
-    double air_absorption_alpha2;
     double duration;
     double c0;
     int n_pml_layers;

@@ -13,10 +13,6 @@ Config load_config(const std::string& filename, const std::string& experiment_na
     
     // Explicit Default Fallbacks
     config.asset_name = "hall";
-    // ... (rest of defaults)
-    config.boundary_absorption = 1.0;
-    config.air_absorption_alpha1 = 0.0;
-    config.air_absorption_alpha2 = 0.0;
     config.c0 = 343.5;
     config.n_pml_layers = 5;
     config.dh = 0.5;
@@ -44,9 +40,6 @@ Config load_config(const std::string& filename, const std::string& experiment_na
         if (j.contains("simulation")) {
             auto& s = j["simulation"];
             if (s.contains("asset_name")) config.asset_name = s["asset_name"];
-            if (s.contains("boundary_absorption")) config.boundary_absorption = s["boundary_absorption"];
-            if (s.contains("air_absorption_alpha1")) config.air_absorption_alpha1 = s["air_absorption_alpha1"];
-            if (s.contains("air_absorption_alpha2")) config.air_absorption_alpha2 = s["air_absorption_alpha2"];
             if (s.contains("duration")) config.duration = s["duration"];
             if (s.contains("c0")) config.c0 = s["c0"];
             if (s.contains("n_pml_layers")) config.n_pml_layers = s["n_pml_layers"];

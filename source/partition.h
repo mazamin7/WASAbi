@@ -14,13 +14,16 @@ public:
     double dh_;
     double dt_;
     double c0_;
-    double air_absorption_alpha1_;
-    double air_absorption_alpha2_;
+    double air_absorption_alpha1_{ 0.0 };
+    double air_absorption_alpha2_{ 0.0 };
 
     int x_start_, x_end_;
     int y_start_, y_end_;
     int z_start_, z_end_;
     int width_, height_, depth_;
+    
+    // Per-face boundary absorption [X_MINUS, X_PLUS, Y_MINUS, Y_PLUS, Z_MINUS, Z_PLUS]
+    double boundary_absorption_[6] = { -1.0, -1.0, -1.0, -1.0, -1.0, -1.0 };
 
 	struct Info
 	{
@@ -43,8 +46,8 @@ public:
 	bool is_x_pml_{ false };
 	bool is_y_pml_{ false };
 	bool is_z_pml_{ false };
-public:
-	static double boundary_absorption_;
+    // Removed static boundary absorption
+
 
 	Partition(int xs, int ys, int zs, int w, int h, int d);
 	virtual ~Partition();

@@ -1,4 +1,8 @@
 {
+    "air_absorption": {
+        "alpha1": 0.0,
+        "alpha2": 0.0
+    },
     "partitions": [
         {
             "x": 0,
@@ -6,7 +10,15 @@
             "z": 0,
             "w": 20,
             "h": 10,
-            "d": 10
+            "d": 10,
+            "boundary_absorption": {
+                "x_minus": 1.0,
+                "x_plus": 1.0,
+                "y_minus": 1.0,
+                "y_plus": 1.0,
+                "z_minus": 1.0,
+                "z_plus": 1.0
+            }
         },
         {
             "x": 10,
@@ -14,7 +26,15 @@
             "z": 0,
             "w": 20,
             "h": 10,
-            "d": 10
+            "d": 10,
+            "boundary_absorption": {
+                "x_minus": 1.0,
+                "x_plus": 1.0,
+                "y_minus": 1.0,
+                "y_plus": 1.0,
+                "z_minus": 1.0,
+                "z_plus": 1.0
+            }
         },
         {
             "x": 20,
@@ -22,7 +42,15 @@
             "z": 0,
             "w": 20,
             "h": 10,
-            "d": 10
+            "d": 10,
+            "boundary_absorption": {
+                "x_minus": 1.0,
+                "x_plus": 1.0,
+                "y_minus": 1.0,
+                "y_plus": 1.0,
+                "z_minus": 1.0,
+                "z_plus": 1.0
+            }
         },
         {
             "x": 30,
@@ -30,7 +58,15 @@
             "z": 0,
             "w": 20,
             "h": 10,
-            "d": 10
+            "d": 10,
+            "boundary_absorption": {
+                "x_minus": 1.0,
+                "x_plus": 1.0,
+                "y_minus": 1.0,
+                "y_plus": 1.0,
+                "z_minus": 1.0,
+                "z_plus": 1.0
+            }
         },
         {
             "x": 40,
@@ -38,7 +74,15 @@
             "z": 0,
             "w": 20,
             "h": 10,
-            "d": 10
+            "d": 10,
+            "boundary_absorption": {
+                "x_minus": 1.0,
+                "x_plus": 1.0,
+                "y_minus": 1.0,
+                "y_plus": 1.0,
+                "z_minus": 1.0,
+                "z_plus": 1.0
+            }
         },
         {
             "x": 50,
@@ -46,7 +90,15 @@
             "z": 0,
             "w": 20,
             "h": 10,
-            "d": 10
+            "d": 10,
+            "boundary_absorption": {
+                "x_minus": 1.0,
+                "x_plus": 1.0,
+                "y_minus": 1.0,
+                "y_plus": 1.0,
+                "z_minus": 1.0,
+                "z_plus": 1.0
+            }
         },
         {
             "x": 60,
@@ -54,7 +106,15 @@
             "z": 0,
             "w": 20,
             "h": 10,
-            "d": 10
+            "d": 10,
+            "boundary_absorption": {
+                "x_minus": 1.0,
+                "x_plus": 1.0,
+                "y_minus": 1.0,
+                "y_plus": 1.0,
+                "z_minus": 1.0,
+                "z_plus": 1.0
+            }
         },
         {
             "x": 70,
@@ -62,7 +122,15 @@
             "z": 0,
             "w": 20,
             "h": 10,
-            "d": 10
+            "d": 10,
+            "boundary_absorption": {
+                "x_minus": 1.0,
+                "x_plus": 1.0,
+                "y_minus": 1.0,
+                "y_plus": 1.0,
+                "z_minus": 1.0,
+                "z_plus": 1.0
+            }
         }
     ],
     "sources": [

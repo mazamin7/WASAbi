@@ -88,7 +88,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 						end - start + 1,
 						partition->depth_);
 					partitions_.push_back(pml);
-					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_);
+					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_[0]);
 					boundaries_.push_back(boundary);
 					info_.num_pml_partitions++;
 					started = false;
@@ -126,7 +126,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 						end - start + 1,
 						partition->depth_);
 					partitions_.push_back(pml);
-					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_);
+					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_[1]);
 					boundaries_.push_back(boundary);
 					info_.num_pml_partitions++;
 					started = false;
@@ -164,7 +164,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 						Simulation::n_pml_layers_,
 						partition->depth_);
 					partitions_.push_back(pml);
-					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_);
+					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_[2]);
 					boundaries_.push_back(boundary);
 					info_.num_pml_partitions++;
 					started = false;
@@ -202,7 +202,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 						Simulation::n_pml_layers_,
 						partition->depth_);
 					partitions_.push_back(pml);
-					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_);
+					auto boundary = Boundary::FindBoundary(pml, partition, partition->boundary_absorption_[3]);
 					boundaries_.push_back(boundary);
 					info_.num_pml_partitions++;
 					started = false;
@@ -230,7 +230,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 			partitions_.push_back(pml);
 			std::shared_ptr<Boundary> cu_b(new Boundary(
 				Boundary::Z_BOUNDARY,
-				partition->boundary_absorption_,
+				partition->boundary_absorption_[4],
 				pml,
 				partition,
 				partition->x_start_,
@@ -258,7 +258,7 @@ Simulation::Simulation(std::vector<std::shared_ptr<Partition>> &partitions, std:
 			partitions_.push_back(pml);
 			std::shared_ptr<Boundary> cu_b(new Boundary(
 				Boundary::Z_BOUNDARY,
-				partition->boundary_absorption_,
+				partition->boundary_absorption_[5],
 				pml,
 				partition,
 				partition->x_start_,

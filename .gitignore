@@ -143,3 +143,4 @@ source/Intel® VTune™ Profiler Results/
 *.nv/
 *.nvb/
 build_log.txt
+build_output.txt

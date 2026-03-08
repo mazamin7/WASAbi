@@ -385,15 +385,42 @@ std::vector<std::shared_ptr<Partition>> Partition::ImportPartitions(std::string 
         try {
             json j;
             file >> j;
+            
+            if (j.contains("air_absorption")) {
+                if (j["air_absorption"].contains("alpha1")) Simulation::air_absorption_alpha1_ = j["air_absorption"]["alpha1"];
+                else throw std::runtime_error("air_absorption.alpha1 is missing from asset.json");
+                
+                if (j["air_absorption"].contains("alpha2")) Simulation::air_absorption_alpha2_ = j["air_absorption"]["alpha2"];
+                else throw std::runtime_error("air_absorption.alpha2 is missing from asset.json");
+            } else {
+                throw std::runtime_error("Global air_absorption configuration is missing from asset.json");
+            }
+
             if (j.contains("partitions")) {
                 for (auto& p : j["partitions"]) {
-                    partitions.push_back(std::make_shared<DctPartition>(
+                    auto part = std::make_shared<DctPartition>(
                         (int)((double)p["x"] / Simulation::dh_), (int)((double)p["y"] / Simulation::dh_), (int)((double)p["z"] / Simulation::dh_),
-                        (int)((double)p["w"] / Simulation::dh_), (int)((double)p["h"] / Simulation::dh_), (int)((double)p["d"] / Simulation::dh_)));
+                        (int)((double)p["w"] / Simulation::dh_), (int)((double)p["h"] / Simulation::dh_), (int)((double)p["d"] / Simulation::dh_));
+                    
+                    if (p.contains("boundary_absorption")) {
+                        auto& ba = p["boundary_absorption"];
+                        if (ba.contains("x_minus")) part->boundary_absorption_[0] = ba["x_minus"]; else throw std::runtime_error("boundary_absorption.x_minus missing from partition");
+                        if (ba.contains("x_plus")) part->boundary_absorption_[1] = ba["x_plus"]; else throw std::runtime_error("boundary_absorption.x_plus missing from partition");
+                        if (ba.contains("y_minus")) part->boundary_absorption_[2] = ba["y_minus"]; else throw std::runtime_error("boundary_absorption.y_minus missing from partition");
+                        if (ba.contains("y_plus")) part->boundary_absorption_[3] = ba["y_plus"]; else throw std::runtime_error("boundary_absorption.y_plus missing from partition");
+                        if (ba.contains("z_minus")) part->boundary_absorption_[4] = ba["z_minus"]; else throw std::runtime_error("boundary_absorption.z_minus missing from partition");
+                        if (ba.contains("z_plus")) part->boundary_absorption_[5] = ba["z_plus"]; else throw std::runtime_error("boundary_absorption.z_plus missing from partition");
+                    } else {
+                        throw std::runtime_error("boundary_absorption map is strictly required for every partition in asset.json");
+                    }
+                    partitions.push_back(part);
                 }
+            } else {
+                throw std::runtime_error("No partitions declared in asset.json");
             }
         } catch (const std::exception& e) {
-            std::cerr << "ERROR parsing JSON asset file: " << e.what() << std::endl;
+            std::cerr << "FATAL ERROR parsing JSON asset file: " << e.what() << std::endl;
+            exit(1);
         }
         return partitions;
     }
