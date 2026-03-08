@@ -1,97 +1,98 @@
 <p align="center">
-  <img src="logo.png">
+  <img src="logo.png" width="300">
 </p>
 
 # WASAbi - a Wave-based Acoustic Simulator using ARD
 
-C++ implementation of Adaptive Rectangular Decomposition (ARD) with frequency dependent atmospheric absorption in 2.5D (3D with constant height).
+C++ implementation of Adaptive Rectangular Decomposition (ARD) with frequency-dependent atmospheric absorption in 2.5D (3D with constant height).
 
 Theory:
 > Gerardo Cicalese, Gabriele Ciaramella, Ilario Mazzieri; Addressing atmospheric absorption in adaptive rectangular decomposition. J. Acoust. Soc. Am. 1 October 2024; 156 (4): 2328–2339. [https://doi.org/10.1121/10.0030468](https://doi.org/10.1121/10.0030468)
 
-Extended from ARD-simulator by [@jinnsjj](https://github.com/jinnsjj).
-> [https://github.com/jinnsjj/ARD-simulator](https://github.com/jinnsjj/ARD-simulator)
+---
 
-## Experiment Workflow
-WASAbi is structured around **Experiments**. Each experiment is a self-contained directory within `source/experiments/` containing all necessary configurations and definitions.
+## 🚀 The WASAbi Pipeline
 
-### 📁 Directory Structure
-```text
-experiments/[experiment_name]/
-├── config.json       # Simulation & Visualization parameters
-├── asset.json        # Geometry (Partitions), Sources, and Recorders
-└── output/           # Binary simulation results (.bin)
+WASAbi is structured around a three-stage workflow: **Design**, **Simulate**, and **Analyze**.
+
+### 1️⃣ DESIGN: Experiment Designer
+Before running a simulation, use the web-based **Experiment Designer** to create your geometry and transducer layout.
+
+<p align="center">
+  <img src="docs/img/designer_screenshot.png" width="800" alt="Experiment Designer">
+</p>
+
+- **Location**: `tools/experiment-editor/editor.html` (Open in any modern browser).
+- **Features**:
+    - Interactive 2D drawing of rectangular partitions.
+    - Real-time **CFL Stability Warning** (`c₀ · dt / dh > 0.6`).
+    - Visual feedback for face-specific absorption coefficients.
+    - Export standardized `asset.json` and `config.json`.
+
+### 2️⃣ SIMULATE: CUDA Core
+Run the high-performance CUDA simulation engine.
+
+**📂 Experiment Structure:**
+Each experiment lives in `source/experiments/[name]/`:
+- `asset.json`: Geometry, sources, recorders, and **medium properties** (c₀, α₁, α₂).
+- `config.json`: Numeric parameters (dh, dt, duration, viz_skip).
+- `output/`: Binary files containing simulation results.
+
+**🚀 Execution:**
+```cmd
+.\WASAbiApp.exe --experiment hall --mode sim-viz
 ```
 
-### ⚙️ Configuration (`config.json`)
-Defines the physics and technical parameters of the simulation.
+### 3️⃣ ANALYZE: MATLAB Post-Processing
+Analyze binary output data using tools in `tools/postprocessing/`.
+
+- **`rir.m`**: Compute Room Impulse Responses, Energy Decay Curves (EDC), and acoustic parameters.
+- **`visualize_field.m`**: Render the 3D pressure field propagation from recorded data.
+
+---
+
+## 🛠️ Configuration Schemas
+
+### 🧱 Assets (`asset.json`)
+Defines the spatial layout and medium characteristics.
+```json
+{
+    "medium_properties": {
+        "c0": 343.5,
+        "alpha1": 0.0,
+        "alpha2": 1e-6
+    },
+    "partitions": [
+        { 
+          "x": 0, "y": 0, "z": 0, "w": 30, "h": 10, "d": 3,
+          "boundary_absorption": { "x_minus": 0.1, "x_plus": 0.1, ... }
+        }
+    ],
+    "sources": [{ "type": "gaussian", "x": 15, "y": 5, "z": 1.5 }],
+    "recorders": [{ "x": 10, "y": 5, "z": 1.5 }]
+}
+```
+
+### ⚙️ Numerical Config (`config.json`)
+Defines the simulation engine parameters.
 ```json
 {
     "simulation": {
-        "duration": 0.2,            // Total simulation time (s)
-        "dh": 0.5,                 // Spatial step (m)
-        "dt": 0.000625,            // Temporal step (s)
-        "c0": 343.5,               // Speed of sound (m/s)
-        "boundary_absorption": 1.0, // Global wall absorption [0, 1]
-        "n_pml_layers": 5          // Absorbing boundary layers
+        "duration": 0.5,
+        "dh": 0.2,
+        "dt": 0.0002,
+        "n_pml_layers": 5
     },
     "visualization": {
-        "viz_skip": 10,            // Steps to skip between renders
-        "max_viz_gain": 100        // Visual intensity scaling
+        "viz_skip": 10,
+        "max_viz_gain": 20
     }
 }
 ```
 
-### 🧱 Assets (`asset.json`)
-Defines the spatial layout and transducer positions.
-```json
-{
-    "partitions": [
-        { "x": 0, "y": 0, "z": 0, "w": 30, "h": 10, "d": 10 }
-    ],
-    "sources": [
-        { "type": "gaussian", "x": 15, "y": 25, "z": 3 }
-    ],
-    "recorders": [
-        { "x": 15, "y": 15, "z": 3 }
-    ]
-}
-```
-
 ---
 
-## Running the Simulator
-
-Launch the simulator using the provided batch scripts or directly from the command line.
-
-### 🕹️ CLI Modes (`--mode`)
-- **`sim-viz`**: Standard real-time visualization mode.
-- **`sim-record-field`**: Records the 3D pressure field over time to `record_data_*.bin`.
-- **`sim-record-response`**: Records the pressure at recorder positions to `response_data_*.bin`.
-- **`viz-record`**: Benchmarking mode for visualization performance.
-
-### 🚀 Commands
-**Using the batch scripts (easiest):**
-```cmd
-.\run_sim_viz.bat hall            # Run 'hall' experiment in viz mode
-.\run_sim_record_field.bat room   # Record 3D field for 'room'
-```
-
-**Direct Execution:**
-```cmd
-.\WASAbiApp.exe --experiment hall --mode sim-record-response
-```
-
----
-
-## Post-Processing (MATLAB)
-Tools are provided in `postprocessing/` to analyze the binary outputs:
-- **`visualize_field.m`**: Standard 3D field visualizer. Automatically orchestrates `config.json` and `asset.json` to decode binary field data.
-- **`rir.m`**: Computes Energy Decay Curves (EDC) and RIR statistics.
-
----
-
-## Building WASAbi
+## 🏗️ Building WASAbi
 
 ### 🟢 Prerequisites
 - **NVIDIA GPU** (Compute Capability 6.1+).
@@ -99,8 +100,7 @@ Tools are provided in `postprocessing/` to analyze the binary outputs:
 - **Visual Studio 2022** with MSVC.
 
 ### 🪟 Windows Build
-Execute the automated build script from the project root:
 ```cmd
 .\build_cuda.bat
 ```
-This will initialize the environment, configure CMake, and build the `WASAbiApp.exe` executable into `source/build/`.
+This builds `WASAbiApp.exe` into `source/build/`.
