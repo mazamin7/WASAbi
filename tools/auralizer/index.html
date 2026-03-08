@@ -132,10 +132,36 @@
             background: #000;
             cursor: crosshair;
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
 
         canvas {
             display: block;
+            flex: 1;
+        }
+
+        #ir-canvas-container {
+            height: 150px;
+            background: #050507;
+            border-top: 1px solid var(--border);
+            position: relative;
+        }
+
+        #ir-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .ir-label {
+            position: absolute;
+            top: 5px;
+            left: 10px;
+            font-size: 10px;
+            color: var(--text2);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
         }
 
         #controls {
@@ -221,6 +247,10 @@
     <div id="main">
         <div id="canvas-wrap">
             <canvas id="canvas"></canvas>
+            <div id="ir-canvas-container">
+                <div class="ir-label">Live Impulse Response (interpolated)</div>
+                <canvas id="ir-canvas"></canvas>
+            </div>
             <div id="visual-hint">Drag the <b>orange marker</b> to move the listener</div>
         </div>
 
@@ -265,6 +295,8 @@
         // View State
         let canvas = document.getElementById('canvas');
         let ctx = canvas.getContext('2d');
+        let irCanvas = document.getElementById('ir-canvas');
+        let irCtx = irCanvas.getContext('2d');
         let zoom = 40;
         let viewX = 0;
         let viewY = 0;
@@ -397,6 +429,51 @@
                     interpGains[i].gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
                 }
             }
+            renderIR(weights, coords);
+        }
+
+        function renderIR(weights, coords) {
+            if (!meta || !irGrid || !irCanvas.width) return;
+
+            irCtx.fillStyle = '#050507';
+            irCtx.fillRect(0, 0, irCanvas.width, irCanvas.height);
+
+            // Interpolate IR for visualization
+            const blendedIR = new Float32Array(meta.ir_len);
+            for (let i = 0; i < 4; i++) {
+                const [cx, cy] = coords[i];
+                if (weights[i] > 0 && cx >= 0 && cx < meta.nx && cy >= 0 && cy < meta.ny) {
+                    const idx = (cy * meta.nx + cx) * meta.ir_len;
+                    for (let t = 0; t < meta.ir_len; t++) {
+                        blendedIR[t] += irGrid[idx + t] * weights[i];
+                    }
+                }
+            }
+
+            // Find peak for auto-scaling
+            let peak = 0;
+            for (let t = 0; t < meta.ir_len; t++) peak = Math.max(peak, Math.abs(blendedIR[t]));
+            if (peak < 0.0001) peak = 1;
+
+            irCtx.beginPath();
+            irCtx.strokeStyle = varColor('--accent');
+            irCtx.lineWidth = 1;
+
+            for (let i = 0; i < irCanvas.width; i++) {
+                const t = Math.floor((i / irCanvas.width) * meta.ir_len);
+                const val = blendedIR[t] / peak;
+                const y = (irCanvas.height / 2) - (val * irCanvas.height / 2.2);
+                if (i === 0) irCtx.moveTo(i, y);
+                else irCtx.lineTo(i, y);
+            }
+            irCtx.stroke();
+
+            // Draw axis
+            irCtx.beginPath();
+            irCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+            irCtx.moveTo(0, irCanvas.height / 2);
+            irCtx.lineTo(irCanvas.width, irCanvas.height / 2);
+            irCtx.stroke();
         }
 
         document.getElementById('toggle-audio').addEventListener('click', () => {
@@ -498,7 +575,9 @@
 
         window.addEventListener('resize', () => {
             canvas.width = document.getElementById('canvas-wrap').clientWidth;
-            canvas.height = document.getElementById('canvas-wrap').clientHeight;
+            canvas.height = document.getElementById('canvas-wrap').clientHeight - 150;
+            irCanvas.width = irCanvas.clientWidth;
+            irCanvas.height = irCanvas.clientHeight;
             render();
         });
         window.dispatchEvent(new Event('resize'));
