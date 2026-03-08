@@ -144,3 +144,15 @@ source/Intel® VTune™ Profiler Results/
 *.nvb/
 build_log.txt
 build_output.txt
+
+# ---------------------------------
+# Data Files & Auralizer
+# ---------------------------------
+*.bin
+*.wav
+*.mp3
+*.m4a
+experiments/*/output/
+tools/auralizer/*.bin
+tools/auralizer/*.json
+!tools/auralizer/ir_metadata.json

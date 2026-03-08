@@ -60,6 +60,18 @@ Analyze binary output data using tools in `tools/postprocessing/`.
 - **`rir.m`**: Compute Room Impulse Responses, Energy Decay Curves (EDC), and acoustic parameters.
 - **`visualize_field.m`**: Render the 3D pressure field propagation from recorded data.
 
+### 4️⃣ LISTEN: Interactive Auralizer
+Hear the room in real-time by moving a listener marker over a precomputed IR grid.
+
+- **Location**: `tools/auralizer/index.html` (Open in any modern browser).
+- **Setup**:
+    1. Run the precomputation script (requires **Python 3.8+** and `numpy`):
+       ```powershell
+       python tools/auralizer/precompute_ir.py experiments/hall 1.5
+       ```
+    2. Load the resulting `ir_metadata.json` and `ir_grid_2d.bin` into the web tool.
+    3. Load a dry audio file and start the engine.
+
 ---
 
 ## 🛠️ Configuration Schemas
