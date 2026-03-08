@@ -40,18 +40,20 @@ std::vector<std::shared_ptr<SoundSource>> SoundSource::ImportSources(std::string
         try {
             json j;
             file >> j;
-            if (j.contains("sources")) {
-                for (auto& s : j["sources"]) {
-                    std::string type = "gaussian";
-                    if (s.contains("type")) type = s["type"];
+            if (j.contains("sources") && j["sources"].is_array() && !j["sources"].empty()) {
+                if (j["sources"].size() > 1) {
+                    std::cerr << "WARNING: Multiple sources found in asset file. WASAbi now supports only 1 source. Using the first one." << std::endl;
+                }
+                auto& s = j["sources"][0];
+                std::string type = "gaussian";
+                if (s.contains("type")) type = s["type"];
 
-                    if (type == "gaussian") {
-                        sources.push_back(std::make_shared<GaussianSource>(
-                            (int)((double)s["x"] / Simulation::dh_), 
-                            (int)((double)s["y"] / Simulation::dh_), 
-                            (int)((double)s["z"] / Simulation::dh_),
-                            dir_path));
-                    }
+                if (type == "gaussian") {
+                    sources.push_back(std::make_shared<GaussianSource>(
+                        (int)((double)s["x"] / Simulation::dh_), 
+                        (int)((double)s["y"] / Simulation::dh_), 
+                        (int)((double)s["z"] / Simulation::dh_),
+                        dir_path));
                 }
             }
         } catch (const std::exception& e) {
@@ -83,7 +85,11 @@ std::vector<std::shared_ptr<SoundSource>> SoundSource::ImportSources(std::string
 			// It's explicitly a source
 			double x, y, z;
 			if (ss >> x >> y >> z) {
-				sources.push_back(std::make_shared<GaussianSource>((int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), dir_path));
+				if (sources.empty()) {
+					sources.push_back(std::make_shared<GaussianSource>((int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), dir_path));
+				} else {
+					std::cerr << "WARNING: Multiple sources found in text asset file. Ignoring extra sources." << std::endl;
+				}
 			}
 		}
 		else {
@@ -92,7 +98,11 @@ std::vector<std::shared_ptr<SoundSource>> SoundSource::ImportSources(std::string
 				double x = std::stod(first_token);
 				double y, z, dummy;
 				if ((ss >> y >> z) && !(ss >> dummy)) {
-					sources.push_back(std::make_shared<GaussianSource>((int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), dir_path));
+					if (sources.empty()) {
+						sources.push_back(std::make_shared<GaussianSource>((int)(x / Simulation::dh_), (int)(y / Simulation::dh_), (int)(z / Simulation::dh_), dir_path));
+					} else {
+						std::cerr << "WARNING: Multiple sources found in text asset file. Ignoring extra sources." << std::endl;
+					}
 				}
 			} catch (...) {
 				// Not a number, not an 'S', ignore line

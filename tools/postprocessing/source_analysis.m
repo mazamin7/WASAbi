@@ -1,4 +1,6 @@
 clear all, close all, clc;
+% Source Analysis Tool
+% Note: WASAbi now supports a single source for deconvolution/RIR analysis.
 
 % Default experiment path
 if ~exist('experiment_path', 'var')

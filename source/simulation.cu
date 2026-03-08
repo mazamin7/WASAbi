@@ -478,7 +478,7 @@ void Simulation::Info()
 	std::cout << "Number of dct_partitions: " << info_.num_dct_partitions << std::endl;
 	std::cout << "Number of pml_partitions: " << info_.num_pml_partitions << std::endl;
 	std::cout << "Number of boundaries: " << info_.num_boundaries << std::endl;
-	std::cout << "Number of sources: " << info_.num_sources << std::endl;
+	std::cout << "Number of sources: " << info_.num_sources << " (Only 1 supported for deconvolution)" << std::endl;
 
 	std::cout << "############################################################" << std::endl;
 	for (auto p : partitions_)

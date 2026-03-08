@@ -841,6 +841,10 @@
                 drawStart = ws;
                 drawCurrent = ws;
             } else if (mode === 'source') {
+                if (sources.length > 0) {
+                    alert('Only 1 source is allowed for deconvolution. Delete the existing one to move or replace it.');
+                    return;
+                }
                 sources.push({ x: ws.x, y: ws.y, z: 1.5 });
                 selectedSourceIdx = sources.length - 1;
                 selectedRecorderIdx = null;
@@ -1279,7 +1283,7 @@
                     }));
                 }
                 if (data.sources) {
-                    sources = data.sources.map(s => ({
+                    sources = data.sources.slice(0, 1).map(s => ({
                         x: s.x, y: s.y, z: s.z || 1.5
                     }));
                 }

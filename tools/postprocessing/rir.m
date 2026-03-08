@@ -25,6 +25,13 @@ sim_dur = config.simulation.duration;
 dh = config.simulation.dh;
 dt = config.simulation.dt;
 
+% Deconvolution (RIR analysis) strictly requires exactly 1 source.
+if isfield(asset, 'sources') && length(asset.sources) > 1
+    warning('Asset file contains %d sources. RIR analysis only supports 1 source. Using source_data_0.bin representing the first source.', length(asset.sources));
+elseif ~isfield(asset, 'sources') || isempty(asset.sources)
+    error('No sources found in asset.json. Cannot compute RIR.');
+end
+
 % Calculate Surface Area-Weighted alpha_b from all partitions
 total_area = 0;
 weighted_alpha = 0;
