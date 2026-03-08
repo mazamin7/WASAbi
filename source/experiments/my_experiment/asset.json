@@ -1,0 +1,87 @@
+{
+    "air_absorption": {
+        "alpha1": 0,
+        "alpha2": 0
+    },
+    "partitions": [
+        {
+            "x": 20,
+            "y": 5,
+            "z": 0,
+            "w": 6,
+            "h": 3,
+            "d": 3,
+            "boundary_absorption": {
+                "x_minus": 1,
+                "x_plus": 1,
+                "y_minus": 1,
+                "y_plus": 1,
+                "z_minus": 1,
+                "z_plus": 1
+            }
+        },
+        {
+            "x": 26,
+            "y": 3,
+            "z": 0,
+            "w": 3,
+            "h": 7,
+            "d": 3,
+            "boundary_absorption": {
+                "x_minus": 1,
+                "x_plus": 1,
+                "y_minus": 1,
+                "y_plus": 1,
+                "z_minus": 1,
+                "z_plus": 1
+            }
+        },
+        {
+            "x": 20,
+            "y": 0,
+            "z": 0,
+            "w": 9,
+            "h": 3,
+            "d": 3,
+            "boundary_absorption": {
+                "x_minus": 1,
+                "x_plus": 1,
+                "y_minus": 1,
+                "y_plus": 1,
+                "z_minus": 1,
+                "z_plus": 1
+            }
+        },
+        {
+            "x": 20,
+            "y": 10,
+            "z": 0,
+            "w": 9,
+            "h": 3,
+            "d": 3,
+            "boundary_absorption": {
+                "x_minus": 1,
+                "x_plus": 1,
+                "y_minus": 1,
+                "y_plus": 1,
+                "z_minus": 1,
+                "z_plus": 1
+            }
+        }
+    ],
+    "sources": [
+        {
+            "type": "gaussian",
+            "x": 23,
+            "y": 6.5,
+            "z": 1.5
+        }
+    ],
+    "recorders": [
+        {
+            "x": 21.5,
+            "y": 1.5,
+            "z": 1.5
+        }
+    ]
+}

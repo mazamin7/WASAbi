@@ -1,0 +1,14 @@
+{
+    "simulation": {
+        "asset_name": "my_experiment",
+        "duration": 0.5,
+        "dh": 0.2,
+        "dt": 0.0002,
+        "c0": 343.5,
+        "n_pml_layers": 5
+    },
+    "visualization": {
+        "viz_skip": 0,
+        "max_viz_gain": 0.000002
+    }
+}
