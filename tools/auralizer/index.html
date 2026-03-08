@@ -257,17 +257,20 @@
         <div id="controls">
             <button id="toggle-audio" style="width: 50px; height: 50px; border-radius: 25px;">⏯</button>
 
-            <div class="slider-group" style="max-width: 200px;">
+            <div class="slider-group">
                 <label>Main Volume</label>
-                <input type="range" id="vol-slider" min="0" max="1" step="0.01" value="0.5">
+                <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.5">
+            </div>
+            <div class="slider-group">
+                <label>Dry/Wet Mix</label>
+                <input type="range" id="mix-slider" min="0" max="1" step="0.01" value="1.0">
+            </div>
+            <div class="slider-group">
+                <label>Reflection Gain</label>
+                <input type="range" id="ir-gain-slider" min="1" max="100" step="1" value="10">
             </div>
 
-            <div class="slider-group" style="max-width: 200px;">
-                <label>IR Gain (Wet)</label>
-                <input type="range" id="wet-slider" min="0" max="10" step="0.1" value="1.0">
-            </div>
-
-            <div id="pos-info" style="font-family: monospace; font-size: 11px; color: var(--text2);">
+            <div id="pos-info" style="font-family: monospace; font-size: 11px; color: var(--text2); min-width: 120px;">
                 Listener: -- m, -- m
             </div>
         </div>
@@ -278,12 +281,17 @@
         let audioCtx = null;
         let mainGain = null;
         let wetGain = null;
+        let dryGain = null;
         let drySource = null;
         let dryBuffer = null;
 
-        // Auralization Nodes (4-point interpolation)
-        let convolvers = [];
-        let interpGains = [];
+        // Auralization Nodes (Dual-shuttle: 2 sets of 4 paths)
+        let shuttles = [
+            { convolvers: [], gains: [], active: true },
+            { convolvers: [], gains: [], active: false }
+        ];
+        let shuttleCrossGain = null; // Master crossfader
+        let masterCrossValue = 1.0; // 1 = Shuttle 0, 0 = Shuttle 1
 
         // App State
         let meta = null;
@@ -300,6 +308,10 @@
         let zoom = 40;
         let viewX = 0;
         let viewY = 0;
+
+        // Cache for convolver state
+        let lastCoordKey = "";
+        let activeShuttleIdx = 0;
 
         // --- INIT & FILE LOADING ---
 
@@ -373,22 +385,38 @@
 
         function setupGraph() {
             mainGain = audioCtx.createGain();
-            mainGain.gain.value = 0.5;
+            mainGain.gain.value = masterVolume;
             mainGain.connect(audioCtx.destination);
 
             wetGain = audioCtx.createGain();
-            wetGain.gain.value = 1.0;
+            wetGain.gain.value = mixAmount * reflectionGain;
             wetGain.connect(mainGain);
 
-            // Create 4 parallel paths for bilinear interpolation
-            for (let i = 0; i < 4; i++) {
-                const conv = audioCtx.createConvolver();
-                const g = audioCtx.createGain();
-                g.gain.value = 0;
-                conv.connect(g);
-                g.connect(wetGain);
-                convolvers.push(conv);
-                interpGains.push(g);
+            dryGain = audioCtx.createGain();
+            dryGain.gain.value = 1.0 - mixAmount;
+            dryGain.connect(mainGain);
+
+            shuttleCrossGain = audioCtx.createGain();
+            shuttleCrossGain.connect(wetGain);
+
+            // Create 8 parallel paths (two sets of 4)
+            for (let s = 0; s < 2; s++) {
+                const shuttle = shuttles[s];
+                const sGain = audioCtx.createGain();
+                sGain.gain.value = (s === 0) ? 1 : 0;
+                shuttle.masterGain = sGain;
+                sGain.connect(wetGain);
+
+                for (let i = 0; i < 4; i++) {
+                    const conv = audioCtx.createConvolver();
+                    conv.normalize = false;
+                    const g = audioCtx.createGain();
+                    g.gain.value = 0;
+                    conv.connect(g);
+                    g.connect(sGain);
+                    shuttle.convolvers.push(conv);
+                    shuttle.gains.push(g);
+                }
             }
         }
 
@@ -407,29 +435,91 @@
 
         async function updateConvolvers() {
             if (!audioCtx || !meta || !irGrid) {
-                // Even without audioCtx, we can at least render the IR plot
                 const data = getWeightsAndCoords();
                 if (data) renderIR(data.weights, data.coords);
                 return;
             }
 
             const { weights, coords } = getWeightsAndCoords();
+            const coordKey = coords.map(c => `${c[0]},${c[1]}`).join('|');
 
+            const targetFs = audioCtx.sampleRate;
+            const originalFs = 1 / meta.dt;
+
+            if (coordKey !== lastCoordKey) {
+                // Crossing grid cell: Flip shuttle
+                const nextShuttleIdx = 1 - activeShuttleIdx;
+                const activeShuttle = shuttles[activeShuttleIdx];
+                const nextShuttle = shuttles[nextShuttleIdx];
+
+                // Prepare next shuttle buffers
+                for (let i = 0; i < 4; i++) {
+                    const [cx, cy] = coords[i];
+                    if (cx >= 0 && cx < meta.nx && cy >= 0 && cy < meta.ny) {
+                        const idx = (cy * meta.nx + cx) * meta.ir_len;
+                        const irSlice = irGrid.slice(idx, idx + meta.ir_len);
+
+                        // --- Resampling + High-Freq Sharpening ---
+                        const ratio = targetFs / originalFs;
+                        const newLen = Math.floor(meta.ir_len * ratio);
+                        const resampled = new Float32Array(newLen);
+
+                        // Find original peak
+                        let origPeakIdx = 0;
+                        let origPeakVal = 0;
+                        for (let t = 0; t < irSlice.length; t++) {
+                            if (Math.abs(irSlice[t]) > Math.abs(origPeakVal)) {
+                                origPeakVal = irSlice[t];
+                                origPeakIdx = t;
+                            }
+                        }
+
+                        // Upsample
+                        for (let j = 0; j < newLen; j++) {
+                            const pos = j / ratio;
+                            const i1 = Math.floor(pos);
+                            const i2 = Math.min(meta.ir_len - 1, i1 + 1);
+                            const f = pos - i1;
+                            resampled[j] = irSlice[i1] * (1 - f) + irSlice[i2] * f;
+                        }
+
+                        // SHARPEN: Inject broadband delta at upsampled peak position
+                        const sharpPeakIdx = Math.floor(origPeakIdx * ratio);
+                        // Zero out local neighborhood of the "smear"
+                        const win = Math.max(1, Math.floor(ratio * 2));
+                        for (let k = Math.max(0, sharpPeakIdx - win); k <= Math.min(newLen - 1, sharpPeakIdx + win); k++) {
+                            resampled[k] *= 0.05;
+                        }
+                        resampled[sharpPeakIdx] = origPeakVal; // Perfect impulse
+
+                        const finalBuffer = audioCtx.createBuffer(1, newLen, targetFs);
+                        finalBuffer.copyToChannel(resampled, 0);
+                        nextShuttle.convolvers[i].buffer = finalBuffer;
+                        nextShuttle.gains[i].gain.value = weights[i];
+                    } else {
+                        nextShuttle.gains[i].gain.value = 0;
+                    }
+                }
+
+                // Crossfade
+                activeShuttle.masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                nextShuttle.masterGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.05);
+
+                activeShuttleIdx = nextShuttleIdx;
+                lastCoordKey = coordKey;
+            }
+
+            // Normal continuous interpolation (update weights of active shuttle)
+            const shuttle = shuttles[activeShuttleIdx];
             for (let i = 0; i < 4; i++) {
                 const [cx, cy] = coords[i];
                 if (cx >= 0 && cx < meta.nx && cy >= 0 && cy < meta.ny) {
-                    const idx = (cy * meta.nx + cx) * meta.ir_len;
-                    const irSlice = irGrid.slice(idx, idx + meta.ir_len);
-
-                    const irBuffer = audioCtx.createBuffer(1, meta.ir_len, 1 / meta.dt);
-                    irBuffer.copyToChannel(irSlice, 0);
-
-                    convolvers[i].buffer = irBuffer;
-                    interpGains[i].gain.setTargetAtTime(weights[i], audioCtx.currentTime, 0.05);
+                    shuttle.gains[i].gain.setTargetAtTime(weights[i], audioCtx.currentTime, 0.02);
                 } else {
-                    interpGains[i].gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                    shuttle.gains[i].gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
                 }
             }
+
             renderIR(weights, coords);
         }
 
@@ -451,10 +541,21 @@
                 }
             }
 
-            // Find peak for auto-scaling
-            let peak = 0;
-            for (let t = 0; t < meta.ir_len; t++) peak = Math.max(peak, Math.abs(blendedIR[t]));
-            if (peak < 0.0001) peak = 1;
+            // SHARPEN for visualization
+            let peakIdx = 0;
+            let peakVal = 0;
+            for (let t = 0; t < meta.ir_len; t++) {
+                if (Math.abs(blendedIR[t]) > Math.abs(peakVal)) {
+                    peakVal = blendedIR[t];
+                    peakIdx = t;
+                }
+            }
+            // Zero out neighbors for plot
+            const win = 2;
+            for (let k = Math.max(0, peakIdx - win); k <= Math.min(meta.ir_len - 1, peakIdx + win); k++) {
+                blendedIR[k] *= 0.1;
+            }
+            blendedIR[peakIdx] = peakVal;
 
             irCtx.beginPath();
             irCtx.strokeStyle = varColor('--accent');
@@ -462,7 +563,7 @@
 
             for (let i = 0; i < irCanvas.width; i++) {
                 const t = Math.floor((i / irCanvas.width) * meta.ir_len);
-                const val = blendedIR[t] / peak;
+                const val = blendedIR[t] / Math.abs(peakVal || 1);
                 const y = (irCanvas.height / 2) - (val * irCanvas.height / 2.2);
                 if (i === 0) irCtx.moveTo(i, y);
                 else irCtx.lineTo(i, y);
@@ -487,16 +588,46 @@
                 drySource = audioCtx.createBufferSource();
                 drySource.buffer = dryBuffer;
                 drySource.loop = true;
-                drySource.connect(wetGain); // Connect to the convolver path
-                // For direct sound, we could add a dry path too
+
+                // Route to all convolvers
+                shuttles.forEach(s => {
+                    s.convolvers.forEach(c => drySource.connect(c));
+                });
+                // Route to dry path
+                drySource.connect(dryGain);
+
                 drySource.start();
                 updateConvolvers();
             }
         });
 
-        // sliders omitted for brevity in first draft, will add basic ones
-        document.getElementById('vol-slider').oninput = e => mainGain && (mainGain.gain.value = e.target.value);
-        document.getElementById('wet-slider').oninput = e => wetGain && (wetGain.gain.value = e.target.value);
+        // --- CONTROL LISTENERS ---
+
+        let masterVolume = 0.5;
+        let mixAmount = 1.0; // 1 = Wet, 0 = Dry
+        let reflectionGain = 10.0;
+
+        function updateGains() {
+            if (!mainGain || !wetGain || !dryGain) return;
+            mainGain.gain.setTargetAtTime(masterVolume, audioCtx.currentTime, 0.05);
+            wetGain.gain.setTargetAtTime(mixAmount * reflectionGain, audioCtx.currentTime, 0.05);
+            dryGain.gain.setTargetAtTime(1.0 - mixAmount, audioCtx.currentTime, 0.05);
+        }
+
+        document.getElementById('volume-slider').addEventListener('input', (e) => {
+            masterVolume = parseFloat(e.target.value);
+            updateGains();
+        });
+
+        document.getElementById('mix-slider').addEventListener('input', (e) => {
+            mixAmount = parseFloat(e.target.value);
+            updateGains();
+        });
+
+        document.getElementById('ir-gain-slider').addEventListener('input', (e) => {
+            reflectionGain = parseFloat(e.target.value);
+            updateGains();
+        });
 
         // --- VISUALIZATION ---
 
@@ -606,10 +737,25 @@
             listenerPos.x = w.x;
             listenerPos.y = w.y;
             render();
+            updateConvolvers(); // Real-time audio update
+        });
 
-            // Real-time IR plot update while dragging
-            const data = getWeightsAndCoords();
-            if (data) renderIR(data.weights, data.coords);
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const wBefore = toWorld(mouseX, mouseY);
+
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            zoom *= delta;
+
+            const wAfter = toWorld(mouseX, mouseY);
+            viewX += (wAfter.x - wBefore.x);
+            viewY += (wAfter.y - wBefore.y);
+
+            render();
         });
 
         window.addEventListener('mouseup', () => {

@@ -3,9 +3,10 @@ import json
 import os
 import sys
 
-def deconvolve(recorded, source, eps=1e-5):
+def deconvolve(recorded, source, dt, f_cut, eps=1e-5):
     """
-    Deconvolve recorded signal with source signal in frequency domain.
+    Deconvolve recorded signal with source signal in frequency domain
+    and apply a low-pass filter at f_cut.
     """
     N = len(recorded)
     # Ensure power of 2 for better performance
@@ -16,6 +17,16 @@ def deconvolve(recorded, source, eps=1e-5):
     
     # Regularized division
     IR_freq = REC / (SRC + eps)
+    
+    # Low-pass filter (Zero frequency bins above f_cut)
+    # Frequency axis for N_fft
+    fs = 1.0 / dt
+    freqs = np.fft.fftfreq(N_fft, d=dt)
+    
+    # Mask out frequencies above f_cut
+    mask = np.abs(freqs) <= f_cut
+    IR_freq *= mask
+    
     ir = np.fft.ifft(IR_freq).real
     
     return ir[:N]
@@ -89,8 +100,10 @@ def main():
     ir_len = min(ir_len, n_steps)
     
     print(f"Generating IRs for {gs_x}x{gs_y} points...")
+    print(f"Low-pass filter cutoff: {150/dh:.2f} Hz (based on dh={dh})")
     
     ir_grid = np.zeros((gs_y, gs_x, ir_len), dtype=np.float32)
+    f_cut = 150.0 / dh
     
     for y in range(gs_y):
         for x in range(gs_x):
@@ -99,11 +112,41 @@ def main():
             if np.max(np.abs(recorded)) < 1e-15:
                 continue
             
-            ir = deconvolve(recorded, source_signal)
-            ir_grid[y, x, :] = ir[:ir_len].astype(np.float32)
+            ir = deconvolve(recorded, source_signal, dt, f_cut)
+            
+            # --- IR Sharpening (Peak finding + Delta arrival) ---
+            # Find the index of the maximum absolute value (primary arrival)
+            peak_idx = np.argmax(np.abs(ir[:ir_len]))
+            peak_val = ir[peak_idx]
+            
+            # Create a hybrid IR:
+            # 1. Start with the low-passed IR
+            sharpened_ir = ir[:ir_len].copy()
+            
+            # 2. Zero out the area around the peak to remove the "smear" 
+            # (main lobe of the low-pass sinc-like artifact)
+            # A window of ~4-10 samples is usually enough for these frequencies
+            window = 4 
+            start_win = max(0, peak_idx - window)
+            end_win = min(ir_len, peak_idx + window + 1)
+            sharpened_ir[start_win:end_win] *= 0.1 # Attenuate the smear
+            
+            # 3. Inject the perfect delta
+            sharpened_ir[peak_idx] = peak_val
+            
+            ir_grid[y, x, :] = sharpened_ir.astype(np.float32)
             
         if y % 10 == 0:
             print(f"Progress: {y}/{gs_y}")
+
+    print(f"Normalizing IR grid...")
+    global_max = np.max(np.abs(ir_grid))
+    if global_max > 0:
+        scaling_factor = 0.5 / global_max
+        ir_grid *= scaling_factor
+        print(f"Global max: {global_max:.2e}, Scaled by {scaling_factor:.2e}")
+    else:
+        print("Warning: All IRs are zero!")
 
     output_grid_path = os.path.join(exp_dir, "output", "ir_grid_2d.bin")
     output_meta_path = os.path.join(exp_dir, "output", "ir_metadata.json")
