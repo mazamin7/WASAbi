@@ -1,4 +1,5 @@
-clear all; close all; clc;
+% clear all;
+close all; clc;
 
 % Default experiment path
 if ~exist('experiment_path', 'var')
