@@ -126,4 +126,4 @@ Defines the simulation engine parameters.
 ```cmd
 .\build_cuda.bat
 ```
-6. This builds `WASAbiApp.exe` into `build/`.
+This builds `WASAbiApp.exe` into `build/`.
