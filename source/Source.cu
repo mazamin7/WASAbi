@@ -156,7 +156,9 @@ int main(int argc, char* argv[]) {
     }
     int dim_x = rxe - rxs, dim_y = rye - rys, dim_z = rze - rzs;
     int pml = Simulation::n_pml_layers_;
-    int panel_w_sim = max({ dim_x, dim_y, dim_z }) + 2 * pml;
+    // If we are in simulation mode, the partitions vector already includes PML layers.
+    // In playback mode, we need to manually 'inflate' the DCT dimensions to match the simulated window size.
+    int panel_w_sim = (cli_args.mode == RunMode::VIZ_RECORD) ? (max({ dim_x, dim_y, dim_z }) + 2 * pml) : max({ dim_x, dim_y, dim_z });
     int panel_h_sim = panel_w_sim;
     int resolution_x = panel_w_sim * 3;
     int resolution_y = panel_h_sim;
@@ -234,7 +236,8 @@ int main(int argc, char* argv[]) {
             if (fi == 0) smooth_v = tv; else smooth_v = smooth_v * 0.9f + tv * 0.1f;
             float v_c = max(0.001f, min(1000.0f, smooth_v));
             
-            fill(pixels.begin(), pixels.end(), 0x000000);
+            
+            fill(pixels.begin(), pixels.end(), 0xFF141414); // Opaque dark-grey background
             
             for (auto p : partitions) {
                 int px1 = p->x_start_ - rxs + pml_lay, px2 = p->x_end_ - rxs + pml_lay;
