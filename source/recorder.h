@@ -39,8 +39,13 @@ public:
 	void FindPartition(std::vector<std::shared_ptr<Partition>> partitions);
 	void RecordField(int time_step = 0);
 	void RecordResponse(int time_step = 0);
+	void FlushResponse();
 
 	static std::vector<std::shared_ptr<Recorder>> ImportRecorders(const Config& config, std::string path, int total_steps__, std::string dir_path);
+
+private:
+	double* d_response_buffer_ = nullptr;
+    int response_count_ = 0;
 
 };
 

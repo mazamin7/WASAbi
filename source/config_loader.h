@@ -12,17 +12,14 @@ struct Config {
     double duration;
     double c0;
     int n_pml_layers;
-    std::string precision;
+    double dh;
+
+    double dt;
     int viz_skip;
     int fixed_panel_size;
     float max_viz_gain;
-    
-    // Recording settings
-    bool is_record_response;
-    bool is_record_field;
 };
 
 Config load_config(const std::string& filename, const std::string& experiment_name = "");
-void set_precision_params(const std::string& precision, double& dh, double& dt);
 
 #endif // CONFIG_LOADER_H

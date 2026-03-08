@@ -1,5 +1,10 @@
 clear all; close all; clc;
 
+% Default experiment path
+if ~exist('experiment_path', 'var')
+    experiment_path = '../source/experiments/hall';
+end
+
 % Correct Binary Filenames
 source_filename = [experiment_path, '/output/source_data_0.bin'];
 receiver_filename = [experiment_path, '/output/response_data_0.bin'];
@@ -18,18 +23,10 @@ alpha_b = config.simulation.boundary_absorption;
 c = config.simulation.c0;
 sim_dur = config.simulation.duration;
 dh = config.simulation.dh;
+dt = config.simulation.dt;
 
-% Sampling rate and bandwidth based on dh
-switch dh
-    case 0.05
-        fs = 16000; % Sampling rate of impulse response
-    case 0.1
-        fs = 8000;
-    case 0.2
-        fs = 5000;
-    case 0.5
-        fs = 1600;
-end
+% Sampling rate based on dt
+fs = round(1 / dt);
 
 % Compute S and V
 S = 2720; V = 7600;

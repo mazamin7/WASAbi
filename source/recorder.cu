@@ -17,11 +17,15 @@ Recorder::Recorder(const Config& config, int x, int y, int z, int total_steps, s
 	
 	output_path_ = dir_path_ + "/record_data_" + std::to_string(id_) + ".bin";
 	response_path_ = dir_path_ + "/response_data_" + std::to_string(id_) + ".bin";
+
+	cudaMalloc((void**)&d_response_buffer_, total_steps_ * sizeof(double));
+    response_count_ = 0;
 }
 
 Recorder::~Recorder()
 {
 	if (field_buffer_) free(field_buffer_);
+    if (d_response_buffer_) cudaFree(d_response_buffer_);
 	output_.close();
 	response_.close();
 }
@@ -113,16 +117,36 @@ void Recorder::RecordField(int time_step)
 	}
 }
 
+__global__ void RecordResponseKernel(const double* d_pressure, double* d_buffer, int idx, int x, int y, int z, int w, int h)
+{
+    d_buffer[idx] = d_pressure[z * h * w + y * w + x];
+}
+
 void Recorder::RecordResponse(int time_step)
 {
-	if (time_step <= total_steps_)
+	if (time_step < total_steps_)
 	{
-		if (!response_.is_open()) {
-			response_.open(response_path_, std::ios::out | std::ios::binary);
-		}
-        double val = part_->get_pressure(x_, y_, z_);
-		response_.write(reinterpret_cast<const char*>(&val), sizeof(double));
+		// FIX: Launch a tiny kernel to record value asynchronously on the GPU
+        RecordResponseKernel<<<1, 1, 0, part_->stream_>>>(
+            part_->d_pressure_, d_response_buffer_, response_count_++,
+            x_ - part_->x_start_, y_ - part_->y_start_, z_ - part_->z_start_,
+            part_->width_, part_->height_
+        );
 	}
+}
+
+void Recorder::FlushResponse()
+{
+	if (response_count_ == 0) return;
+
+    std::vector<double> h_buffer(response_count_);
+    cudaMemcpy(h_buffer.data(), d_response_buffer_, response_count_ * sizeof(double), cudaMemcpyDeviceToHost);
+
+	if (!response_.is_open()) {
+		response_.open(response_path_, std::ios::out | std::ios::binary);
+	}
+	response_.write(reinterpret_cast<const char*>(h_buffer.data()), response_count_ * sizeof(double));
+	response_.close();
 }
 
 std::vector<std::shared_ptr<Recorder>> Recorder::ImportRecorders(const Config& config, std::string path, int total_steps__, std::string dir_path)

@@ -1,6 +1,11 @@
 clear all, close all, clc;
 
-experiment_path = '../source/experiments/hall';
+% Default experiment path
+if ~exist('experiment_path', 'var')
+    experiment_path = '../source/experiments/hall';
+end
+
+data_filename = [experiment_path, '/output/record_data_0.bin'];
 % Load Experiment Config
 config_str = fileread([experiment_path, '/config.json']);
 config = jsondecode(config_str);
@@ -30,10 +35,10 @@ for i = 1:length(partitions)
     z_max = max(z_max, ceil((p.z + p.d) / dh));
 end
 
-% Total dimensions including PML
-Lx = (x_max - x_min) + 2 * n_pml;
-Ly = (y_max - y_min) + 2 * n_pml;
-Lz = (z_max - z_min) + 2 * n_pml;
+% Total dimensions (excluding PML, as they are not recorded)
+Lx = x_max - x_min;
+Ly = y_max - y_min;
+Lz = z_max - z_min;
 
 % Stream Binary Chunk
 fileID = fopen(data_filename, 'r');
@@ -43,7 +48,7 @@ fclose(fileID);
 % Reshape the data into a 4D array (Time, X, Y, Z)
 % We calculate the number of time steps (N) based on the total elements
 points_per_frame = Lx * Ly * Lz;
-N = length(A) / points_per_frame;
+N = round(length(A) / points_per_frame);
 
 pressure_values = zeros(N, Lx, Ly, Lz);
 
@@ -56,7 +61,7 @@ end
 %%
 close all;
 
-for iT = 2:1:5
+for iT = 50:1:54
     figure()
     p = squeeze(pressure_values(iT,:,:,:));
     

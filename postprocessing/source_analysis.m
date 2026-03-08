@@ -1,33 +1,24 @@
 clear all, close all, clc;
 
-source_filename = 'source_data_0.bin';
-
-% Parameters
-c = 343.5;
-
-sim_dur = 1;
-% sim_dur = 5;
-
-dh = 0.2;
-% dh = 0.05;
-% dh = 0.1;
-
-switch dh
-    case 0.05
-        dt = 0.625e-4;
-        fcut = 3000; % Bandwidth of impulse response
-    case 0.1
-        dt = 1.25e-4;
-        fcut = 1500;
-    case 0.2
-        dt = 2e-4;
-        fcut = 750;
-    case 0.5
-        dt = 6.25e-4;
-        fcut = 300;
+% Default experiment path
+if ~exist('experiment_path', 'var')
+    experiment_path = '../source/experiments/hall';
 end
 
-fs = 1/dt; % Sampling rate of impulse response
+source_filename = [experiment_path, '/output/source_data_0.bin'];
+
+% Load Experiment Config
+config_str = fileread([experiment_path, '/config.json']);
+config = jsondecode(config_str);
+
+% Parameters
+c = config.simulation.c0;
+sim_dur = config.simulation.duration;
+dh = config.simulation.dh;
+dt = config.simulation.dt;
+
+fcut = 150 / dh;
+fs = round(1/dt); % Sampling rate of impulse response
 
 % Load binary source
 fid_src = fopen(source_filename, 'r');

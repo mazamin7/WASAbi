@@ -79,7 +79,8 @@ int main(int argc, char* argv[]) {
     Simulation::duration_ = config.duration;
     Simulation::c0_ = config.c0;
     Simulation::n_pml_layers_ = config.n_pml_layers;
-    set_precision_params(config.precision, Simulation::dh_, Simulation::dt_);
+    Simulation::dh_ = config.dh;
+    Simulation::dt_ = config.dt;
     Simulation::viz_skip_ = config.viz_skip;
     Simulation::max_viz_gain_ = config.max_viz_gain;
 
@@ -172,6 +173,10 @@ int main(int argc, char* argv[]) {
             } else if (cli_args.mode != RunMode::SIM_VIZ && time_step % (Simulation::viz_skip_ * 5) == 0) {
                 cout << "Progress: " << time_step << "/" << total_steps << "\r"; cout.flush();
             }
+        }
+        // Ensure all buffered response data is written to disk
+        for (auto r : recorders) {
+            if (is_record_response) r->FlushResponse();
         }
     } 
     // --- PLAYBACK LOOP ---
