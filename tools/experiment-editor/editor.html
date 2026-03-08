@@ -219,6 +219,17 @@
             border-bottom: none;
         }
 
+        .placed-info {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .placed-info.active {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
         .section-title {
             font-size: 10px;
             font-weight: 700;
@@ -512,8 +523,8 @@
         const wrap = document.getElementById('canvas-wrap');
 
         let rects = [];        // { id, x, y, w, h, d, ba: {xm,xp,ym,yp,zm,zp} }
-        let source = null;     // { x, y }
-        let recorder = null;   // { x, y }
+        let sources = [];      // { x, y, z }
+        let recorders = [];    // { x, y, z }
 
         let mode = 'draw';     // draw | select | source | recorder
 
@@ -528,9 +539,14 @@
 
         // Interaction
         let selectedId = null;
+        let selectedSourceIdx = null;
+        let selectedRecorderIdx = null;
+
         let dragging = false;
         let dragStart = null;
         let dragRectStart = null;
+        let dragMarkerStart = null;
+
         let panning = false;
         let panStart = null;
         let panViewStart = null;
@@ -685,39 +701,45 @@
                 }
             }
 
-            // Source
-            if (source) {
-                const s = toScreen(source.x, source.y);
+            // Sources
+            sources.forEach((s, idx) => {
+                const scr = toScreen(s.x, s.y);
+                const isSelected = selectedSourceIdx === idx;
                 ctx.beginPath();
-                ctx.arc(s.x, s.y, 9, 0, Math.PI * 2);
+                ctx.arc(scr.x, scr.y, 9, 0, Math.PI * 2);
                 ctx.fillStyle = '#22c55e';
                 ctx.fill();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.5)';
+                ctx.setLineDash(isSelected ? [] : [2, 1]);
+                ctx.lineWidth = isSelected ? 3 : 1.5;
                 ctx.stroke();
+                ctx.setLineDash([]);
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 10px Inter';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('S', s.x, s.y);
-            }
+                ctx.fillText(`S${idx + 1}`, scr.x, scr.y);
+            });
 
-            // Recorder
-            if (recorder) {
-                const s = toScreen(recorder.x, recorder.y);
+            // Recorders
+            recorders.forEach((r, idx) => {
+                const scr = toScreen(r.x, r.y);
+                const isSelected = selectedRecorderIdx === idx;
                 ctx.beginPath();
-                ctx.arc(s.x, s.y, 9, 0, Math.PI * 2);
+                ctx.arc(scr.x, scr.y, 9, 0, Math.PI * 2);
                 ctx.fillStyle = '#f97316';
                 ctx.fill();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = isSelected ? '#fff' : 'rgba(255,255,255,0.5)';
+                ctx.setLineDash(isSelected ? [] : [2, 1]);
+                ctx.lineWidth = isSelected ? 3 : 1.5;
                 ctx.stroke();
+                ctx.setLineDash([]);
                 ctx.fillStyle = '#fff';
                 ctx.font = 'bold 10px Inter';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText('R', s.x, s.y);
-            }
+                ctx.fillText(`R${idx + 1}`, scr.x, scr.y);
+            });
         }
 
         // ============================================================
@@ -757,11 +779,60 @@
             const w = toWorld(px, py);
             const ws = { x: snapGrid(w.x), y: snapGrid(w.y) };
 
-            if (mode === 'select' && hoverEdge && selectedId !== null) {
-                resizing = true;
-                const hit = rects.find(r => r.id === selectedId);
-                resizeRectStart = { x: hit.x, y: hit.y, w: hit.w, h: hit.h };
-                dragStart = ws;
+            if (mode === 'select') {
+                // Priority 1: Check sources
+                for (let i = sources.length - 1; i >= 0; i--) {
+                    const s = toScreen(sources[i].x, sources[i].y);
+                    const d = Math.sqrt((px - s.x) ** 2 + (py - s.y) ** 2);
+                    if (d < 12) {
+                        selectedSourceIdx = i;
+                        selectedRecorderIdx = null;
+                        selectedId = null;
+                        dragging = true;
+                        dragMarkerStart = { x: sources[i].x, y: sources[i].y };
+                        dragStart = ws;
+                        updatePlacementPanel();
+                        render();
+                        return;
+                    }
+                }
+                // Priority 2: Check recorders
+                for (let i = recorders.length - 1; i >= 0; i--) {
+                    const s = toScreen(recorders[i].x, recorders[i].y);
+                    const d = Math.sqrt((px - s.x) ** 2 + (py - s.y) ** 2);
+                    if (d < 12) {
+                        selectedRecorderIdx = i;
+                        selectedSourceIdx = null;
+                        selectedId = null;
+                        dragging = true;
+                        dragMarkerStart = { x: recorders[i].x, y: recorders[i].y };
+                        dragStart = ws;
+                        updatePlacementPanel();
+                        render();
+                        return;
+                    }
+                }
+
+                // Priority 3: Resize or Rect select
+                if (hoverEdge && selectedId !== null) {
+                    resizing = true;
+                    const hit = rects.find(r => r.id === selectedId);
+                    resizeRectStart = { x: hit.x, y: hit.y, w: hit.w, h: hit.h };
+                    dragStart = ws;
+                    return;
+                }
+                const hit = rectAt(w.x, w.y);
+                selectedId = hit ? hit.id : null;
+                selectedSourceIdx = null;
+                selectedRecorderIdx = null;
+                if (hit) {
+                    dragging = true;
+                    dragStart = ws;
+                    dragRectStart = { x: hit.x, y: hit.y };
+                }
+                updateRectPanel();
+                updatePlacementPanel();
+                render();
                 return;
             }
 
@@ -769,22 +840,18 @@
                 drawing = true;
                 drawStart = ws;
                 drawCurrent = ws;
-            } else if (mode === 'select') {
-                const hit = rectAt(w.x, w.y);
-                selectedId = hit ? hit.id : null;
-                if (hit) {
-                    dragging = true;
-                    dragStart = ws;
-                    dragRectStart = { x: hit.x, y: hit.y };
-                }
-                updateRectPanel();
-                render();
             } else if (mode === 'source') {
-                source = { x: snapGrid(w.x), y: snapGrid(w.y) };
+                sources.push({ x: ws.x, y: ws.y, z: 1.5 });
+                selectedSourceIdx = sources.length - 1;
+                selectedRecorderIdx = null;
+                selectedId = null;
                 updatePlacementPanel();
                 render();
             } else if (mode === 'recorder') {
-                recorder = { x: snapGrid(w.x), y: snapGrid(w.y) };
+                recorders.push({ x: ws.x, y: ws.y, z: 1.5 });
+                selectedRecorderIdx = recorders.length - 1;
+                selectedSourceIdx = null;
+                selectedId = null;
                 updatePlacementPanel();
                 render();
             }
@@ -806,14 +873,24 @@
             if (drawing) {
                 drawCurrent = ws;
                 render();
-            } else if (dragging && selectedId !== null) {
-                const r = rects.find(r => r.id === selectedId);
-                if (r) {
-                    r.x = snapGrid(dragRectStart.x + (ws.x - dragStart.x));
-                    r.y = snapGrid(dragRectStart.y + (ws.y - dragStart.y));
-                    updateRectPanel();
-                    render();
+            } else if (dragging) {
+                if (selectedId !== null) {
+                    const r = rects.find(r => r.id === selectedId);
+                    if (r) {
+                        r.x = snapGrid(dragRectStart.x + (ws.x - dragStart.x));
+                        r.y = snapGrid(dragRectStart.y + (ws.y - dragStart.y));
+                        updateRectPanel();
+                    }
+                } else if (selectedSourceIdx !== null) {
+                    sources[selectedSourceIdx].x = ws.x;
+                    sources[selectedSourceIdx].y = ws.y;
+                    updatePlacementPanel();
+                } else if (selectedRecorderIdx !== null) {
+                    recorders[selectedRecorderIdx].x = ws.x;
+                    recorders[selectedRecorderIdx].y = ws.y;
+                    updatePlacementPanel();
                 }
+                render();
             } else if (resizing && selectedId !== null) {
                 const r = rects.find(r => r.id === selectedId);
                 if (r) {
@@ -947,10 +1024,18 @@
         }
 
         function deleteSelected() {
-            if (selectedId === null) return;
-            rects = rects.filter(r => r.id !== selectedId);
-            selectedId = null;
+            if (selectedId !== null) {
+                rects = rects.filter(r => r.id !== selectedId);
+                selectedId = null;
+            } else if (selectedSourceIdx !== null) {
+                sources.splice(selectedSourceIdx, 1);
+                selectedSourceIdx = null;
+            } else if (selectedRecorderIdx !== null) {
+                recorders.splice(selectedRecorderIdx, 1);
+                selectedRecorderIdx = null;
+            }
             updateRectPanel();
+            updatePlacementPanel();
             render();
         }
 
@@ -958,21 +1043,72 @@
         // RIGHT PANEL
         // ============================================================
         function updatePlacementPanel() {
-            if (source) {
-                document.getElementById('src-info').style.display = '';
-                const z = parseFloat(document.getElementById('src-z').value) || 1.5;
-                document.getElementById('src-pos').textContent = `x=${source.x}, y=${source.y}, z=${z} m`;
+            const el = document.getElementById('placement-section');
+            let html = `<div class="section-title">Placements</div>`;
+
+            // List Sources
+            sources.forEach((s, idx) => {
+                const sel = selectedSourceIdx === idx;
+                html += `
+                    <div class="placed-info ${sel ? 'active' : ''}" onclick="selectSource(${idx})" style="border: ${sel ? '1px solid var(--green)' : '1px solid transparent'}; cursor:pointer; margin-bottom:4px">
+                        <div style="display:flex; justify-content:space-between; align-items:center">
+                            <span>Source ${idx + 1}</span>
+                            <span style="font-size:9px; color:var(--text3)">x:${s.x} y:${s.y}</span>
+                        </div>
+                        ${sel ? `
+                            <div class="prop-row" style="margin-top:6px">
+                                <span class="prop-label" style="font-size:10px; min-width:60px">Z pos (m)</span>
+                                <input type="number" id="src-z-${idx}" value="${s.z}" step="0.1" min="0" style="font-size:11px; height:20px" oninput="sources[${idx}].z = parseFloat(this.value); render();">
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            // List Recorders
+            recorders.forEach((r, idx) => {
+                const sel = selectedRecorderIdx === idx;
+                html += `
+                    <div class="placed-info ${sel ? 'active' : ''}" onclick="selectRecorder(${idx})" style="border: ${sel ? '1px solid var(--orange)' : '1px solid transparent'}; cursor:pointer; margin-bottom:4px">
+                        <div style="display:flex; justify-content:space-between; align-items:center">
+                            <span>Recorder ${idx + 1}</span>
+                            <span style="font-size:9px; color:var(--text3)">x:${r.x} y:${r.y}</span>
+                        </div>
+                        ${sel ? `
+                            <div class="prop-row" style="margin-top:6px">
+                                <span class="prop-label" style="font-size:10px; min-width:60px">Z pos (m)</span>
+                                <input type="number" id="rec-z-${idx}" value="${r.z}" step="0.1" min="0" style="font-size:11px; height:20px" oninput="recorders[${idx}].z = parseFloat(this.value); render();">
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            if (sources.length === 0 && recorders.length === 0) {
+                html += `<div class="empty-state">No sources or recorders placed</div>`;
             }
-            if (recorder) {
-                document.getElementById('rec-info').style.display = '';
-                const z = parseFloat(document.getElementById('rec-z').value) || 1.5;
-                document.getElementById('rec-pos').textContent = `x=${recorder.x}, y=${recorder.y}, z=${z} m`;
-            }
+
+            el.innerHTML = html;
         }
 
-        ['src-z', 'rec-z'].forEach(id => {
-            document.getElementById(id).addEventListener('input', updatePlacementPanel);
-        });
+        function selectSource(idx) {
+            selectedSourceIdx = idx;
+            selectedRecorderIdx = null;
+            selectedId = null;
+            updateRectPanel();
+            updatePlacementPanel();
+            render();
+        }
+
+        function selectRecorder(idx) {
+            selectedRecorderIdx = idx;
+            selectedSourceIdx = null;
+            selectedId = null;
+            updateRectPanel();
+            updatePlacementPanel();
+            render();
+        }
+
 
         function updateRectPanel() {
             const el = document.getElementById('rect-props');
@@ -1037,12 +1173,10 @@
             const dh = parseFloat(document.getElementById('p-dh').value) || 0.2;
             const a1 = parseFloat(document.getElementById('p-a1').value) || 0;
             const a2 = parseFloat(document.getElementById('p-a2').value) || 0;
-            const srcZ = parseFloat(document.getElementById('src-z').value) || 1.5;
-            const recZ = parseFloat(document.getElementById('rec-z').value) || 1.5;
 
             // Validate
-            if (!source) { alert('Place a source first!'); return; }
-            if (!recorder) { alert('Place a recorder first!'); return; }
+            if (sources.length === 0) { alert('Place at least one source!'); return; }
+            if (recorders.length === 0) { alert('Place at least one recorder!'); return; }
             if (rects.length === 0) { alert('Draw at least one rectangle!'); return; }
 
             // All geometry values must be multiples of dh (C++ uses integer grid units).
@@ -1066,15 +1200,15 @@
                     alpha2: a2
                 },
                 partitions,
-                sources: [{
+                sources: sources.map(s => ({
                     type: 'gaussian',
-                    x: snapDh(source.x, dh), y: snapDh(source.y, dh),
-                    z: snapDh(srcZ, dh)
-                }],
-                recorders: [{
-                    x: snapDh(recorder.x, dh), y: snapDh(recorder.y, dh),
-                    z: snapDh(recZ, dh)
-                }]
+                    x: snapDh(s.x, dh), y: snapDh(s.y, dh),
+                    z: snapDh(s.z, dh)
+                })),
+                recorders: recorders.map(r => ({
+                    x: snapDh(r.x, dh), y: snapDh(r.y, dh),
+                    z: snapDh(r.z, dh)
+                }))
             };
 
             download('asset.json', JSON.stringify(obj, null, 4));
@@ -1144,13 +1278,15 @@
                         }
                     }));
                 }
-                if (data.sources && data.sources.length > 0) {
-                    source = { x: data.sources[0].x, y: data.sources[0].y };
-                    document.getElementById('src-z').value = data.sources[0].z;
+                if (data.sources) {
+                    sources = data.sources.map(s => ({
+                        x: s.x, y: s.y, z: s.z || 1.5
+                    }));
                 }
-                if (data.recorders && data.recorders.length > 0) {
-                    recorder = { x: data.recorders[0].x, y: data.recorders[0].y };
-                    document.getElementById('rec-z').value = data.recorders[0].z;
+                if (data.recorders) {
+                    recorders = data.recorders.map(r => ({
+                        x: r.x, y: r.y, z: r.z || 1.5
+                    }));
                 }
                 updatePlacementPanel();
                 updateRectPanel();
