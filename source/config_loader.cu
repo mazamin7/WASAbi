@@ -21,9 +21,31 @@ Config load_config(const std::string& filename, const std::string& experiment_na
     config.fixed_panel_size = 400;
     config.max_viz_gain = 100.0f;
 
+    // Determine the experiment root directory by searching parent directories
+    std::filesystem::path exp_root;
+    bool found_root = false;
+    std::filesystem::path current_search = std::filesystem::current_path();
+
+    for (int i = 0; i < 4; ++i) {
+        if (std::filesystem::exists(current_search / "experiments")) {
+            exp_root = current_search / "experiments";
+            found_root = true;
+            break;
+        }
+        if (current_search.has_parent_path()) {
+            current_search = current_search.parent_path();
+        } else {
+            break;
+        }
+    }
+
+    if (!found_root) {
+        exp_root = "./experiments"; // Fallback
+    }
+
     std::string actual_path = filename;
     if (!experiment_name.empty()) {
-        actual_path = "./experiments/" + experiment_name + "/config.json";
+        actual_path = (exp_root / experiment_name / "config.json").string();
     }
 
     std::ifstream file(actual_path);

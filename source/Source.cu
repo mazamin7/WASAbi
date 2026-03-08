@@ -84,11 +84,36 @@ int main(int argc, char* argv[]) {
     else { is_record_field = false; is_record_response = false; }
 
     double time1 = omp_get_wtime();
-    cout << "Current Working Directory: " << std::filesystem::current_path() << endl;
+    
+    // Determine the experiment root directory by searching parent directories
+    std::filesystem::path exp_root;
+    bool found_root = false;
+    std::filesystem::path current_search = std::filesystem::current_path();
+    
+    // Check up to 3 levels up for the experiments directory
+    for (int i = 0; i < 4; ++i) {
+        cout << "Searching for experiments in: " << (current_search / "experiments").string() << endl;
+        if (std::filesystem::exists(current_search / "experiments")) {
+            exp_root = current_search / "experiments";
+            found_root = true;
+            cout << "Found experiments root at: " << exp_root.string() << endl;
+            break;
+        }
+        if (current_search.has_parent_path()) {
+            current_search = current_search.parent_path();
+        } else {
+            break;
+        }
+    }
+
+    if (!found_root) {
+        cerr << "WARNING: Could not find 'experiments' directory in current or parent folders." << endl;
+        exp_root = "./experiments"; // Fallback to current dir
+    }
 
     string dir_name;
     if (!config.experiment_name.empty()) {
-        dir_name = "./experiments/" + config.experiment_name + "/output";
+        dir_name = (exp_root / config.experiment_name / "output").string();
     } else {
         dir_name = "./output";
     }
@@ -100,7 +125,7 @@ int main(int argc, char* argv[]) {
 
     string asset_path;
     if (!config.experiment_name.empty()) {
-        asset_path = "./experiments/" + config.experiment_name + "/asset.json";
+        asset_path = (exp_root / config.experiment_name / "asset.json").string();
     } else {
         asset_path = "./assets/" + config.asset_name + ".txt";
     }

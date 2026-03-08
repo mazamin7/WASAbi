@@ -25,6 +25,8 @@ Before running a simulation, use the web-based **Experiment Designer** to create
 - **Location**: `tools/experiment-editor/editor.html` (Open in any modern browser).
 - **Features**:
     - Interactive 2D drawing of rectangular partitions.
+    - **Dynamic Resizing**: Drag edges of selected rectangles to resize.
+    - **Project Loading**: Use the **📂 Load** button to import existing `config.json` or `asset.json` files for modification.
     - Real-time **CFL Stability Warning** (`c₀ · dt / dh > 0.6`).
     - Visual feedback for face-specific absorption coefficients.
     - Export standardized `asset.json` and `config.json`.
@@ -33,14 +35,23 @@ Before running a simulation, use the web-based **Experiment Designer** to create
 Run the high-performance CUDA simulation engine.
 
 **📂 Experiment Structure:**
-Each experiment lives in `source/experiments/[name]/`:
+Each experiment lives in `experiments/[name]/`:
 - `asset.json`: Geometry, sources, recorders, and **medium properties** (c₀, α₁, α₂).
 - `config.json`: Numeric parameters (dh, dt, duration, viz_skip).
 - `output/`: Binary files containing simulation results.
 
 **🚀 Execution:**
+Use the batch files in the root for quick execution:
+- `run_sim_viz.bat`: Run simulation with real-time visualization.
+- `run_sim_record_response.bat`: Run simulation and record RIR.
+- `run_sim_record_field.bat`: Run simulation and record full pressure field.
+- `run_viz_record.bat`: Visualize a previously recorded field.
+
+*Tip: Modify `experiment_name.txt` in the root to change the default experiment name for these scripts.*
+
+Or run manually:
 ```cmd
-.\WASAbiApp.exe --experiment hall --mode sim-viz
+.\build\WASAbiApp.exe --experiment hall --mode sim-viz
 ```
 
 ### 3️⃣ ANALYZE: MATLAB Post-Processing
@@ -103,4 +114,4 @@ Defines the simulation engine parameters.
 ```cmd
 .\build_cuda.bat
 ```
-This builds `WASAbiApp.exe` into `source/build/`.
+6. This builds `WASAbiApp.exe` into `build/`.

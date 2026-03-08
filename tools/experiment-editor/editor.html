@@ -319,6 +319,23 @@
             line-height: 1.7;
         }
 
+        .import-btn {
+            background: var(--panel2);
+            border: 1px solid var(--border);
+            color: var(--text2);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .import-btn:hover {
+            border-color: var(--accent);
+            color: var(--text);
+        }
+
         .panel-scroll {
             flex: 1;
             overflow-y: auto;
@@ -396,6 +413,9 @@
         <div class="header-right">
             <button class="export-btn config" onclick="exportConfig()">⬇ config.json</button>
             <button class="export-btn asset" onclick="exportAsset()">⬇ asset.json</button>
+            <div class="header-sep"></div>
+            <button class="import-btn" onclick="document.getElementById('load-file').click()">📂 Load</button>
+            <input type="file" id="load-file" style="display:none" onchange="loadJson(event)">
         </div>
     </header>
 
@@ -520,6 +540,10 @@
         const SNAP = 0.5;
 
         let nextId = 1;
+
+        let hoverEdge = null;
+        let resizing = false;
+        let resizeRectStart = null;
 
         // ============================================================
         // RESIZE
@@ -733,6 +757,14 @@
             const w = toWorld(px, py);
             const ws = { x: snapGrid(w.x), y: snapGrid(w.y) };
 
+            if (mode === 'select' && hoverEdge && selectedId !== null) {
+                resizing = true;
+                const hit = rects.find(r => r.id === selectedId);
+                resizeRectStart = { x: hit.x, y: hit.y, w: hit.w, h: hit.h };
+                dragStart = ws;
+                return;
+            }
+
             if (mode === 'draw') {
                 drawing = true;
                 drawStart = ws;
@@ -782,6 +814,59 @@
                     updateRectPanel();
                     render();
                 }
+            } else if (resizing && selectedId !== null) {
+                const r = rects.find(r => r.id === selectedId);
+                if (r) {
+                    const dx = ws.x - dragStart.x;
+                    const dy = ws.y - dragStart.y;
+                    if (hoverEdge.includes('w')) {
+                        const newX = snapGrid(resizeRectStart.x + dx);
+                        const newW = snapGrid(resizeRectStart.w - (newX - resizeRectStart.x));
+                        if (newW >= SNAP) { r.x = newX; r.w = newW; }
+                    } else if (hoverEdge.includes('e')) {
+                        r.w = Math.max(SNAP, snapGrid(resizeRectStart.w + dx));
+                    }
+                    if (hoverEdge.includes('n')) {
+                        const newY = snapGrid(resizeRectStart.y + dy);
+                        const newH = snapGrid(resizeRectStart.h - (newY - resizeRectStart.y));
+                        if (newH >= SNAP) { r.y = newY; r.h = newH; }
+                    } else if (hoverEdge.includes('s')) {
+                        r.h = Math.max(SNAP, snapGrid(resizeRectStart.h + dy));
+                    }
+                    updateRectPanel();
+                    render();
+                }
+            } else if (mode === 'select' && !dragging && !resizing) {
+                // Resize handle detection: only for SELECTED rectangle
+                hoverEdge = null;
+                canvas.style.cursor = 'default';
+
+                if (selectedId !== null) {
+                    const hit = rects.find(r => r.id === selectedId);
+                    if (hit) {
+                        const s = toScreen(hit.x, hit.y);
+                        const sw = hit.w * zoom;
+                        const sh = hit.h * zoom;
+                        const tol = 10;
+                        let edge = '';
+
+                        // Check north/south
+                        if (px >= s.x - tol && px <= s.x + sw + tol) {
+                            if (Math.abs(py - s.y) < tol) edge += 'n';
+                            else if (Math.abs(py - (s.y + sh)) < tol) edge += 's';
+                        }
+                        // Check west/east
+                        if (py >= s.y - tol && py <= s.y + sh + tol) {
+                            if (Math.abs(px - s.x) < tol) edge += 'w';
+                            else if (Math.abs(px - (s.x + sw)) < tol) edge += 'e';
+                        }
+
+                        if (edge) {
+                            canvas.style.cursor = edge + '-resize';
+                            hoverEdge = edge;
+                        }
+                    }
+                }
             }
         });
 
@@ -812,6 +897,7 @@
                 render();
             }
             if (dragging) { dragging = false; }
+            if (resizing) { resizing = false; }
         });
 
         canvas.addEventListener('wheel', e => {
@@ -834,6 +920,16 @@
             if (e.code === 'Space') { spaceDown = true; canvas.style.cursor = 'grab'; }
             if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
             if (e.key === 'Escape') { selectedId = null; updateRectPanel(); render(); }
+
+            // Panning with arrow keys
+            const panStep = 20 / zoom; // logical meters to pan
+            if (e.key === 'ArrowUp') { viewY += 20; render(); }
+            if (e.key === 'ArrowDown') { viewY -= 20; render(); }
+            if (e.key === 'ArrowLeft') { viewX += 20; render(); }
+            if (e.key === 'ArrowRight') { viewX -= 20; render(); }
+
+            if (e.key === '+' || e.key === '=') { zoom *= 1.1; zoom = Math.min(200, zoom); render(); }
+            if (e.key === '-' || e.key === '_') { zoom /= 1.1; zoom = Math.max(8, zoom); render(); }
         });
         window.addEventListener('keyup', e => {
             if (e.code === 'Space') { spaceDown = false; setMode(mode); }
@@ -1000,6 +1096,68 @@
                 }
             };
             download('config.json', JSON.stringify(obj, null, 4));
+        }
+
+        function loadJson(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    importData(data);
+                } catch (err) {
+                    alert('Error parsing JSON: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // Reset for same file re-load
+        }
+
+        function importData(data) {
+            if (data.simulation && data.simulation.asset_name) {
+                // it's a config.json
+                document.getElementById('exp-name').value = data.simulation.asset_name;
+                document.getElementById('p-dur').value = data.simulation.duration;
+                document.getElementById('p-dh').value = data.simulation.dh;
+                document.getElementById('p-dt').value = data.simulation.dt;
+                document.getElementById('p-pml').value = data.simulation.n_pml_layers;
+                checkCFL();
+            } else if (data.partitions || data.sources || data.recorders) {
+                // it's an asset.json
+                if (data.medium_properties) {
+                    document.getElementById('p-c0').value = data.medium_properties.c0;
+                    document.getElementById('p-a1').value = data.medium_properties.alpha1;
+                    document.getElementById('p-a2').value = data.medium_properties.alpha2;
+                }
+                if (data.partitions) {
+                    rects = data.partitions.map((p, i) => ({
+                        id: nextId++,
+                        x: p.x, y: p.y, w: p.w, h: p.h, d: p.d,
+                        ba: {
+                            xm: p.boundary_absorption.x_minus,
+                            xp: p.boundary_absorption.x_plus,
+                            ym: p.boundary_absorption.y_minus,
+                            yp: p.boundary_absorption.y_plus,
+                            zm: p.boundary_absorption.z_minus,
+                            zp: p.boundary_absorption.z_plus
+                        }
+                    }));
+                }
+                if (data.sources && data.sources.length > 0) {
+                    source = { x: data.sources[0].x, y: data.sources[0].y };
+                    document.getElementById('src-z').value = data.sources[0].z;
+                }
+                if (data.recorders && data.recorders.length > 0) {
+                    recorder = { x: data.recorders[0].x, y: data.recorders[0].y };
+                    document.getElementById('rec-z').value = data.recorders[0].z;
+                }
+                updatePlacementPanel();
+                updateRectPanel();
+                render();
+            } else {
+                alert('Unknown JSON format');
+            }
         }
 
         function download(filename, content) {
