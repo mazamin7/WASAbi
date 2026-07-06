@@ -10,6 +10,10 @@ public:
 
 	void Update() override;
 
+	void HalfKick();
+	void Drift();
+	void MergeResiduesIntoForce();
+
 	// Spectral components
 	DctVolume* pressure_vol_;
 	DctVolume* velocity_vol_;
@@ -25,12 +29,11 @@ private:
 	// Pre-calculated physics update coefficients
 	// A, B, C: velocity coefficients
 	// D, E, F: pressure coefficients
-	double* d_coef_A_;
-	double* d_coef_B_;
-	double* d_coef_C_;
-	double* d_coef_D_;
-	double* d_coef_E_;
-	double* d_coef_F_;
+	// Pre-calculated exact drift matrix S_m
+	double* d_S11_;
+	double* d_S12_;
+	double* d_S21_;
+	double* d_S22_;
 
 	// Helper function to initialize w0 and alpha arrays on device
 	void InitializeConstants();

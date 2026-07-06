@@ -1,6 +1,7 @@
 #include "simulation.h"
 #include "partition.h"
 #include "pml_partition.h"
+#include "dct_partition.h"
 #include <cuda_runtime.h>
 #include "boundary.h"
 
@@ -339,58 +340,65 @@ int Simulation::Update()
 	//std::cout << std::to_string(sources_[0]->SampleValue(time_step)) << " ";
 
 
-	for (int i = 0; i < dct_partitions_.size(); i++)
-	{
-		// compute force
-		dct_partitions_[i]->ComputeSourceForcingTerms((double)time_step);
-
-		// update pressure and velocity
-		dct_partitions_[i]->Update();
-
-		// reset residue
-		dct_partitions_[i]->reset_residues();
+	if (time_step == 0) {
+		for (auto p : partitions_) p->reset_forces();
+		for (auto p : partitions_) p->ComputeSourceForcingTerms(0.0);
+		for (auto p : partitions_) p->reset_residues();
+		cudaDeviceSynchronize();
+		for (int i = 0; i < (int)boundaries_.size(); i++) {
+			if (boundaries_[i]) boundaries_[i]->ComputeResidues();
+		}
+		cudaDeviceSynchronize();
+		for (auto p : dct_partitions_) {
+			DctPartition* dp = static_cast<DctPartition*>(p.get());
+			dp->MergeResiduesIntoForce();
+			dp->force_vol_->ExecuteDct(p->stream_);
+		}
+		for (auto p : pml_partitions_) p->PostMerge();
+		cudaDeviceSynchronize();
 	}
 
+	// 1. First half-kick for Strang Splitting (DCT only)
+	for (auto p : dct_partitions_) static_cast<DctPartition*>(p.get())->HalfKick();
 
-	for (int i = 0; i < pml_partitions_.size(); i++)
-	{
-		// compute force
-		pml_partitions_[i]->ComputeSourceForcingTerms((double)time_step);
+	// 2. Exact Drift (DCT only)
+	for (auto p : dct_partitions_) static_cast<DctPartition*>(p.get())->Drift();
 
-		// update pressure and velocity
-		pml_partitions_[i]->Update();
+	// 3. PML explicit update
+	for (auto p : pml_partitions_) p->Update();
 
-		// reset residue
-		pml_partitions_[i]->reset_residues();
+	// 4. Interface Reconstruction (IDCT)
+	for (auto p : dct_partitions_) {
+		DctPartition* dp = static_cast<DctPartition*>(p.get());
+		dp->pressure_vol_->ExecuteIdct(p->stream_);
+		dp->velocity_vol_->ExecuteIdct(p->stream_);
 	}
 
-	// Wait for all partition internal updates to finish before boundary calculations
 	cudaDeviceSynchronize();
 
-	// compute residue
+	// 5. Compute new forces at t_{n+1}
+	for (auto p : partitions_) p->reset_forces();
+	for (auto p : partitions_) p->ComputeSourceForcingTerms((double)time_step + 1.0);
 	for (auto p : partitions_) p->reset_residues();
+	cudaDeviceSynchronize();
 
 	for (int i = 0; i < (int)boundaries_.size(); i++) {
-		if (boundaries_[i]) {
-			boundaries_[i]->ComputeResidues();
-		}
+		if (boundaries_[i]) boundaries_[i]->ComputeResidues();
 	}
-	cudaError_t err = cudaDeviceSynchronize();
-	if (err != cudaSuccess) {
-		std::cerr << "CUDA ERROR after boundary computation: " << cudaGetErrorString(err) << std::endl;
-		exit(1);
-	}
+	cudaDeviceSynchronize();
 
-	// post-merge
-	for (int i = 0; i < partitions_.size(); i++)
-	{
-		partitions_[i]->PostMerge();
+	for (auto p : dct_partitions_) {
+		DctPartition* dp = static_cast<DctPartition*>(p.get());
+		dp->MergeResiduesIntoForce();
+		dp->force_vol_->ExecuteDct(p->stream_);
 	}
-	
-	// Clear forces for next step (can be async)
-	for (auto p : partitions_) p->reset_forces();
+	for (auto p : pml_partitions_) p->PostMerge();
 
 	cudaDeviceSynchronize();
+
+	// 6. Second half-kick
+	for (auto p : dct_partitions_) static_cast<DctPartition*>(p.get())->HalfKick();
+
 	//std::cout << std::endl;
 
 	// Visualization: render XY / XZ / YZ planes side-by-side every viz_skip_ steps

@@ -7,17 +7,79 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-// The massively parallel O(N^3) physics update kernel - now optimized with pre-calculated coefficients
-__global__ void DctUpdateKernel(
+// Kernel to pre-calculate w0, alpha, AND physics coefficients natively on the GPU during initialization
+__global__ void InitConstantsKernel(
+    double* __restrict__ d_w0, double* __restrict__ d_alpha,
+    double* __restrict__ d_S11, double* __restrict__ d_S12, double* __restrict__ d_S21, double* __restrict__ d_S22,
+    int w, int h, int d,
+    double lx2, double ly2, double lz2,
+    double c0, double a1, double a2, double dt)
+{
+    int k = blockIdx.x * blockDim.x + threadIdx.x; // width (x)
+    int j = blockIdx.y * blockDim.y + threadIdx.y; // height (y)
+    int i = blockIdx.z * blockDim.z + threadIdx.z; // depth (z)
+
+    if (k < w && j < h && i < d) {
+        int idx = i * h * w + j * w + k;
+        double w0 = c0 * M_PI * sqrt((double)(i * i) / lz2 + (double)(j * j) / ly2 + (double)(k * k) / lx2);
+        double alpha = a1 + a2 * w0 * w0;
+        
+        d_w0[idx] = w0;
+        d_alpha[idx] = alpha;
+
+        double w02 = w0 * w0;
+        double S11 = 1.0, S12 = dt, S21 = 0.0, S22 = 1.0;
+
+        if (idx == 0) {
+            // Constant mode (\lambda_m = 0 -> w0 = 0)
+            if (alpha == 0.0) {
+                S11 = 1.0; S12 = dt;
+                S21 = 0.0; S22 = 1.0;
+            } else {
+                double e_alpha_dt = exp(-alpha * dt);
+                S11 = 1.0; S12 = (1.0 - e_alpha_dt) / alpha;
+                S21 = 0.0; S22 = e_alpha_dt;
+            }
+        } else {
+            // Non-constant modes (\lambda_m < 0 -> w0 > 0)
+            double delta_sq = alpha * alpha - 4.0 * w02;
+            double E = exp(-alpha * dt / 2.0);
+            double Ch = 0.0, Sh = 0.0;
+
+            if (delta_sq < 0.0) {
+                // Underdamped
+                double omega = sqrt(-delta_sq) / 2.0;
+                Ch = cos(omega * dt);
+                Sh = sin(omega * dt) / omega;
+            } else if (delta_sq == 0.0) {
+                // Critically damped
+                Ch = 1.0;
+                Sh = dt;
+            } else {
+                // Overdamped
+                double delta = sqrt(delta_sq);
+                Ch = cosh(delta * dt / 2.0);
+                Sh = sinh(delta * dt / 2.0) / (delta / 2.0);
+            }
+
+            S11 = E * (Ch + Sh * alpha / 2.0);
+            S12 = E * Sh;
+            S21 = E * Sh * (-w02);
+            S22 = E * (Ch - Sh * alpha / 2.0);
+        }
+
+        d_S11[idx] = S11; d_S12[idx] = S12; 
+        d_S21[idx] = S21; d_S22[idx] = S22;
+    }
+}
+
+__global__ void DctDriftKernel(
     double* __restrict__ d_pressure_modes,
     double* __restrict__ d_velocity_modes,
-    const double* __restrict__ d_force_modes,
-    const double* __restrict__ d_A,
-    const double* __restrict__ d_B,
-    const double* __restrict__ d_C,
-    const double* __restrict__ d_D,
-    const double* __restrict__ d_E,
-    const double* __restrict__ d_F,
+    const double* __restrict__ d_S11,
+    const double* __restrict__ d_S12,
+    const double* __restrict__ d_S21,
+    const double* __restrict__ d_S22,
     int w, int h, int d)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -29,91 +91,37 @@ __global__ void DctUpdateKernel(
         
         double pres = d_pressure_modes[idx];
         double vel = d_velocity_modes[idx];
-        double force = d_force_modes[idx];
         
-        // Optimized physics update using pre-calculated coefficients
-        // next_vel = A*vel + B*pres + C*force
-        // next_pres = D*vel + E*pres + F*force
-        double next_vel  = d_A[idx] * vel + d_B[idx] * pres + d_C[idx] * force;
-        double next_pres = d_D[idx] * vel + d_E[idx] * pres + d_F[idx] * force;
+        // Exact drift
+        double next_pres = d_S11[idx] * pres + d_S12[idx] * vel;
+        double next_vel  = d_S21[idx] * pres + d_S22[idx] * vel;
 
-        d_velocity_modes[idx] = next_vel;
         d_pressure_modes[idx] = next_pres;
+        d_velocity_modes[idx] = next_vel;
     }
 }
 
-// Kernel to pre-calculate w0, alpha, AND physics coefficients natively on the GPU during initialization
-__global__ void InitConstantsKernel(
-    double* __restrict__ d_w0, double* __restrict__ d_alpha,
-    double* __restrict__ d_A, double* __restrict__ d_B, double* __restrict__ d_C,
-    double* __restrict__ d_D, double* __restrict__ d_E, double* __restrict__ d_F,
-    int w, int h, int d,
-    double lx2, double ly2, double lz2,
-    double c0, double a1, double a2, double dt)
+__global__ void DctKickKernel(
+    double* __restrict__ d_velocity_modes,
+    const double* __restrict__ d_force_modes,
+    double half_dt,
+    int w, int h, int d)
 {
-    int k = blockIdx.x * blockDim.x + threadIdx.x; // width (x)
-    int j = blockIdx.y * blockDim.y + threadIdx.y; // height (y)
-    int i = blockIdx.z * blockDim.z + threadIdx.z; // depth (z)
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (k < w && j < h && i < d) {
-        int idx = i * h * w + j * w + k;
-        double w0 = c0 * M_PI * sqrt(i * i / lz2 + j * j / ly2 + k * k / lx2);
-        double alpha = a1 + a2 * w0 * w0;
-        
-        d_w0[idx] = w0;
-        d_alpha[idx] = alpha;
-
-        double A = 1.0, B = 0.0, C = 0.0;
-        double D = 0.0, E = 1.0, F = 0.0;
-
-        if ((idx == 0) && (alpha == 0.0)) {
-            A = 1.0; B = 0.0; C = dt;
-            D = dt;  E = 1.0; F = (dt * dt / 2.0);
-        }
-        else if ((idx == 0) && (alpha > 0.0)) {
-            double e2at = exp(-2.0 * alpha * dt);
-            A = e2at; B = 0.0; C = (1.0 - e2at) / (2.0 * alpha);
-            D = (1.0 - e2at) / (2.0 * alpha); E = 1.0; F = ((e2at - 1.0) / (4.0 * alpha * alpha) + 1.0 / (2.0 * alpha) * dt);
-        }
-        else if ((idx > 0) && (alpha < w0)) {
-            double inv_w02 = 1.0 / (w0 * w0);
-            double alpha_sqr = alpha * alpha;
-            double omega = sqrt(w0 * w0 - alpha_sqr);
-            double cwt = cos(omega * dt);
-            double swt = sin(omega * dt);
-            double eatm = exp(-alpha * dt);
-            double inv_w = 1.0 / omega;
-
-            A = eatm * (cwt - alpha * inv_w * swt);
-            B = -eatm * (omega + alpha_sqr * inv_w) * swt;
-            C = -B * inv_w02;
-
-            D = eatm * swt * inv_w;
-            E = eatm * (cwt + alpha * inv_w * swt);
-            F = (1.0 - E) * inv_w02;
-        }
-        else if ((idx > 0) && (alpha > w0)) {
-            double inv_w02 = 1.0 / (w0 * w0);
-            double alpha_sqr = alpha * alpha;
-            double alphad = sqrt(alpha_sqr - w0 * w0);
-            double alpha1 = alpha + alphad;
-            double alpha2 = alpha - alphad;
-            double eat1 = exp(-alpha1 * dt);
-            double eat2 = exp(-alpha2 * dt);
-
-            A = (0.5 * (eat1 + eat2) + 0.5 / alphad * alpha * (eat1 - eat2));
-            B = (-0.5 * (alpha1 * eat1 + alpha2 * eat2) - 0.5 / alphad * alpha * (alpha2 * eat2 - alpha1 * eat1));
-            C = inv_w02 * 0.5 * (alpha1 * eat1 + alpha2 * eat2 + alpha / alphad * (alpha2 * eat2 - alpha1 * eat1));
-
-            D = 0.5 / alphad * (eat2 - eat1);
-            E = (eat1 + eat2 + 0.5 / alphad * (alpha2 * eat2 - alpha1 * eat1));
-            F = inv_w02 * (1.0 - (eat1 + eat2 + 0.5 / alphad * (alpha2 * eat2 - alpha1 * eat1)));
-        }
-
-        d_A[idx] = A; d_B[idx] = B; d_C[idx] = C;
-        d_D[idx] = D; d_E[idx] = E; d_F[idx] = F;
+    if (x < w && y < h && z < d) {
+        int idx = z * h * w + y * w + x;
+        d_velocity_modes[idx] += half_dt * d_force_modes[idx];
     }
 }
+
+__global__ void MergeResiduesIntoForceKernel(double* d_force, const double* d_residue, int size) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < size) d_force[i] += d_residue[i];
+}
+
 
 DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
     : Partition(xs, ys, zs, w, h, d, false) // Don't allocate default Partition buffers (prevents leak)
@@ -123,12 +131,10 @@ DctPartition::DctPartition(int xs, int ys, int zs, int w, int h, int d)
     cudaMalloc((void**)&d_w0_, vol_size);
     cudaMalloc((void**)&d_alpha_, vol_size);
     
-    cudaMalloc((void**)&d_coef_A_, vol_size);
-    cudaMalloc((void**)&d_coef_B_, vol_size);
-    cudaMalloc((void**)&d_coef_C_, vol_size);
-    cudaMalloc((void**)&d_coef_D_, vol_size);
-    cudaMalloc((void**)&d_coef_E_, vol_size);
-    cudaMalloc((void**)&d_coef_F_, vol_size);
+    cudaMalloc((void**)&d_S11_, vol_size);
+    cudaMalloc((void**)&d_S12_, vol_size);
+    cudaMalloc((void**)&d_S21_, vol_size);
+    cudaMalloc((void**)&d_S22_, vol_size);
 
     // Allocate shared buffers for DCT operations to save VRAM
     int w2 = 2 * w, h2 = 2 * h, d2 = 2 * d;
@@ -157,8 +163,7 @@ DctPartition::~DctPartition()
     cudaFree(d_shared_complex_);
     cudaFree(d_w0_);
     cudaFree(d_alpha_);
-    cudaFree(d_coef_A_); cudaFree(d_coef_B_); cudaFree(d_coef_C_);
-    cudaFree(d_coef_D_); cudaFree(d_coef_E_); cudaFree(d_coef_F_);
+    cudaFree(d_S11_); cudaFree(d_S12_); cudaFree(d_S21_); cudaFree(d_S22_);
     delete pressure_vol_;
     delete velocity_vol_;
     delete force_vol_;
@@ -176,35 +181,49 @@ void DctPartition::InitializeConstants()
 
     InitConstantsKernel<<<gridSize, blockSize>>>(
         d_w0_, d_alpha_, 
-        d_coef_A_, d_coef_B_, d_coef_C_, 
-        d_coef_D_, d_coef_E_, d_coef_F_, 
+        d_S11_, d_S12_, d_S21_, d_S22_, 
         width_, height_, depth_, lx2, ly2, lz2, c0_, air_absorption_alpha1_, air_absorption_alpha2_, dt_);
 }
 
-void DctPartition::Update()
+void DctPartition::HalfKick()
 {
-    // 1. Transform space to frequency (DCT)
-    pressure_vol_->ExecuteDct(stream_);
-    velocity_vol_->ExecuteDct(stream_);
-    force_vol_->ExecuteDct(stream_);
-
-    // 2. Optimized Physics Update using pre-calculated coefficients
     dim3 blockSize(8, 8, 8);
     dim3 gridSize((width_ + blockSize.x - 1) / blockSize.x,
                   (height_ + blockSize.y - 1) / blockSize.y,
                   (depth_ + blockSize.z - 1) / blockSize.z);
 
-    DctUpdateKernel<<<gridSize, blockSize, 0, stream_>>>(
-        pressure_vol_->d_modes_,
+    DctKickKernel<<<gridSize, blockSize, 0, stream_>>>(
         velocity_vol_->d_modes_,
         force_vol_->d_modes_,
-        d_coef_A_, d_coef_B_, d_coef_C_,
-        d_coef_D_, d_coef_E_, d_coef_F_,
+        dt_ / 2.0,
         width_, height_, depth_
     );
-
-    // 3. Transform frequency back to space (IDCT)
-    velocity_vol_->ExecuteIdct(stream_);
-    pressure_vol_->ExecuteIdct(stream_);
 }
 
+void DctPartition::Drift()
+{
+    dim3 blockSize(8, 8, 8);
+    dim3 gridSize((width_ + blockSize.x - 1) / blockSize.x,
+                  (height_ + blockSize.y - 1) / blockSize.y,
+                  (depth_ + blockSize.z - 1) / blockSize.z);
+
+    DctDriftKernel<<<gridSize, blockSize, 0, stream_>>>(
+        pressure_vol_->d_modes_,
+        velocity_vol_->d_modes_,
+        d_S11_, d_S12_, d_S21_, d_S22_,
+        width_, height_, depth_
+    );
+}
+
+void DctPartition::MergeResiduesIntoForce()
+{
+    int size = width_ * height_ * depth_;
+    int threads = 256;
+    int blocks = (size + threads - 1) / threads;
+    MergeResiduesIntoForceKernel<<<blocks, threads, 0, stream_>>>(d_force_, d_residue_, size);
+}
+
+void DctPartition::Update()
+{
+    // Deprecated for Strang splitting
+}
